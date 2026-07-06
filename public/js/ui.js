@@ -71,7 +71,7 @@ class UI {
         c.innerHTML = '<div class="messages-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>No messages yet</span><span style="font-size:0.8rem">Messages are end-to-end encrypted when E2E is enabled</span></div>';
     }
 
-    static renderTransferCard(fileId, meta, direction) {
+    static renderTransferCard(fileId, meta, direction, onCancel) {
         const card = document.createElement('div');
         card.className = 'transfer-card';
         card.id = 'transfer-' + fileId;
@@ -79,9 +79,12 @@ class UI {
         const label = direction === 'upload' ? 'Sending' : 'Receiving';
         card.innerHTML = '<div class="transfer-info"><span class="transfer-icon">' + icon + '</span><div class="transfer-details">' +
             '<div class="transfer-name">' + UI.escapeHtml(meta.fileName) + '</div>' +
-            '<div class="transfer-meta">' + label + ' · ' + FileTransfer.formatSize(meta.fileSize) + (meta.encrypted ? ' · Encrypted' : '') + '</div></div></div>' +
+            '<div class="transfer-meta">' + label + ' · ' + FileTransfer.formatSize(meta.fileSize) + (meta.encrypted ? ' · Encrypted' : '') + '</div></div>' +
+            '<button class="btn-cancel-transfer" title="Cancel Transfer" style="margin-left:auto;background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>' +
             '<div class="transfer-progress"><div class="transfer-bar"><div class="transfer-bar-fill" style="width:0%"></div></div>' +
             '<div class="transfer-stats"><span class="transfer-percent">0%</span><span class="transfer-speed"></span></div></div>';
+        const cancelBtn = card.querySelector('.btn-cancel-transfer');
+        if (cancelBtn && onCancel) cancelBtn.addEventListener('click', () => onCancel(fileId));
         return card;
     }
 
@@ -133,7 +136,7 @@ class UI {
         return card;
     }
 
-    static renderFileChatMessage(meta, url, isSent, senderName, timestamp) {
+    static renderFileChatMessage(meta, url, isSent, sender, timestamp) {
         const msg = document.createElement('div');
         msg.className = 'message ' + (isSent ? 'message-sent' : 'message-received');
         const isImage = meta.fileType && meta.fileType.startsWith('image/');
@@ -150,7 +153,9 @@ class UI {
             '<div style="font-size:0.75rem;opacity:0.8">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
             '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" style="margin-left:auto;background:var(--accent-primary);color:white;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-weight:600">Download</a></div>';
 
-        msg.innerHTML = (!isSent ? '<span class="message-sender" style="color:var(--text-secondary)">' + (senderName || 'Peer') + '</span>' : '') +
+        const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
+        const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
+        msg.innerHTML = (!isSent ? '<span class="message-sender" style="color:' + sColor + '">' + sName + '</span>' : '') +
             '<div class="message-bubble" style="padding:10px">' + preview + fileBox + '</div>' +
             '<div style="display:flex;align-items:center;gap:6px;' + (isSent ? 'flex-direction:row-reverse' : '') + '">' +
             '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span></div>';

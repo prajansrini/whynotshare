@@ -4,6 +4,7 @@ class FileTransfer {
         this.crypto = crypto;
         this.encryptionEnabled = true;
         this.incoming = new Map();
+        this.cancelledTransfers = new Set();
         this.chunkSize = 64 * 1024;
         this.onProgress = null;
         this.onFileReceived = null;
@@ -18,6 +19,10 @@ class FileTransfer {
         this.conn.sendFileEvent('file-meta', meta);
         const start = Date.now();
         for (let i = 0; i < totalChunks; i++) {
+            if (this.cancelledTransfers.has(fileId)) {
+                this.cancelledTransfers.delete(fileId);
+                return;
+            }
             const s = i * this.chunkSize, e = Math.min(s + this.chunkSize, file.size);
             const buf = await file.slice(s, e).arrayBuffer();
             let payload;
@@ -28,13 +33,29 @@ class FileTransfer {
                 payload = { fileId, index: i, data: this.crypto._bufToBase64(buf) };
             }
             this.conn.sendFileEvent('file-chunk', payload);
-            const progress = (i + 1) / totalChunks;
+            const progress = Math.min(1, (i + 1) / totalChunks);
             const elapsed = (Date.now() - start) / 1000;
             const speed = elapsed > 0 ? e / elapsed : 0;
             if (this.onProgress) this.onProgress(fileId, progress, speed, 'upload', meta);
-            if (i % 8 === 7) await new Promise(r => setTimeout(r, 5));
+            if (i % 4 === 3) {
+                await new Promise(r => setTimeout(r, 5));
+                if (this.conn.waitForBuffer) await this.conn.waitForBuffer();
+            }
         }
-        this.conn.sendFileEvent('file-complete', { fileId });
+        if (!this.cancelledTransfers.has(fileId)) {
+            this.conn.sendFileEvent('file-complete', { fileId });
+        } else {
+            this.cancelledTransfers.delete(fileId);
+        }
+    }
+
+    cancelTransfer(fileId) {
+        this.cancelledTransfers.add(fileId);
+        this.incoming.delete(fileId);
+        this.conn.sendFileEvent('file-cancel', { fileId });
+        const tc = document.getElementById('transfer-' + fileId);
+        if (tc) tc.remove();
+        if (typeof UI !== 'undefined') UI.toast('Transfer cancelled', 'info');
     }
 
     handleFileEvent(type, data) {
@@ -44,11 +65,12 @@ class FileTransfer {
             case 'file-meta': this._onMeta(data); break;
             case 'file-chunk': this._onChunk(data); break;
             case 'file-complete': this._onComplete(data); break;
+            case 'file-cancel': this._onCancel(data); break;
         }
     }
 
     _onMeta(data) {
-        this.incoming.set(data.fileId, { meta: data, chunks: new Array(data.totalChunks), received: 0, startTime: Date.now() });
+        this.incoming.set(data.fileId, { meta: data, chunks: new Array(data.totalChunks), received: 0, startTime: Date.now(), senderId: data.senderId });
         if (this.onIncomingFile) this.onIncomingFile(data.fileId, data);
     }
 
@@ -81,8 +103,15 @@ class FileTransfer {
         const info = this.incoming.get(data.fileId);
         if (!info) return;
         const blob = new Blob(info.chunks, { type: info.meta.fileType || 'application/octet-stream' });
-        if (this.onFileReceived) this.onFileReceived(data.fileId, info.meta, blob);
+        if (this.onFileReceived) this.onFileReceived(data.fileId, info.meta, blob, info.senderId);
         this.incoming.delete(data.fileId);
+    }
+
+    _onCancel(data) {
+        this.incoming.delete(data.fileId);
+        const tc = document.getElementById('transfer-' + data.fileId);
+        if (tc) tc.remove();
+        if (typeof UI !== 'undefined') UI.toast('Peer cancelled file transfer', 'info');
     }
 
     setEncryption(on) { this.encryptionEnabled = on; }

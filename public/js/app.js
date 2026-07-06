@@ -21,25 +21,28 @@ class App {
         this.fileTransfer.onProgress = (fid, prog, speed, dir, meta) => {
             let card = document.getElementById('transfer-' + fid);
             if (!card) {
-                card = UI.renderTransferCard(fid, meta, dir);
+                card = UI.renderTransferCard(fid, meta, dir, (id) => this.fileTransfer.cancelTransfer(id));
                 document.getElementById('transfers-list').prepend(card);
             }
             UI.updateTransferProgress(fid, prog, speed);
         };
 
         this.fileTransfer.onIncomingFile = (fid, meta) => {
-            const card = UI.renderTransferCard(fid, meta, 'download');
+            const card = UI.renderTransferCard(fid, meta, 'download', (id) => this.fileTransfer.cancelTransfer(id));
             document.getElementById('transfers-list').prepend(card);
         };
 
-        this.fileTransfer.onFileReceived = (fid, meta, blob) => {
+        this.fileTransfer.onFileReceived = (fid, meta, blob, senderId) => {
             const tc = document.getElementById('transfer-' + fid);
             if (tc) tc.remove();
             const card = UI.renderReceivedFile(fid, meta, blob);
             document.getElementById('received-files').prepend(card);
             
+            const peer = this.conn.getPeers().find(p => p.id === senderId);
+            const senderName = peer ? peer.deviceName : 'Peer';
+            const senderColor = this.textShare ? this.textShare._getPeerColor(senderId || 'unknown') : 'var(--text-secondary)';
             const url = URL.createObjectURL(blob);
-            const chatMsg = UI.renderFileChatMessage(meta, url, false, 'Peer', Date.now());
+            const chatMsg = UI.renderFileChatMessage(meta, url, false, { name: senderName, color: senderColor }, Date.now());
             const msgs = document.getElementById('messages');
             if (msgs) {
                 const empty = msgs.querySelector('.messages-empty');

@@ -179,6 +179,17 @@ class ConnectionManager {
         }
     }
 
+    async waitForBuffer() {
+        for (const conn of this.connections.values()) {
+            const dc = conn.dataChannel || conn._dc || (conn.peerConnection && conn.peerConnection.sctp);
+            if (dc && 'bufferedAmount' in dc) {
+                while (dc.bufferedAmount > 65536) {
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+        }
+    }
+
     leaveRoom() {
         for (const conn of this.connections.values()) conn.close();
         this.connections.clear();
