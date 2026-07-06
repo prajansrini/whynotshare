@@ -67,9 +67,11 @@ class FileTransfer {
                 return;
             }
         } else { buf = this.crypto._base64ToBuf(data.data); }
-        info.chunks[data.index] = new Uint8Array(buf);
-        info.received++;
-        const progress = info.received / info.meta.totalChunks;
+        if (!info.chunks[data.index]) {
+            info.chunks[data.index] = new Uint8Array(buf);
+            info.received++;
+        }
+        const progress = Math.min(1, info.received / info.meta.totalChunks);
         const elapsed = (Date.now() - info.startTime) / 1000;
         const speed = elapsed > 0 ? (info.received * this.chunkSize) / elapsed : 0;
         if (this.onProgress) this.onProgress(data.fileId, progress, speed, 'download', info.meta);
