@@ -430,8 +430,34 @@ class App {
     }
 
     openHostManageModal() {
-        document.getElementById('input-new-room-id').value = this.conn.getRoomCode() || '';
-        document.getElementById('input-rotate-room-key').value = this.crypto.getPhrase() || '';
+        const isPrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
+        const roomCode = this.conn.getRoomCode() || '';
+        const phrase = this.crypto.getPhrase() || '';
+        const url = this._buildShareUrl(roomCode, phrase);
+
+        document.getElementById('input-new-room-id').value = roomCode;
+        const linkInput = document.getElementById('input-modal-room-link');
+        if (linkInput) linkInput.value = url;
+        document.getElementById('input-rotate-room-key').value = phrase;
+
+        const titleEl = document.getElementById('host-manage-title-text');
+        if (titleEl) titleEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>${isPrivileged ? 'Host Governance Panel' : 'Room Details & Security'}`;
+
+        const inputId = document.getElementById('input-new-room-id');
+        const btnSaveId = document.getElementById('btn-save-room-id');
+        if (inputId) inputId.readOnly = !isPrivileged;
+        if (btnSaveId) btnSaveId.style.display = isPrivileged ? 'inline-block' : 'none';
+
+        const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
+        const inputKey = document.getElementById('input-rotate-room-key');
+        const btnSaveKey = document.getElementById('btn-rotate-room-key');
+        if (btnGenKey) btnGenKey.style.display = isPrivileged ? 'inline-flex' : 'none';
+        if (inputKey) inputKey.readOnly = !isPrivileged;
+        if (btnSaveKey) btnSaveKey.style.display = isPrivileged ? 'inline-block' : 'none';
+
+        const deleteBox = document.getElementById('box-delete-room');
+        if (deleteBox) deleteBox.style.display = isPrivileged ? 'flex' : 'none';
+
         this.renderHostMembersList();
         document.getElementById('modal-host-manage').style.display = 'flex';
     }
@@ -463,8 +489,7 @@ class App {
                         this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
                         this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                         UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
-                        UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
-                        this.renderHostMembersList();
+                        this.refreshPeerLists();
                     };
                     btns.appendChild(btnPromote);
                 }
@@ -474,6 +499,13 @@ class App {
                 btnKick.textContent = 'Remove';
                 btnKick.onclick = () => {
                     this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
+                    this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
+                    if (this.conn.connections && this.conn.connections.has(p.id)) {
+                        try { this.conn.connections.get(p.id).close(); } catch(e){}
+                        this.conn.connections.delete(p.id);
+                    }
+                    this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                    this.refreshPeerLists();
                     UI.toast(`Removed ${p.deviceName}`, 'success');
                 };
                 btns.appendChild(btnKick);
@@ -481,6 +513,15 @@ class App {
             }
             listEl.appendChild(row);
         });
+    }
+
+    refreshPeerLists() {
+        if (!this.conn) return;
+        const peers = this.conn.getPeers() || [];
+        const myId = this.conn.getSocketId();
+        UI.updateDevicesList(peers, myId);
+        this.renderHostMembersList();
+        this.renderPersonalRecipients();
     }
 
     _onRoomIdChanged(newCode) {
@@ -566,7 +607,7 @@ class App {
 
     _enterShareScreen(code, peers) {
         document.getElementById('share-room-code').textContent = code;
-        UI.updateDevicesList(peers, this.conn.getSocketId());
+        this.refreshPeerLists();
         if (this.textShare) {
             this.textShare.loadHistory();
             if (this.textShare.messages.length === 0) UI.showEmptyMessages();
@@ -598,13 +639,11 @@ class App {
     _onPeerJoined(peer) {
         const rs = document.getElementById('screen-room');
         if (rs && rs.classList.contains('active')) { this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers()); return; }
-        UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
-        this.renderPersonalRecipients();
+        this.refreshPeerLists();
     }
 
     _onPeerLeft() {
-        UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
-        this.renderPersonalRecipients();
+        this.refreshPeerLists();
     }
 
     _buildShareUrl(code, phrase) {
@@ -734,9 +773,11 @@ class App {
     updatePrivilegeUI() {
         const isPrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
         const hmBtn = document.getElementById('btn-host-manage');
+        const hmText = document.getElementById('btn-host-manage-text');
         const passBtn = document.getElementById('btn-edit-passphrase');
-        if (hmBtn) hmBtn.style.display = isPrivileged ? 'inline-flex' : 'none';
-        if (passBtn) passBtn.style.display = isPrivileged ? 'none' : 'inline-flex';
+        if (hmBtn) hmBtn.style.display = 'inline-flex';
+        if (hmText) hmText.textContent = isPrivileged ? 'Host Manage' : 'Room Info';
+        if (passBtn) passBtn.style.display = 'none';
     }
 
     _createQrInstance(url, size = 240) {
@@ -1052,8 +1093,49 @@ class App {
             });
         }
 
+        const btnRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
+        if (btnRoomBadgeCopy) {
+            btnRoomBadgeCopy.addEventListener('click', () => {
+                if (this.roomCode) {
+                    navigator.clipboard.writeText(this.roomCode);
+                    UI.toast('Room ID copied to clipboard!', 'success');
+                }
+            });
+        }
+        const btnCopyModalRoomId = document.getElementById('btn-copy-modal-room-id');
+        if (btnCopyModalRoomId) {
+            btnCopyModalRoomId.addEventListener('click', () => {
+                const val = document.getElementById('input-new-room-id').value;
+                if (val) {
+                    navigator.clipboard.writeText(val);
+                    UI.toast('Room ID copied!', 'success');
+                }
+            });
+        }
+        const btnCopyModalRoomLink = document.getElementById('btn-copy-modal-room-link');
+        if (btnCopyModalRoomLink) {
+            btnCopyModalRoomLink.addEventListener('click', () => {
+                const val = document.getElementById('input-modal-room-link').value;
+                if (val) {
+                    navigator.clipboard.writeText(val);
+                    UI.toast('Room Link copied!', 'success');
+                }
+            });
+        }
+        const btnCopyModalRoomKey = document.getElementById('btn-copy-modal-room-key');
+        if (btnCopyModalRoomKey) {
+            btnCopyModalRoomKey.addEventListener('click', () => {
+                const val = document.getElementById('input-rotate-room-key').value;
+                if (val) {
+                    navigator.clipboard.writeText(val);
+                    UI.toast('Room Key copied!', 'success');
+                }
+            });
+        }
+
         // Passphrase modal
-        document.getElementById('btn-edit-passphrase').addEventListener('click', () => {
+        const btnEditPass = document.getElementById('btn-edit-passphrase');
+        if (btnEditPass) btnEditPass.addEventListener('click', () => {
             const isPrivileged = this.conn.isCreator || this.conn.isAdmin;
             const titleEl = document.getElementById('passphrase-modal-title');
             const labelEl = document.getElementById('passphrase-modal-label');

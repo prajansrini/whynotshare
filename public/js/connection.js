@@ -103,6 +103,8 @@ class ConnectionManager {
             } else if (wasCreator && this.peers.length > 0) {
                 this._handleHostSuccession();
             }
+            if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+            else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
         });
     }
 
@@ -144,7 +146,8 @@ class ConnectionManager {
                 this.peers = data.payload;
                 if (!this.peers.find(p => p.id === this.myPeerId))
                     this.peers.push({ id: this.myPeerId, ...this.myInfo, isCreator: false });
-                UI.updateDevicesList(this.peers, this.myPeerId);
+                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+                else UI.updateDevicesList(this.peers, this.myPeerId);
                 break;
             case 'chat-history': {
                 if (this.onHistoryReceived) this.onHistoryReceived(data.payload);
@@ -166,7 +169,9 @@ class ConnectionManager {
                 const p = this.peers.find(x => x.id === rinfo.id);
                 if (p) {
                     p.deviceName = rinfo.deviceName;
-                    if (typeof UI !== 'undefined') {
+                    if (window.app && window.app.refreshPeerLists) {
+                        window.app.refreshPeerLists();
+                    } else if (typeof UI !== 'undefined') {
                         UI.updateDevicesList(this.peers, this.myPeerId);
                     }
                     if (this.isCreator) this._broadcast({ type: 'peer-update', payload: this.peers });
@@ -203,7 +208,8 @@ class ConnectionManager {
                 } else if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
-                if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
+                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+                else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
                 if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
                 break;
             }
@@ -255,8 +261,8 @@ class ConnectionManager {
     renameDevice(newName) {
         this.myInfo.deviceName = newName;
         const p = this.peers.find(x => x.id === this.myPeerId);
-        if (p) p.deviceName = newName;
-        if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
+        if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+        else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
         const msg = { type: 'peer-rename', payload: { id: this.myPeerId, deviceName: newName } };
         if (this.isCreator) {
             this._broadcast({ type: 'peer-update', payload: this.peers });
@@ -302,8 +308,9 @@ class ConnectionManager {
                     if (me) { me.id = id; me.isCreator = true; me.isAdmin = true; }
                     if (typeof UI !== 'undefined') {
                         UI.toast('You are now the Room Host!', 'info');
-                        UI.updateDevicesList(this.peers, this.myPeerId);
                     }
+                    if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+                    else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
                     if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
                     if (window.app && window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
                 });

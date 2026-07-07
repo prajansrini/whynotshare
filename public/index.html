@@ -139,11 +139,10 @@
                         <h2 class="app-title" style="font-size:1.45rem;margin:0;letter-spacing:-0.5px">Why<span class="text-gradient">Not</span>Share</h2>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                        <div class="room-badge" title="Room Code" style="height:34px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span id="share-room-code">---</span></div>
+                        <div class="room-badge" id="btn-room-badge-copy" title="Click to copy Room ID" style="height:34px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:0.88rem;font-weight:700;cursor:pointer;user-select:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:block;flex-shrink:0"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span id="share-room-code" style="line-height:1">---</span></div>
                         <button id="btn-copy-room-link" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Copy Room Share Link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy Link</button>
                         <button id="btn-show-qr-share" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Show QR Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>QR</button>
-                        <button id="btn-edit-passphrase" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="View Room Key"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key</button>
-                        <button id="btn-host-manage" class="btn btn-secondary" style="display:none;padding:0 14px;border-radius:18px;font-size:0.82rem;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.35)" title="Host Governance Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Manage</button>
+                        <button id="btn-host-manage" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.35)" title="Room Info & Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg><span id="btn-host-manage-text">Host Manage</span></button>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
@@ -171,7 +170,7 @@
                 <div id="staged-files-chat" style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column"></div>
                 <div class="text-input-area">
                     <textarea id="text-input" placeholder="Type a message..." rows="1"></textarea>
-                    <button id="btn-attach-chat" class="btn-send" style="margin-right:8px;background:var(--accent-gradient);color:white;border:none;box-shadow:0 4px 14px rgba(99,102,241,0.35)" title="Attach & Send File"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+                    <button id="btn-attach-chat" class="btn-send" style="background:var(--accent-gradient);color:white;border:none;box-shadow:0 4px 14px rgba(99,102,241,0.35)" title="Attach & Send File"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
                     <button id="btn-send-text" class="btn-send" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
                 </div>
             </div>
@@ -193,31 +192,42 @@
 
     <!-- HOST MANAGEMENT MODAL -->
     <div id="modal-host-manage" class="modal-overlay" style="display:none">
-        <div class="modal-card glass-card" style="max-width:460px">
+        <div class="modal-card glass-card" style="max-width:480px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
-                <h3 style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Governance Panel</h3>
+                <h3 id="host-manage-title-text" style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Governance Panel</h3>
                 <button id="btn-close-host-manage" class="btn-close-modal" title="Close Panel">✕</button>
             </div>
             
-            <div style="display:flex;flex-direction:column;gap:16px">
-                <!-- Change Room ID -->
+            <div style="display:flex;flex-direction:column;gap:14px">
+                <!-- Room ID -->
                 <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
-                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;color:var(--text-primary)">Change Room ID</div>
-                    <div style="display:flex;gap:8px">
-                        <input type="text" id="input-new-room-id" class="input-field text-mono" placeholder="New Room Code (e.g. VIP-ROOM)" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0">
-                        <button id="btn-save-room-id" class="btn btn-primary" style="padding:0 16px;height:38px;font-size:0.8rem;border-radius:10px">Rename</button>
+                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;color:var(--text-primary)">Room ID</div>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="input-new-room-id" class="input-field text-mono" placeholder="Room Code" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0;flex:1">
+                        <button id="btn-copy-modal-room-id" class="btn btn-secondary" style="padding:0 12px;height:38px;font-size:0.8rem;border-radius:10px" title="Copy Room ID">Copy</button>
+                        <button id="btn-save-room-id" class="btn btn-primary" style="padding:0 14px;height:38px;font-size:0.8rem;border-radius:10px">Rename</button>
+                    </div>
+                </div>
+
+                <!-- Room Share Link -->
+                <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
+                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;color:var(--text-primary)">Room Share Link</div>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="input-modal-room-link" class="input-field text-mono" readonly style="padding:8px 12px;font-size:0.78rem;height:38px;margin:0;flex:1;color:var(--text-secondary)">
+                        <button id="btn-copy-modal-room-link" class="btn btn-secondary" style="padding:0 12px;height:38px;font-size:0.8rem;border-radius:10px" title="Copy Link">Copy Link</button>
                     </div>
                 </div>
 
                 <!-- Edit Room Key -->
                 <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                        <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary)">Edit Room Key</div>
+                        <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary)">Room Key (E2E Passphrase)</div>
                         <button id="btn-gen-rotate-room-key" style="background:none;border:none;color:var(--accent-secondary);font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:6px" title="Generate Random Passphrase">Generate Random</button>
                     </div>
-                    <div style="display:flex;gap:8px">
-                        <input type="text" id="input-rotate-room-key" class="input-field text-mono" placeholder="New Room Key / Passphrase" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0">
-                        <button id="btn-rotate-room-key" class="btn btn-primary" style="padding:0 16px;height:38px;font-size:0.8rem;border-radius:10px">Save</button>
+                    <div style="display:flex;gap:6px">
+                        <input type="text" id="input-rotate-room-key" class="input-field text-mono" placeholder="Room Key" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0;flex:1">
+                        <button id="btn-copy-modal-room-key" class="btn btn-secondary" style="padding:0 12px;height:38px;font-size:0.8rem;border-radius:10px" title="Copy Room Key">Copy</button>
+                        <button id="btn-rotate-room-key" class="btn btn-primary" style="padding:0 14px;height:38px;font-size:0.8rem;border-radius:10px">Save</button>
                     </div>
                 </div>
 
@@ -228,7 +238,7 @@
                 </div>
 
                 <!-- Delete Room -->
-                <div style="padding:14px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);border-radius:14px;display:flex;align-items:center;justify-content:space-between">
+                <div id="box-delete-room" style="padding:14px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);border-radius:14px;display:flex;align-items:center;justify-content:space-between">
                     <div>
                         <div style="font-size:0.85rem;font-weight:700;color:#f87171">Delete Room</div>
                         <div style="font-size:0.75rem;color:var(--text-tertiary)">Disconnect all members & destroy room</div>
