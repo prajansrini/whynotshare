@@ -252,19 +252,12 @@ button .waiting-dots span {
 
 .devices-list {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-sm);
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    margin-top: 0;
-    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-top 0.3s ease;
-}
-
-.devices-list.expanded {
-    max-height: 500px;
+    max-height: 60vh;
     opacity: 1;
-    margin-top: 12px;
+    overflow-y: auto;
+    margin-top: 0;
 }
 
 .device-chip {
@@ -409,12 +402,24 @@ button .waiting-dots span {
     animation: fadeIn 0.25s ease;
 }
 
-.tab-content.active { display: block; }
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#tab-files.active {
+    overflow-y: auto;
+}
 
 /* --- Messages / Text Share --- */
 .messages-container {
     width: 100%;
-    height: 350px;
+    flex: 1;
+    min-height: 0;
+    height: auto;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -525,6 +530,7 @@ button .waiting-dots span {
     gap: var(--space-sm);
     width: 100%;
     align-items: flex-end;
+    flex-shrink: 0;
 }
 
 .text-input-area textarea {
@@ -798,6 +804,30 @@ button .waiting-dots span {
     border-color: rgba(255, 255, 255, 0.15);
 }
 
+.btn-close-modal {
+    width: 32px;
+    height: 32px;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+}
+
+.btn-close-modal:hover {
+    background: var(--accent-gradient);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+}
+
 /* --- File Transfer Drop Zone --- */
 .drop-zone {
     width: 100%;
@@ -990,7 +1020,7 @@ button .waiting-dots span {
 @media (max-width: 600px) {
     .app-title { font-size: 1.6rem; }
     .room-code-value { font-size: 2.2rem; }
-    .messages-container { height: 280px; }
+    .messages-container { flex: 1; min-height: 300px; height: auto; }
     .share-header { flex-wrap: wrap; gap: var(--space-sm); }
     .device-chip { font-size: 0.8rem; padding: 6px 10px; }
     .tab-btn { font-size: 0.85rem; padding: 8px 12px; }

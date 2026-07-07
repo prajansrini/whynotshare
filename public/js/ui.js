@@ -60,10 +60,14 @@ class UI {
     static updateDevicesList(peers, myId) {
         const list = document.getElementById('devices-list');
         const count = document.getElementById('devices-count');
+        const countModal = document.getElementById('devices-count-modal');
+        const countPill = document.getElementById('devices-count-pill');
         if (!list) return;
         list.innerHTML = '';
         peers.forEach(p => list.appendChild(UI.renderDeviceChip(p, p.id === myId)));
         if (count) count.textContent = peers.length + ' device' + (peers.length !== 1 ? 's' : '');
+        if (countModal) countModal.textContent = peers.length;
+        if (countPill) countPill.textContent = peers.length;
     }
 
     static showEmptyMessages() {

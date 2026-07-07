@@ -132,28 +132,28 @@
 
         <!-- SHARE PANEL -->
         <div id="screen-share" class="screen share-screen">
-            <div class="share-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                    <div class="room-badge" title="Room Code" style="height:34px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span id="share-room-code">---</span></div>
-                    <button id="btn-copy-room-link" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Copy Room Share Link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy Link</button>
-                    <button id="btn-show-qr-share" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Show QR Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>QR</button>
-                    <button id="btn-edit-passphrase" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="View Room Key"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key</button>
-                    <button id="btn-host-manage" class="btn btn-secondary" style="display:none;padding:0 14px;border-radius:18px;font-size:0.82rem;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.35)" title="Host Governance Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Manage</button>
+            <div class="share-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+                    <div style="display:flex;align-items:center;gap:8px;user-select:none">
+                        <svg width="28" height="28" viewBox="0 0 100 100" fill="none" stroke="url(#logo-grad-share)"><defs><linearGradient id="logo-grad-share" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs><path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke-width="6" stroke-linejoin="round"/><g transform="translate(34, 34) scale(1.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></g></svg>
+                        <h2 class="app-title" style="font-size:1.45rem;margin:0;letter-spacing:-0.5px">Why<span class="text-gradient">Not</span>Share</h2>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <div class="room-badge" title="Room Code" style="height:34px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span id="share-room-code">---</span></div>
+                        <button id="btn-copy-room-link" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Copy Room Share Link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy Link</button>
+                        <button id="btn-show-qr-share" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Show QR Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>QR</button>
+                        <button id="btn-edit-passphrase" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="View Room Key"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key</button>
+                        <button id="btn-host-manage" class="btn btn-secondary" style="display:none;padding:0 14px;border-radius:18px;font-size:0.82rem;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.35)" title="Host Governance Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Manage</button>
+                    </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
                     <button id="btn-disconnect" class="btn btn-danger" style="padding:0 16px;border-radius:18px;font-size:0.82rem;height:34px;font-weight:600;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Leave</button>
                 </div>
             </div>
 
-            <div class="devices-panel glass-card" style="padding:var(--space-md) var(--space-lg);margin-bottom:var(--space-md)">
-                <div class="devices-header" id="devices-header" style="cursor:pointer;user-select:none;margin-bottom:0;display:flex;align-items:center;justify-content:space-between" title="Click to view connected devices">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <h3 style="margin:0;font-size:0.85rem;font-weight:600;color:var(--text-secondary)">Connected Devices</h3>
-                        <span id="devices-count" class="devices-count">0</span>
-                    </div>
-                    <svg id="devices-dropdown-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s ease"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-                <div id="devices-list" class="devices-list"></div>
+            <div style="display:flex;align-items:center;justify-content:flex-start;gap:10px;margin:12px 0;flex-wrap:wrap">
+                <button id="btn-show-devices-popup" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Connected Devices</span> <span id="devices-count-pill" style="background:var(--accent-gradient);color:white;font-size:0.75rem;padding:2px 8px;border-radius:10px;font-weight:700">0</span></button>
+                <button id="btn-show-pe2e-popup" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="Personal E2E Encryption"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Personal E2E:</span> <span id="pe2e-status-pill" style="color:var(--text-tertiary);font-weight:700">OFF</span></button>
             </div>
 
             <div class="tab-nav" data-active="text">
@@ -169,31 +169,6 @@
                 </div>
                 <div id="transfers-list" style="margin-bottom:8px"></div>
                 <div id="staged-files-chat" style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column"></div>
-                <div id="personal-e2e-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;margin-bottom:8px;flex-wrap:wrap;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <span style="color:var(--accent-secondary);display:flex;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                        <div>
-                            <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary)">Personal E2E Encryption</div>
-                            <div style="font-size:0.75rem;color:var(--text-tertiary)">Encrypt messages only for selected recipients below</div>
-                        </div>
-                    </div>
-                    <div class="security-switch-bar sec-bar-sm" style="margin:0" title="Personal Encryption Toggle">
-                        <div class="sec-slider"></div>
-                        <button id="btn-share-encrypt-on" class="sec-pill-btn">
-                            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>ON</span>
-                        </button>
-                        <button id="btn-share-encrypt-off" class="sec-pill-btn active-plaintext">
-                            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>OFF</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="personal-recipients-container" style="display:none;padding:12px 16px;background:var(--glass-bg);border:1px solid rgba(168,85,247,0.35);border-radius:14px;margin-bottom:10px;flex-direction:column;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,0.2)">
-                    <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between">
-                        <span style="display:flex;align-items:center;gap:6px;color:#c084fc"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Authorized Recipients (Click to toggle access):</span>
-                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;height:auto;border-radius:14px;background:rgba(168,85,247,0.2);color:#e9d5ff;border:1px solid rgba(168,85,247,0.4)">Select All</button>
-                    </div>
-                    <div id="personal-recipients-list" style="display:flex;flex-wrap:wrap;gap:8px;max-height:120px;overflow-y:auto"></div>
-                </div>
                 <div class="text-input-area">
                     <textarea id="text-input" placeholder="Type a message..." rows="1"></textarea>
                     <button id="btn-attach-chat" class="btn-send" style="margin-right:8px;background:var(--accent-gradient);color:white;border:none;box-shadow:0 4px 14px rgba(99,102,241,0.35)" title="Attach & Send File"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
@@ -221,7 +196,7 @@
         <div class="modal-card glass-card" style="max-width:460px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
                 <h3 style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Governance Panel</h3>
-                <button id="btn-close-host-manage" style="width:32px;height:32px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border:1px solid var(--glass-border);border-radius:50%;color:var(--text-primary);cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.3)" title="Close Panel">✕</button>
+                <button id="btn-close-host-manage" class="btn-close-modal" title="Close Panel">✕</button>
             </div>
             
             <div style="display:flex;flex-direction:column;gap:16px">
@@ -267,7 +242,10 @@
     <!-- PASSPHRASE MODAL -->
     <div id="modal-passphrase" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card">
-            <h3 id="passphrase-modal-title" style="font-size:1.1rem;font-weight:700;margin-bottom:var(--space-lg)">Change Encryption Passphrase</h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
+                <h3 id="passphrase-modal-title" style="font-size:1.15rem;font-weight:700;margin:0">Change Encryption Passphrase</h3>
+                <button id="btn-close-passphrase-top" class="btn-close-modal" title="Close">✕</button>
+            </div>
             <div class="input-group">
                 <label id="passphrase-modal-label" class="input-label">New Passphrase</label>
                 <input type="text" id="input-new-passphrase" class="input-field text-mono" placeholder="Enter passphrase..." autocomplete="off" spellcheck="false">
@@ -284,12 +262,60 @@
     <!-- QR CODE MODAL -->
     <div id="modal-qr" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card" style="text-align:center;max-width:360px">
-            <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:8px">Room Share Link</h3>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;text-align:left">
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0">Room Share Link</h3>
+                <button id="btn-close-qr-top" class="btn-close-modal" title="Close">✕</button>
+            </div>
             <p class="text-secondary" style="font-size:0.85rem;margin-bottom:20px">Scan this QR code with any camera or scanner to join instantly</p>
             <div id="qr-container" style="display:flex;justify-content:center;align-items:center;padding:16px;background:rgba(255,255,255,0.03);border-radius:20px;margin:0 auto 20px auto;width:fit-content;border:1px solid var(--glass-border);box-shadow:0 8px 32px rgba(0,0,0,0.2)"></div>
             <div style="display:flex;gap:var(--space-sm)">
                 <button id="btn-close-qr" class="btn btn-secondary" style="flex:1">Close</button>
                 <button id="btn-download-qr" class="btn btn-primary" style="flex:1">Download QR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONNECTED DEVICES MODAL -->
+    <div id="modal-connected-devices" class="modal-overlay" style="display:none">
+        <div class="modal-card glass-card" style="max-width:480px;width:90%">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0">Connected Devices (<span id="devices-count-modal">0</span>)</h3>
+                <button id="btn-close-devices-modal" class="btn-close-modal" title="Close">&times;</button>
+            </div>
+            <div id="devices-list" class="devices-list" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
+        </div>
+    </div>
+
+    <!-- PERSONAL E2E MODAL -->
+    <div id="modal-personal-e2e" class="modal-overlay" style="display:none">
+        <div class="modal-card glass-card" style="max-width:500px;width:90%">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0">Personal E2E Encryption</h3>
+                <button id="btn-close-pe2e-modal" class="btn-close-modal" title="Close">&times;</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;flex-wrap:wrap;gap:10px">
+                    <div>
+                        <div style="font-size:0.9rem;font-weight:600;color:var(--text-primary)">Enable Personal Encryption</div>
+                        <div style="font-size:0.75rem;color:var(--text-tertiary)">Encrypt messages only for selected recipients</div>
+                    </div>
+                    <div class="security-switch-bar sec-bar-sm" style="margin:0" title="Personal Encryption Toggle">
+                        <div class="sec-slider"></div>
+                        <button id="btn-share-encrypt-on" class="sec-pill-btn">
+                            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>ON</span>
+                        </button>
+                        <button id="btn-share-encrypt-off" class="sec-pill-btn active-plaintext">
+                            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>OFF</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="personal-recipients-container" style="display:none;flex-direction:column;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid rgba(168,85,247,0.35);border-radius:14px">
+                    <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between">
+                        <span style="display:flex;align-items:center;gap:6px;color:#c084fc"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Authorized Recipients:</span>
+                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;height:auto;border-radius:14px;background:rgba(168,85,247,0.2);color:#e9d5ff;border:1px solid rgba(168,85,247,0.4)">Select All</button>
+                    </div>
+                    <div id="personal-recipients-list" style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto"></div>
+                </div>
             </div>
         </div>
     </div>

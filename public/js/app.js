@@ -367,8 +367,13 @@ class App {
         const container = document.getElementById('personal-recipients-container');
         if (container) {
             container.style.display = enabled ? 'flex' : 'none';
-            if (enabled) this.renderPersonalRecipients();
         }
+        const pe2ePill = document.getElementById('pe2e-status-pill');
+        if (pe2ePill) {
+            pe2ePill.textContent = enabled ? 'ON' : 'OFF';
+            pe2ePill.style.color = enabled ? '#a855f7' : 'var(--text-tertiary)';
+        }
+        this.renderPersonalRecipients();
         if (enabled && !this.crypto.myPersonalKey) {
             this.crypto.generatePersonalKey();
         }
@@ -594,12 +599,12 @@ class App {
         const rs = document.getElementById('screen-room');
         if (rs && rs.classList.contains('active')) { this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers()); return; }
         UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
-        if (this.personalE2E) this.renderPersonalRecipients();
+        this.renderPersonalRecipients();
     }
 
     _onPeerLeft() {
         UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
-        if (this.personalE2E) this.renderPersonalRecipients();
+        this.renderPersonalRecipients();
     }
 
     _buildShareUrl(code, phrase) {
@@ -752,7 +757,7 @@ class App {
         const logoUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgIcon);
 
         return new QRCodeStyling({
-            type: "svg",
+            type: "canvas",
             width: size,
             height: size,
             data: url,
@@ -761,7 +766,7 @@ class App {
             cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
             cornersDotOptions: { color: centerDotColor, type: "dot" },
             backgroundOptions: { color: "rgba(0, 0, 0, 0)" },
-            imageOptions: { crossOrigin: "anonymous", margin: 10, imageSize: 0.4, hideBackgroundDots: true },
+            imageOptions: { margin: 8, imageSize: 0.35, hideBackgroundDots: true },
             image: logoUrl
         });
     }
@@ -779,7 +784,6 @@ class App {
         this.qrCodeObj = this._createQrInstance(url, 240);
         if (this.qrCodeObj) {
             this.qrCodeObj.append(container);
-            setTimeout(() => { if (this.qrCodeObj) this.qrCodeObj.update(); }, 50);
         } else {
             container.textContent = 'QR Library not loaded';
         }
@@ -865,8 +869,10 @@ class App {
         if (btnShowQrShare) btnShowQrShare.addEventListener('click', openQr);
 
         const btnCloseQr = document.getElementById('btn-close-qr');
+        const btnCloseQrTop = document.getElementById('btn-close-qr-top');
         const modalQr = document.getElementById('modal-qr');
         if (btnCloseQr) btnCloseQr.addEventListener('click', () => { if (modalQr) modalQr.style.display = 'none'; });
+        if (btnCloseQrTop) btnCloseQrTop.addEventListener('click', () => { if (modalQr) modalQr.style.display = 'none'; });
         if (modalQr) modalQr.addEventListener('click', (e) => { if (e.target.id === 'modal-qr') modalQr.style.display = 'none'; });
         const btnDlQr = document.getElementById('btn-download-qr');
         if (btnDlQr) {
@@ -883,15 +889,42 @@ class App {
             });
         }
 
-        const devHeader = document.getElementById('devices-header');
-        if (devHeader) {
-            devHeader.addEventListener('click', () => {
-                const list = document.getElementById('devices-list');
-                const chevron = document.getElementById('devices-dropdown-chevron');
-                if (list) {
-                    const isExp = list.classList.toggle('expanded');
-                    if (chevron) chevron.style.transform = isExp ? 'rotate(180deg)' : 'rotate(0deg)';
-                }
+        const btnShowDevices = document.getElementById('btn-show-devices-popup');
+        if (btnShowDevices) {
+            btnShowDevices.addEventListener('click', () => {
+                document.getElementById('modal-connected-devices').style.display = 'flex';
+            });
+        }
+        const btnCloseDevices = document.getElementById('btn-close-devices-modal');
+        if (btnCloseDevices) {
+            btnCloseDevices.addEventListener('click', () => {
+                document.getElementById('modal-connected-devices').style.display = 'none';
+            });
+        }
+        const modalDevices = document.getElementById('modal-connected-devices');
+        if (modalDevices) {
+            modalDevices.addEventListener('click', (e) => {
+                if (e.target.id === 'modal-connected-devices') e.target.style.display = 'none';
+            });
+        }
+
+        const btnShowPe2e = document.getElementById('btn-show-pe2e-popup');
+        if (btnShowPe2e) {
+            btnShowPe2e.addEventListener('click', () => {
+                document.getElementById('modal-personal-e2e').style.display = 'flex';
+                this.renderPersonalRecipients();
+            });
+        }
+        const btnClosePe2e = document.getElementById('btn-close-pe2e-modal');
+        if (btnClosePe2e) {
+            btnClosePe2e.addEventListener('click', () => {
+                document.getElementById('modal-personal-e2e').style.display = 'none';
+            });
+        }
+        const modalPe2e = document.getElementById('modal-personal-e2e');
+        if (modalPe2e) {
+            modalPe2e.addEventListener('click', (e) => {
+                if (e.target.id === 'modal-personal-e2e') e.target.style.display = 'none';
             });
         }
 
@@ -1056,6 +1089,8 @@ class App {
             document.getElementById('modal-passphrase').style.display = 'flex';
         });
         document.getElementById('btn-cancel-passphrase').addEventListener('click', () => document.getElementById('modal-passphrase').style.display = 'none');
+        const btnClosePassTop = document.getElementById('btn-close-passphrase-top');
+        if (btnClosePassTop) btnClosePassTop.addEventListener('click', () => document.getElementById('modal-passphrase').style.display = 'none');
         document.getElementById('btn-save-passphrase').addEventListener('click', () => this.changePassphrase(document.getElementById('input-new-passphrase').value));
         document.getElementById('btn-generate-passphrase').addEventListener('click', () => this.generateNewPassphrase());
         document.getElementById('modal-passphrase').addEventListener('click', (e) => { if (e.target.id === 'modal-passphrase') e.target.style.display = 'none'; });

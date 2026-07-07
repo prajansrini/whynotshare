@@ -8,6 +8,8 @@
 [![Protocol](https://img.shields.io/badge/Protocol-WebRTC%20Data%20Channels-00b894?style=for-the-badge)](https://webrtc.org/)
 [![Cryptography](https://img.shields.io/badge/Security-AES--GCM%20256--bit-fd79a8?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 
+### 🚀 [Try Live Demo Hosted on GitHub Pages → https://prajansrini.github.io/whynotshare/](https://prajansrini.github.io/whynotshare/)
+
 ---
 
 ## Executive Summary
