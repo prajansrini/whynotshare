@@ -173,7 +173,7 @@ class ConnectionManager {
             case 'kick-peer': {
                 if (data.payload.targetId === this.myPeerId) {
                     if (typeof UI !== 'undefined') UI.toast('You were removed by the host.', 'error');
-                    if (window.app) window.app.disconnect();
+                    if (window.app && window.app.leaveRoom) window.app.leaveRoom();
                 } else if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
@@ -192,7 +192,7 @@ class ConnectionManager {
             }
             case 'room-deleted': {
                 if (typeof UI !== 'undefined') UI.toast('The room was deleted by the host.', 'error');
-                if (window.app) window.app.disconnect();
+                if (window.app && window.app.leaveRoom) window.app.leaveRoom();
                 break;
             }
             case 'share-personal-key': {

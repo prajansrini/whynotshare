@@ -329,7 +329,7 @@ class App {
         }
         const qrSection = document.getElementById('inline-qr-section');
         if (qrSection) {
-            qrSection.style.display = enabled ? 'flex' : 'none';
+            qrSection.style.display = 'flex';
         }
 
         // Update Share URL dataset and location hash
@@ -461,6 +461,7 @@ class App {
     }
 
     _onRoomIdChanged(newCode) {
+        this.conn.roomCode = newCode;
         document.getElementById('share-room-code').textContent = newCode;
         document.getElementById('display-room-code').textContent = newCode;
         const phrase = this.crypto.getPhrase() || '';
@@ -469,6 +470,14 @@ class App {
         const urlEl = document.getElementById('share-url');
         if (urlEl) urlEl.dataset.url = targetUrl;
         window.history.replaceState(null, '', targetHash);
+        try {
+            const saved = sessionStorage.getItem('whynotshare_active_session');
+            if (saved) {
+                const s = JSON.parse(saved);
+                s.roomCode = newCode;
+                sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
+            }
+        } catch {}
         this.renderInlineQr(targetUrl);
         UI.toast('Room ID changed to: ' + newCode, 'success');
     }
@@ -483,6 +492,14 @@ class App {
             const urlEl = document.getElementById('share-url');
             if (urlEl) urlEl.dataset.url = targetUrl;
             window.history.replaceState(null, '', targetHash);
+            try {
+                const saved = sessionStorage.getItem('whynotshare_active_session');
+                if (saved) {
+                    const s = JSON.parse(saved);
+                    s.passphrase = newKey;
+                    sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
+                }
+            } catch {}
             this.renderInlineQr(targetUrl);
         }
         UI.toast('Room Key was rotated by Host!', 'success');
@@ -707,22 +724,22 @@ class App {
         const modal = document.getElementById('modal-qr');
         const container = document.getElementById('qr-container');
         if (!modal || !container) return;
+        modal.style.display = 'flex';
         container.innerHTML = '';
         this.qrCodeObj = this._createQrInstance(url, 240);
         if (this.qrCodeObj) {
             this.qrCodeObj.append(container);
+            setTimeout(() => { if (this.qrCodeObj) this.qrCodeObj.update(); }, 50);
         } else {
             container.textContent = 'QR Library not loaded';
         }
-        modal.style.display = 'flex';
     }
 
     renderInlineQr(url) {
         const section = document.getElementById('inline-qr-section');
         if (section) {
-            section.style.display = this.e2eEnabled ? 'flex' : 'none';
+            section.style.display = 'flex';
         }
-        if (!this.e2eEnabled) return;
         if (!url) {
             const urlEl = document.getElementById('share-url');
             url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
@@ -893,8 +910,10 @@ class App {
             btnDeleteRoom.addEventListener('click', () => {
                 if (confirm('Are you sure you want to delete this room and disconnect all members?')) {
                     this.conn._broadcast({ type: 'room-deleted' });
-                    this.disconnect();
                     document.getElementById('modal-host-manage').style.display = 'none';
+                    setTimeout(() => {
+                        this.leaveRoom();
+                    }, 200);
                 }
             });
         }
