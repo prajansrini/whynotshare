@@ -444,19 +444,44 @@ class App {
         if (titleEl) titleEl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>${isPrivileged ? 'Host Governance Panel' : 'Room Details & Security'}`;
 
         const inputId = document.getElementById('input-new-room-id');
-        const btnSaveId = document.getElementById('btn-save-room-id');
         if (inputId) inputId.readOnly = !isPrivileged;
-        if (btnSaveId) btnSaveId.style.display = isPrivileged ? 'inline-block' : 'none';
 
+        const toggleOpenRoom = document.getElementById('toggle-open-room');
+        const boxToggleOpenRoom = document.getElementById('box-toggle-open-room');
         const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
         const inputKey = document.getElementById('input-rotate-room-key');
-        const btnSaveKey = document.getElementById('btn-rotate-room-key');
-        if (btnGenKey) btnGenKey.style.display = isPrivileged ? 'inline-flex' : 'none';
-        if (inputKey) inputKey.readOnly = !isPrivileged;
-        if (btnSaveKey) btnSaveKey.style.display = isPrivileged ? 'inline-block' : 'none';
+
+        if (boxToggleOpenRoom) boxToggleOpenRoom.style.display = isPrivileged ? 'flex' : 'none';
+
+        const isOpenRoom = !phrase || phrase.trim() === '';
+        if (toggleOpenRoom) {
+            toggleOpenRoom.checked = isOpenRoom;
+            toggleOpenRoom.disabled = !isPrivileged;
+        }
+
+        if (inputKey) {
+            if (isOpenRoom) {
+                inputKey.value = '';
+                inputKey.placeholder = 'Open Room (No Encryption)';
+                inputKey.disabled = true;
+                inputKey.style.opacity = '0.4';
+                inputKey.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+            } else {
+                inputKey.value = phrase;
+                inputKey.placeholder = 'Room Key';
+                inputKey.disabled = !isPrivileged;
+                inputKey.readOnly = !isPrivileged;
+                inputKey.style.opacity = '1';
+                inputKey.style.backgroundColor = '';
+            }
+        }
+        if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isPrivileged) ? 'inline-flex' : 'none';
 
         const deleteBox = document.getElementById('box-delete-room');
         if (deleteBox) deleteBox.style.display = isPrivileged ? 'flex' : 'none';
+
+        const btnSaveManage = document.getElementById('btn-save-host-manage');
+        if (btnSaveManage) btnSaveManage.style.display = isPrivileged ? 'inline-flex' : 'none';
 
         this.renderHostMembersList();
         document.getElementById('modal-host-manage').style.display = 'flex';
@@ -1033,15 +1058,33 @@ class App {
         const btnCloseHostManage = document.getElementById('btn-close-host-manage');
         if (btnCloseHostManage) btnCloseHostManage.addEventListener('click', () => document.getElementById('modal-host-manage').style.display = 'none');
         document.getElementById('modal-host-manage').addEventListener('click', (e) => { if (e.target.id === 'modal-host-manage') e.target.style.display = 'none'; });
-        const btnSaveRoomId = document.getElementById('btn-save-room-id');
-        if (btnSaveRoomId) {
-            btnSaveRoomId.addEventListener('click', () => {
-                const newId = document.getElementById('input-new-room-id').value.trim();
-                if (newId) {
-                    this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
-                    this._onRoomIdChanged(newId);
-                    document.getElementById('modal-host-manage').style.display = 'none';
+        const toggleOpenRoom = document.getElementById('toggle-open-room');
+        if (toggleOpenRoom) {
+            toggleOpenRoom.addEventListener('change', async (e) => {
+                const isChecked = e.target.checked;
+                const inputEl = document.getElementById('input-rotate-room-key');
+                const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
+                if (inputEl) {
+                    if (isChecked) {
+                        inputEl.value = '';
+                        inputEl.placeholder = 'Open Room (No Encryption)';
+                        inputEl.disabled = true;
+                        inputEl.style.opacity = '0.4';
+                        inputEl.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+                    } else {
+                        let phrase = this.crypto.getPhrase();
+                        if (!phrase || !phrase.trim()) {
+                            phrase = await this.crypto.generateKey();
+                        }
+                        inputEl.value = phrase;
+                        inputEl.placeholder = 'Room Key';
+                        inputEl.disabled = false;
+                        inputEl.readOnly = false;
+                        inputEl.style.opacity = '1';
+                        inputEl.style.backgroundColor = '';
+                    }
                 }
+                if (btnGenKey) btnGenKey.style.display = !isChecked ? 'inline-flex' : 'none';
             });
         }
         const btnGenRotateKey = document.getElementById('btn-gen-rotate-room-key');
@@ -1052,15 +1095,42 @@ class App {
                 if (inputEl) inputEl.value = phrase;
             });
         }
-        const btnRotateKey = document.getElementById('btn-rotate-room-key');
-        if (btnRotateKey) {
-            btnRotateKey.addEventListener('click', () => {
-                const newKey = document.getElementById('input-rotate-room-key').value.trim();
-                if (newKey) {
+        const btnCopyAllModal = document.getElementById('btn-copy-all-modal');
+        if (btnCopyAllModal) {
+            btnCopyAllModal.addEventListener('click', () => {
+                const id = document.getElementById('input-new-room-id').value.trim();
+                const link = document.getElementById('input-modal-room-link').value.trim();
+                const key = document.getElementById('input-rotate-room-key').value.trim() || 'None (Open Room)';
+                const text = `Room ID: ${id}\nShare Link: ${link}\nRoom Key: ${key}`;
+                navigator.clipboard.writeText(text).then(() => {
+                    UI.toast('All connection details copied!', 'success');
+                }).catch(() => UI.toast('Failed to copy', 'error'));
+            });
+        }
+        const btnCancelHostManage = document.getElementById('btn-cancel-host-manage');
+        if (btnCancelHostManage) {
+            btnCancelHostManage.addEventListener('click', () => {
+                document.getElementById('modal-host-manage').style.display = 'none';
+            });
+        }
+        const btnSaveHostManage = document.getElementById('btn-save-host-manage');
+        if (btnSaveHostManage) {
+            btnSaveHostManage.addEventListener('click', () => {
+                const newId = document.getElementById('input-new-room-id').value.trim();
+                if (newId && newId !== this.conn.getRoomCode()) {
+                    this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
+                    this._onRoomIdChanged(newId);
+                }
+                const toggle = document.getElementById('toggle-open-room');
+                const isOpen = toggle && toggle.checked;
+                const newKey = isOpen ? '' : document.getElementById('input-rotate-room-key').value.trim();
+                const currentKey = this.crypto.getPhrase() || '';
+                if (newKey !== currentKey) {
                     this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
                     this._onRoomKeyRotated(newKey);
-                    document.getElementById('modal-host-manage').style.display = 'none';
                 }
+                document.getElementById('modal-host-manage').style.display = 'none';
+                UI.toast('Room settings updated!', 'success');
             });
         }
         const btnDeleteRoom = document.getElementById('btn-host-delete-room');
