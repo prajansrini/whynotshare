@@ -143,15 +143,20 @@ class UI {
         const isVideo = meta.fileType && meta.fileType.startsWith('video/');
         const isAudio = meta.fileType && meta.fileType.startsWith('audio/');
         let preview = '';
-        if (isImage) preview = '<img src="' + url + '" class="file-preview-img" style="max-width:200px;max-height:150px;border-radius:6px;margin-bottom:6px;display:block" alt="' + UI.escapeAttr(meta.fileName) + '">';
-        else if (isVideo) preview = '<video src="' + url + '" class="file-preview-video" style="max-width:200px;max-height:150px;border-radius:6px;margin-bottom:6px;display:block" controls></video>';
-        else if (isAudio) preview = '<audio src="' + url + '" class="file-preview-audio" style="width:100%;max-width:220px;margin-bottom:6px;display:block" controls></audio>';
+        if (url) {
+            if (isImage) preview = '<img src="' + url + '" class="file-preview-img" style="max-width:200px;max-height:150px;border-radius:6px;margin-bottom:6px;display:block" alt="' + UI.escapeAttr(meta.fileName) + '">';
+            else if (isVideo) preview = '<video src="' + url + '" class="file-preview-video" style="max-width:200px;max-height:150px;border-radius:6px;margin-bottom:6px;display:block" controls></video>';
+            else if (isAudio) preview = '<audio src="' + url + '" class="file-preview-audio" style="width:100%;max-width:220px;margin-bottom:6px;display:block" controls></audio>';
+        }
         
+        const actionBtn = url ? '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" style="margin-left:auto;background:var(--accent-primary);color:white;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-weight:600">Download</a>' :
+            '<span style="margin-left:auto;font-size:0.75rem;opacity:0.7;padding:4px 8px;background:rgba(255,255,255,0.1);border-radius:4px">In History</span>';
+
         const fileBox = '<div style="display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.15);padding:8px 12px;border-radius:8px;text-decoration:none;color:inherit">' +
             '<span style="font-size:1.5rem">📄</span>' +
             '<div style="overflow:hidden;text-align:left"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">' + UI.escapeHtml(meta.fileName) + '</div>' +
             '<div style="font-size:0.75rem;opacity:0.8">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
-            '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" style="margin-left:auto;background:var(--accent-primary);color:white;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-weight:600">Download</a></div>';
+            actionBtn + '</div>';
 
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';

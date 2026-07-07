@@ -17,6 +17,8 @@ class App {
         this.conn.onPeerLeft = (p) => this._onPeerLeft(p);
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (type, data) => this.fileTransfer.handleFileEvent(type, data);
+        this.conn.onSyncRequest = () => this.textShare ? this.textShare.messages : [];
+        this.conn.onHistoryReceived = (history) => { if (this.textShare) this.textShare.syncHistory(history); };
 
         this.fileTransfer.onProgress = (fid, prog, speed, dir, meta) => {
             let card = document.getElementById('transfer-' + fid);
@@ -42,13 +44,8 @@ class App {
             const senderName = peer ? peer.deviceName : 'Peer';
             const senderColor = this.textShare ? this.textShare._getPeerColor(senderId || 'unknown') : 'var(--text-secondary)';
             const url = URL.createObjectURL(blob);
-            const chatMsg = UI.renderFileChatMessage(meta, url, false, { name: senderName, color: senderColor }, Date.now());
-            const msgs = document.getElementById('messages');
-            if (msgs) {
-                const empty = msgs.querySelector('.messages-empty');
-                if (empty) empty.remove();
-                msgs.appendChild(chatMsg);
-                msgs.scrollTop = msgs.scrollHeight;
+            if (this.textShare) {
+                this.textShare.addFileMessage(fid, meta, url, false, { name: senderName, id: senderId, color: senderColor }, Date.now());
             }
         };
 
@@ -273,13 +270,9 @@ class App {
             if (rcv) rcv.prepend(card);
             
             const url = URL.createObjectURL(file);
-            const chatMsg = UI.renderFileChatMessage({ fileName: file.name, fileSize: file.size, fileType: file.type }, url, true, 'You', Date.now());
-            const msgs = document.getElementById('messages');
-            if (msgs) {
-                const empty = msgs.querySelector('.messages-empty');
-                if (empty) empty.remove();
-                msgs.appendChild(chatMsg);
-                msgs.scrollTop = msgs.scrollHeight;
+            const meta = { fileName: file.name, fileSize: file.size, fileType: file.type };
+            if (this.textShare) {
+                this.textShare.addFileMessage('sent-' + file.name + '-' + Date.now(), meta, url, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
             }
         }
     }
@@ -346,7 +339,12 @@ class App {
     _enterShareScreen(code, peers) {
         document.getElementById('share-room-code').textContent = code;
         UI.updateDevicesList(peers, this.conn.getSocketId());
-        UI.showEmptyMessages();
+        if (this.textShare) {
+            this.textShare.loadHistory();
+            if (this.textShare.messages.length === 0) UI.showEmptyMessages();
+        } else {
+            UI.showEmptyMessages();
+        }
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
         this.toggleE2E(this.e2eEnabled);

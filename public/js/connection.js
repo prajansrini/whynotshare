@@ -13,6 +13,8 @@ class ConnectionManager {
         this.onFileEvent = null;
         this.onConnected = null;
         this.onDisconnected = null;
+        this.onSyncRequest = null;
+        this.onHistoryReceived = null;
     }
 
     _roomCodeToPeerId(code) { return 'wns-' + code.replace(/-/g, '').toUpperCase(); }
@@ -105,7 +107,16 @@ class ConnectionManager {
                 const ex = this.peers.find(p => p.id === info.id);
                 if (!ex) this.peers.push(info); else Object.assign(ex, info);
                 if (this.onPeerJoined) this.onPeerJoined(info);
-                if (this.isCreator) this._broadcast({ type: 'peer-update', payload: this.peers });
+                if (this.isCreator) {
+                    this._broadcast({ type: 'peer-update', payload: this.peers });
+                    if (this.onSyncRequest) {
+                        const history = this.onSyncRequest();
+                        if (history && history.length > 0) {
+                            const c = this.connections.get(fromId);
+                            if (c && c.open) c.send({ type: 'chat-history', payload: history });
+                        }
+                    }
+                }
                 break;
             }
             case 'host-info': {
@@ -121,10 +132,14 @@ class ConnectionManager {
                     this.peers.push({ id: this.myPeerId, ...this.myInfo, isCreator: false });
                 UI.updateDevicesList(this.peers, this.myPeerId);
                 break;
+            case 'chat-history': {
+                if (this.onHistoryReceived) this.onHistoryReceived(data.payload);
+                break;
+            }
             case 'text': {
                 const sid = data.payload.senderId || fromId;
                 if (sid === this.myPeerId) break;
-                if (this.onTextReceived) this.onTextReceived({ from: sid, encrypted: data.payload.encrypted, timestamp: data.payload.timestamp, raw: data.payload.raw });
+                if (this.onTextReceived) this.onTextReceived({ id: data.payload.id, from: sid, encrypted: data.payload.encrypted, timestamp: data.payload.timestamp, raw: data.payload.raw });
                 if (this.isCreator) this._broadcast({ type: 'text', payload: data.payload }, fromId);
                 break;
             }
