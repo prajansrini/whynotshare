@@ -38,6 +38,7 @@ class UI {
         el.dataset.peerId = peer.id;
         el.innerHTML = '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) +
             '</span><span class="device-name">' + peer.deviceName + '</span>' + 
+            (peer.isCreator ? '<span style="font-size:0.7rem;color:var(--accent-primary);background:rgba(108,92,231,0.15);padding:2px 8px;border-radius:9999px;font-weight:600;margin-left:6px">Host</span>' : (peer.isAdmin ? '<span style="font-size:0.7rem;color:#ea580c;background:rgba(234,88,12,0.15);padding:2px 8px;border-radius:9999px;font-weight:600;margin-left:6px">Admin</span>' : '')) +
             (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:6px">' + peer.systemName + '</span>' : '') +
             (isYou ? '<span class="device-tag" style="margin-left:auto">You</span>' : '');
         return el;

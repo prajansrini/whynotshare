@@ -386,13 +386,27 @@ class App {
         peers.forEach(p => {
             if (p.id === myId) return;
             count++;
-            const item = document.createElement('label');
-            item.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;font-size:0.8rem;cursor:pointer;user-select:none';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = this.selectedPersonalRecipients.has(p.id);
-            cb.addEventListener('change', async () => {
-                if (cb.checked) {
+            const isSel = this.selectedPersonalRecipients.has(p.id);
+            const chip = document.createElement('div');
+            chip.className = 'recipient-chip ' + (isSel ? 'selected' : '');
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:0.82rem;font-weight:500;cursor:pointer;user-select:none;transition:all 0.2s ease;' +
+                (isSel ? 'background:linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.3));border:1px solid rgba(168,85,247,0.8);color:var(--text-primary);box-shadow:0 2px 10px rgba(168,85,247,0.3)' :
+                         'background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);opacity:0.8');
+            
+            const iconSpan = document.createElement('span');
+            iconSpan.style.cssText = 'display:flex;align-items:center;' + (isSel ? 'color:#c084fc;' : 'color:var(--text-tertiary);');
+            iconSpan.innerHTML = isSel ? 
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
+            chip.appendChild(iconSpan);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = p.deviceName || 'Unknown Device';
+            chip.appendChild(nameSpan);
+
+            chip.addEventListener('click', async () => {
+                const nowSel = !this.selectedPersonalRecipients.has(p.id);
+                if (nowSel) {
                     this.selectedPersonalRecipients.add(p.id);
                     if (!this.crypto.myPersonalKey) await this.crypto.generatePersonalKey();
                     this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
@@ -400,12 +414,10 @@ class App {
                     this.selectedPersonalRecipients.delete(p.id);
                     this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: null, targetId: p.id } });
                 }
+                this.renderPersonalRecipients();
             });
-            item.appendChild(cb);
-            const span = document.createElement('span');
-            span.textContent = p.deviceName || 'Unknown Device';
-            item.appendChild(span);
-            listEl.appendChild(item);
+
+            listEl.appendChild(chip);
         });
         if (count === 0) {
             listEl.innerHTML = '<span style="font-size:0.8rem;color:var(--text-tertiary)">No other devices in the room yet.</span>';
@@ -430,20 +442,27 @@ class App {
             row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.05)';
             const left = document.createElement('div');
             left.style.cssText = 'display:flex;align-items:center;gap:8px';
-            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : ''}`;
+            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : (p.isAdmin ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(234,88,12,0.2);color:#ea580c;border-radius:10px;font-weight:600">Admin</span>' : '')}`;
             row.appendChild(left);
 
             if (p.id !== myId && !p.isCreator) {
                 const btns = document.createElement('div');
                 btns.style.cssText = 'display:flex;gap:6px';
-                const btnPromote = document.createElement('button');
-                btnPromote.className = 'btn btn-secondary';
-                btnPromote.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
-                btnPromote.textContent = 'Promote Admin';
-                btnPromote.onclick = () => {
-                    this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
-                    UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
-                };
+                if (!p.isAdmin) {
+                    const btnPromote = document.createElement('button');
+                    btnPromote.className = 'btn btn-secondary';
+                    btnPromote.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
+                    btnPromote.textContent = 'Promote Admin';
+                    btnPromote.onclick = () => {
+                        p.isAdmin = true;
+                        this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
+                        this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                        UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
+                        UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
+                        this.renderHostMembersList();
+                    };
+                    btns.appendChild(btnPromote);
+                }
                 const btnKick = document.createElement('button');
                 btnKick.className = 'btn btn-danger';
                 btnKick.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
@@ -452,7 +471,6 @@ class App {
                     this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
                     UI.toast(`Removed ${p.deviceName}`, 'success');
                 };
-                btns.appendChild(btnPromote);
                 btns.appendChild(btnKick);
                 row.appendChild(btns);
             }
@@ -507,8 +525,32 @@ class App {
 
     async changePassphrase(phrase) {
         if (!phrase || !phrase.trim()) { UI.toast('Passphrase cannot be empty', 'error'); return; }
-        await this.crypto.importKey(phrase.trim());
-        UI.toast('Passphrase updated! Share it with other devices.', 'success');
+        const cleanKey = phrase.trim();
+        await this.crypto.importKey(cleanKey);
+        if (this.conn.isCreator || this.conn.isAdmin) {
+            this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: cleanKey } });
+            document.getElementById('display-secret-phrase').textContent = cleanKey;
+            const code = this.conn.getRoomCode();
+            if (code) {
+                const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, cleanKey) : (window.location.origin + window.location.pathname + '#' + code);
+                const targetHash = this.e2eEnabled ? ('#' + code + ':' + cleanKey) : ('#' + code);
+                const urlEl = document.getElementById('share-url');
+                if (urlEl) urlEl.dataset.url = targetUrl;
+                window.history.replaceState(null, '', targetHash);
+                try {
+                    const saved = sessionStorage.getItem('whynotshare_active_session');
+                    if (saved) {
+                        const s = JSON.parse(saved);
+                        s.passphrase = cleanKey;
+                        sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
+                    }
+                } catch {}
+                this.renderInlineQr(targetUrl);
+            }
+            UI.toast('Room Key updated & broadcasted to all members!', 'success');
+        } else {
+            UI.toast('Passphrase updated locally!', 'success');
+        }
         document.getElementById('modal-passphrase').style.display = 'none';
     }
 
@@ -534,8 +576,7 @@ class App {
         document.getElementById('received-files').innerHTML = '';
         this.toggleE2E(this.e2eEnabled);
         this.togglePersonalE2E(false); // Personal E2E off by default
-        const hmBtn = document.getElementById('btn-host-manage');
-        if (hmBtn) hmBtn.style.display = (this.conn.isCreator || this.conn.isAdmin) ? 'inline-flex' : 'none';
+        this.updatePrivilegeUI();
         try {
             sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                 roomCode: code,
@@ -685,12 +726,20 @@ class App {
         this.renameMyDevice(newName);
     }
 
+    updatePrivilegeUI() {
+        const isPrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
+        const hmBtn = document.getElementById('btn-host-manage');
+        const passBtn = document.getElementById('btn-edit-passphrase');
+        if (hmBtn) hmBtn.style.display = isPrivileged ? 'inline-flex' : 'none';
+        if (passBtn) passBtn.style.display = isPrivileged ? 'none' : 'inline-flex';
+    }
+
     _createQrInstance(url, size = 240) {
         if (!window.QRCodeStyling || !url) return null;
         const isLight = document.body.classList.contains('light-theme');
-        const dotColor = isLight ? '#1e1b4b' : '#ffffff';
+        const dotColor = isLight ? '#1e1b4b' : '#f8fafc';
         const cornerColor = isLight ? '#f97316' : '#818cf8';
-        const centerDotColor = isLight ? '#ea580c' : '#a5b4fc';
+        const centerDotColor = isLight ? '#ea580c' : '#c084fc';
         const logoColor = isLight ? '#f97316' : '#818cf8';
 
         const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="12 10 76 80">
@@ -707,11 +756,12 @@ class App {
             width: size,
             height: size,
             data: url,
+            qrOptions: { errorCorrectionLevel: "H" },
             dotsOptions: { color: dotColor, type: "dots" },
             cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
             cornersDotOptions: { color: centerDotColor, type: "dot" },
-            backgroundOptions: { color: "transparent" },
-            imageOptions: { crossOrigin: "anonymous", margin: 8, imageSize: 0.44, hideBackgroundDots: true },
+            backgroundOptions: { color: "rgba(0, 0, 0, 0)" },
+            imageOptions: { crossOrigin: "anonymous", margin: 10, imageSize: 0.4, hideBackgroundDots: true },
             image: logoUrl
         });
     }
@@ -756,6 +806,32 @@ class App {
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const activeModals = document.querySelectorAll('.modal-overlay');
+                let closedAny = false;
+                activeModals.forEach(m => {
+                    if (m.style.display !== 'none') {
+                        m.style.display = 'none';
+                        closedAny = true;
+                    }
+                });
+                const devicesList = document.getElementById('devices-list');
+                const chevron = document.getElementById('devices-dropdown-chevron');
+                if (devicesList && devicesList.classList.contains('expanded')) {
+                    devicesList.classList.remove('expanded');
+                    if (chevron) chevron.style.transform = 'rotate(0deg)';
+                    closedAny = true;
+                }
+                if (closedAny) {
+                    const ti = document.getElementById('text-input');
+                    const shareScreen = document.getElementById('screen-share');
+                    if (ti && shareScreen && shareScreen.classList.contains('active')) {
+                        ti.focus();
+                    }
+                }
+            }
+        });
         const btnHostEnter = document.getElementById('btn-host-enter-room');
         if (btnHostEnter) {
             btnHostEnter.addEventListener('click', () => {
@@ -801,7 +877,7 @@ class App {
                     this.qrCodeObj.update({ backgroundOptions: { color: bgColor } });
                     this.qrCodeObj.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
                     setTimeout(() => {
-                        if (this.qrCodeObj) this.qrCodeObj.update({ backgroundOptions: { color: 'transparent' } });
+                        if (this.qrCodeObj) this.qrCodeObj.update({ backgroundOptions: { color: 'rgba(0, 0, 0, 0)' } });
                     }, 600);
                 }
             });
@@ -894,6 +970,14 @@ class App {
                 }
             });
         }
+        const btnGenRotateKey = document.getElementById('btn-gen-rotate-room-key');
+        if (btnGenRotateKey) {
+            btnGenRotateKey.addEventListener('click', async () => {
+                const phrase = await this.crypto.generateKey();
+                const inputEl = document.getElementById('input-rotate-room-key');
+                if (inputEl) inputEl.value = phrase;
+            });
+        }
         const btnRotateKey = document.getElementById('btn-rotate-room-key');
         if (btnRotateKey) {
             btnRotateKey.addEventListener('click', () => {
@@ -937,7 +1021,38 @@ class App {
 
         // Passphrase modal
         document.getElementById('btn-edit-passphrase').addEventListener('click', () => {
-            document.getElementById('input-new-passphrase').value = this.crypto.getPhrase() || '';
+            const isPrivileged = this.conn.isCreator || this.conn.isAdmin;
+            const titleEl = document.getElementById('passphrase-modal-title');
+            const labelEl = document.getElementById('passphrase-modal-label');
+            const descEl = document.getElementById('passphrase-modal-desc');
+            const inputEl = document.getElementById('input-new-passphrase');
+            const btnGen = document.getElementById('btn-generate-passphrase');
+            const btnSave = document.getElementById('btn-save-passphrase');
+            const btnCancel = document.getElementById('btn-cancel-passphrase');
+
+            inputEl.value = this.crypto.getPhrase() || '';
+
+            if (isPrivileged) {
+                if (titleEl) titleEl.textContent = 'Change Encryption Passphrase';
+                if (labelEl) labelEl.textContent = 'New Passphrase';
+                if (descEl) descEl.textContent = 'All devices must use the same passphrase to decrypt messages.';
+                inputEl.readOnly = false;
+                inputEl.style.opacity = '1';
+                inputEl.style.cursor = 'text';
+                if (btnGen) btnGen.style.display = 'flex';
+                if (btnSave) btnSave.style.display = '';
+                if (btnCancel) btnCancel.textContent = 'Cancel';
+            } else {
+                if (titleEl) titleEl.textContent = 'Room Encryption Key';
+                if (labelEl) labelEl.textContent = 'Current Room Key (View Only)';
+                if (descEl) descEl.textContent = 'Only room hosts or admins can rotate the encryption key.';
+                inputEl.readOnly = true;
+                inputEl.style.opacity = '0.85';
+                inputEl.style.cursor = 'default';
+                if (btnGen) btnGen.style.display = 'none';
+                if (btnSave) btnSave.style.display = 'none';
+                if (btnCancel) btnCancel.textContent = 'Close';
+            }
             document.getElementById('modal-passphrase').style.display = 'flex';
         });
         document.getElementById('btn-cancel-passphrase').addEventListener('click', () => document.getElementById('modal-passphrase').style.display = 'none');

@@ -238,8 +238,6 @@ button .waiting-dots span {
 .devices-header h3 {
     font-size: 0.85rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
     color: var(--text-secondary);
 }
 

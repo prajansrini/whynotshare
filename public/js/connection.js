@@ -15,6 +15,7 @@ class ConnectionManager {
         this.onDisconnected = null;
         this.onSyncRequest = null;
         this.onHistoryReceived = null;
+        this._startHeartbeat();
     }
 
     _roomCodeToPeerId(code) { return 'wns-' + code.replace(/-/g, '').toUpperCase(); }
@@ -33,7 +34,7 @@ class ConnectionManager {
         const peerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
             if (this.peer) { try { this.peer.destroy(); } catch {} }
-            this.peer = new Peer(peerId);
+            this.peer = new Peer(peerId, { pingInterval: 5000 });
             this.peer.on('open', (id) => {
                 this.myPeerId = id;
                 this.roomCode = code;
@@ -53,7 +54,7 @@ class ConnectionManager {
     joinRoom(code) {
         const hostPeerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
-            this.peer = new Peer();
+            this.peer = new Peer(undefined, { pingInterval: 5000 });
             let settled = false;
             this.peer.on('open', (id) => {
                 this.myPeerId = id;
@@ -94,14 +95,27 @@ class ConnectionManager {
         conn.on('close', () => {
             this.connections.delete(peerId);
             const peer = this.peers.find(p => p.id === peerId);
+            const wasCreator = peer ? peer.isCreator : (peerId === this._roomCodeToPeerId(this.roomCode));
             this.peers = this.peers.filter(p => p.id !== peerId);
             if (this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Unknown' });
-            if (this.isCreator) this._broadcast({ type: 'peer-update', payload: this.peers }, peerId);
+            if (this.isCreator) {
+                this._broadcast({ type: 'peer-update', payload: this.peers }, peerId);
+            } else if (wasCreator && this.peers.length > 0) {
+                this._handleHostSuccession();
+            }
         });
     }
 
     _onMessage(data, fromId) {
         switch (data.type) {
+            case 'ping': {
+                const c = this.connections.get(fromId);
+                if (c && c.open) { try { c.send({ type: 'pong', payload: { time: Date.now() } }); } catch {} }
+                break;
+            }
+            case 'pong': {
+                break;
+            }
             case 'peer-info': {
                 const info = data.payload;
                 const ex = this.peers.find(p => p.id === info.id);
@@ -139,7 +153,7 @@ class ConnectionManager {
             case 'text': {
                 const sid = data.payload.senderId || fromId;
                 if (sid === this.myPeerId) break;
-                if (this.onTextReceived) this.onTextReceived({ id: data.payload.id, from: sid, encrypted: data.payload.encrypted, timestamp: data.payload.timestamp, raw: data.payload.raw });
+                if (this.onTextReceived) this.onTextReceived({ ...data.payload, id: data.payload.id, from: sid, encrypted: data.payload.encrypted, timestamp: data.payload.timestamp, raw: data.payload.raw });
                 if (this.isCreator) this._broadcast({ type: 'text', payload: data.payload }, fromId);
                 break;
             }
@@ -180,14 +194,17 @@ class ConnectionManager {
                 break;
             }
             case 'promote-admin': {
+                const target = this.peers.find(p => p.id === data.payload.targetId);
+                if (target) target.isAdmin = true;
                 if (data.payload.targetId === this.myPeerId) {
                     this.isAdmin = true;
                     if (typeof UI !== 'undefined') UI.toast('You have been promoted to Admin!', 'success');
-                    const hmBtn = document.getElementById('btn-host-manage');
-                    if (hmBtn) hmBtn.style.display = 'inline-flex';
+                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
                 } else if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
+                if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
+                if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
                 break;
             }
             case 'room-deleted': {
@@ -196,11 +213,14 @@ class ConnectionManager {
                 break;
             }
             case 'share-personal-key': {
-                if (window.app && window.app.crypto) {
-                    window.app.crypto.importPeerPersonalKey(fromId, data.payload.keyStr);
+                const actualSender = data.payload.senderId || fromId;
+                if (!data.payload.targetId || data.payload.targetId === this.myPeerId) {
+                    if (window.app && window.app.crypto) {
+                        window.app.crypto.importPeerPersonalKey(actualSender, data.payload.keyStr);
+                    }
                 }
                 if (this.isCreator && data.payload.targetId && data.payload.targetId !== this.myPeerId) {
-                    this.sendDirect(data.payload.targetId, data);
+                    this.sendDirect(data.payload.targetId, { ...data, payload: { ...data.payload, senderId: actualSender } });
                 }
                 break;
             }
@@ -209,13 +229,14 @@ class ConnectionManager {
 
     sendDirect(targetPeerId, message) {
         if (targetPeerId === this.myPeerId) return;
+        const msgToSend = { ...message, payload: { ...message.payload, senderId: (message.payload && message.payload.senderId) || this.myPeerId, targetId: targetPeerId } };
         const conn = this.connections.get(targetPeerId);
         if (conn && conn.open) {
-            conn.send(message);
+            conn.send(msgToSend);
         } else if (!this.isCreator && this.roomCode) {
             // Route through host if not directly connected
             const hostConn = this.connections.get(this._roomCodeToPeerId(this.roomCode));
-            if (hostConn && hostConn.open) hostConn.send({ ...message, payload: { ...message.payload, targetId: targetPeerId } });
+            if (hostConn && hostConn.open) hostConn.send(msgToSend);
         }
     }
 
@@ -262,7 +283,79 @@ class ConnectionManager {
         }
     }
 
+    _handleHostSuccession() {
+        if (!this.peers || this.peers.length === 0) return;
+        const admins = this.peers.filter(p => p.isAdmin);
+        const heir = admins.length > 0 ? admins[0] : this.peers[0];
+
+        if (heir && heir.id === this.myPeerId) {
+            setTimeout(() => {
+                const hostPeerId = this._roomCodeToPeerId(this.roomCode);
+                const oldPeer = this.peer;
+                this.peer = new Peer(hostPeerId, { pingInterval: 5000 });
+                this.peer.on('open', (id) => {
+                    this.myPeerId = id;
+                    this.isCreator = true;
+                    this.isAdmin = true;
+                    if (oldPeer && !oldPeer.destroyed) { try { oldPeer.destroy(); } catch {} }
+                    const me = this.peers.find(p => p.id === heir.id || p.deviceName === this.myInfo.deviceName);
+                    if (me) { me.id = id; me.isCreator = true; me.isAdmin = true; }
+                    if (typeof UI !== 'undefined') {
+                        UI.toast('You are now the Room Host!', 'info');
+                        UI.updateDevicesList(this.peers, this.myPeerId);
+                    }
+                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
+                    if (window.app && window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
+                });
+                this.peer.on('connection', (conn) => this._handleIncoming(conn));
+            }, 600);
+        } else if (heir) {
+            if (typeof UI !== 'undefined') UI.toast(`${heir.deviceName || 'Admin'} is becoming the new Host...`, 'info');
+            setTimeout(() => {
+                const hostPeerId = this._roomCodeToPeerId(this.roomCode);
+                const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
+                conn.on('open', () => {
+                    this._register(conn, hostPeerId);
+                    conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo } });
+                    if (typeof UI !== 'undefined') UI.toast('Connected to new Host!', 'success');
+                });
+            }, 2500);
+        }
+    }
+
+    _startHeartbeat() {
+        if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
+        this._heartbeatInterval = setInterval(() => {
+            if (!this.peer || this.peer.destroyed) return;
+            if (this.peer.disconnected) { try { this.peer.reconnect(); } catch {} }
+            for (const [peerId, conn] of this.connections.entries()) {
+                if (conn && conn.open) { try { conn.send({ type: 'ping', payload: { time: Date.now() } }); } catch {} }
+            }
+            if (!this.isCreator && this.roomCode) {
+                const hostPeerId = this._roomCodeToPeerId(this.roomCode);
+                if (!this.connections.has(hostPeerId) || !this.connections.get(hostPeerId).open) {
+                    this._reconnectToHost();
+                }
+            }
+        }, 10000);
+    }
+
+    _reconnectToHost() {
+        if (!this.roomCode || !this.peer || this.peer.destroyed || this._reconnecting) return;
+        this._reconnecting = true;
+        setTimeout(() => { this._reconnecting = false; }, 5000);
+        try {
+            const hostPeerId = this._roomCodeToPeerId(this.roomCode);
+            const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
+            conn.on('open', () => {
+                this._register(conn, hostPeerId);
+                conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo } });
+            });
+        } catch {}
+    }
+
     leaveRoom() {
+        if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
         for (const conn of this.connections.values()) conn.close();
         this.connections.clear();
         if (this.peer) { this.peer.destroy(); this.peer = null; }

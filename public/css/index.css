@@ -449,7 +449,3 @@ body.light-theme .devices-panel {
 body.light-theme .transfer-bar {
     background: rgba(15, 23, 42, 0.08);
 }
-body.light-theme .message-received {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(15, 23, 42, 0.1);
-}
