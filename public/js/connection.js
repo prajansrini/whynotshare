@@ -159,6 +159,63 @@ class ConnectionManager {
                 }
                 break;
             }
+            case 'room-id-changed': {
+                this.roomCode = data.payload.newCode;
+                if (window.app && window.app._onRoomIdChanged) window.app._onRoomIdChanged(this.roomCode);
+                if (this.isCreator) this._broadcast(data, fromId);
+                break;
+            }
+            case 'room-key-rotated': {
+                if (window.app && window.app._onRoomKeyRotated) window.app._onRoomKeyRotated(data.payload.newKey);
+                if (this.isCreator) this._broadcast(data, fromId);
+                break;
+            }
+            case 'kick-peer': {
+                if (data.payload.targetId === this.myPeerId) {
+                    if (typeof UI !== 'undefined') UI.toast('You were removed by the host.', 'error');
+                    if (window.app) window.app.disconnect();
+                } else if (this.isCreator) {
+                    this._broadcast(data, fromId);
+                }
+                break;
+            }
+            case 'promote-admin': {
+                if (data.payload.targetId === this.myPeerId) {
+                    this.isAdmin = true;
+                    if (typeof UI !== 'undefined') UI.toast('You have been promoted to Admin!', 'success');
+                    const hmBtn = document.getElementById('btn-host-manage');
+                    if (hmBtn) hmBtn.style.display = 'inline-flex';
+                } else if (this.isCreator) {
+                    this._broadcast(data, fromId);
+                }
+                break;
+            }
+            case 'room-deleted': {
+                if (typeof UI !== 'undefined') UI.toast('The room was deleted by the host.', 'error');
+                if (window.app) window.app.disconnect();
+                break;
+            }
+            case 'share-personal-key': {
+                if (window.app && window.app.crypto) {
+                    window.app.crypto.importPeerPersonalKey(fromId, data.payload.keyStr);
+                }
+                if (this.isCreator && data.payload.targetId && data.payload.targetId !== this.myPeerId) {
+                    this.sendDirect(data.payload.targetId, data);
+                }
+                break;
+            }
+        }
+    }
+
+    sendDirect(targetPeerId, message) {
+        if (targetPeerId === this.myPeerId) return;
+        const conn = this.connections.get(targetPeerId);
+        if (conn && conn.open) {
+            conn.send(message);
+        } else if (!this.isCreator && this.roomCode) {
+            // Route through host if not directly connected
+            const hostConn = this.connections.get(this._roomCodeToPeerId(this.roomCode));
+            if (hostConn && hostConn.open) hostConn.send({ ...message, payload: { ...message.payload, targetId: targetPeerId } });
         }
     }
 

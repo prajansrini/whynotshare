@@ -353,6 +353,141 @@ class App {
         }
     }
 
+    /* --- Personal E2E & Host Governance Methods --- */
+    togglePersonalE2E(enabled) {
+        this.personalE2E = enabled;
+        const shareOn = document.getElementById('btn-share-encrypt-on');
+        const shareOff = document.getElementById('btn-share-encrypt-off');
+        if (shareOn && shareOff) {
+            shareOn.classList.toggle('active', enabled);
+            shareOff.classList.toggle('active-plaintext', !enabled);
+            const shareBar = shareOn.closest('.security-switch-bar');
+            if (shareBar) shareBar.classList.toggle('plaintext-mode', !enabled);
+        }
+        const container = document.getElementById('personal-recipients-container');
+        if (container) {
+            container.style.display = enabled ? 'flex' : 'none';
+            if (enabled) this.renderPersonalRecipients();
+        }
+        if (enabled && !this.crypto.myPersonalKey) {
+            this.crypto.generatePersonalKey();
+        }
+    }
+
+    renderPersonalRecipients() {
+        const listEl = document.getElementById('personal-recipients-list');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        const peers = this.conn.getPeers() || [];
+        const myId = this.conn.getSocketId();
+        if (!this.selectedPersonalRecipients) this.selectedPersonalRecipients = new Set();
+        
+        let count = 0;
+        peers.forEach(p => {
+            if (p.id === myId) return;
+            count++;
+            const item = document.createElement('label');
+            item.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;font-size:0.8rem;cursor:pointer;user-select:none';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = this.selectedPersonalRecipients.has(p.id);
+            cb.addEventListener('change', async () => {
+                if (cb.checked) {
+                    this.selectedPersonalRecipients.add(p.id);
+                    if (!this.crypto.myPersonalKey) await this.crypto.generatePersonalKey();
+                    this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
+                } else {
+                    this.selectedPersonalRecipients.delete(p.id);
+                    this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: null, targetId: p.id } });
+                }
+            });
+            item.appendChild(cb);
+            const span = document.createElement('span');
+            span.textContent = p.deviceName || 'Unknown Device';
+            item.appendChild(span);
+            listEl.appendChild(item);
+        });
+        if (count === 0) {
+            listEl.innerHTML = '<span style="font-size:0.8rem;color:var(--text-tertiary)">No other devices in the room yet.</span>';
+        }
+    }
+
+    openHostManageModal() {
+        document.getElementById('input-new-room-id').value = this.conn.getRoomCode() || '';
+        document.getElementById('input-rotate-room-key').value = this.crypto.getPhrase() || '';
+        this.renderHostMembersList();
+        document.getElementById('modal-host-manage').style.display = 'flex';
+    }
+
+    renderHostMembersList() {
+        const listEl = document.getElementById('host-members-list');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        const peers = this.conn.getPeers() || [];
+        const myId = this.conn.getSocketId();
+        peers.forEach(p => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.05)';
+            const left = document.createElement('div');
+            left.style.cssText = 'display:flex;align-items:center;gap:8px';
+            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : ''}`;
+            row.appendChild(left);
+
+            if (p.id !== myId && !p.isCreator) {
+                const btns = document.createElement('div');
+                btns.style.cssText = 'display:flex;gap:6px';
+                const btnPromote = document.createElement('button');
+                btnPromote.className = 'btn btn-secondary';
+                btnPromote.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
+                btnPromote.textContent = 'Promote Admin';
+                btnPromote.onclick = () => {
+                    this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
+                    UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
+                };
+                const btnKick = document.createElement('button');
+                btnKick.className = 'btn btn-danger';
+                btnKick.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
+                btnKick.textContent = 'Remove';
+                btnKick.onclick = () => {
+                    this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
+                    UI.toast(`Removed ${p.deviceName}`, 'success');
+                };
+                btns.appendChild(btnPromote);
+                btns.appendChild(btnKick);
+                row.appendChild(btns);
+            }
+            listEl.appendChild(row);
+        });
+    }
+
+    _onRoomIdChanged(newCode) {
+        document.getElementById('share-room-code').textContent = newCode;
+        document.getElementById('display-room-code').textContent = newCode;
+        const phrase = this.crypto.getPhrase() || '';
+        const targetUrl = this.e2eEnabled ? this._buildShareUrl(newCode, phrase) : (window.location.origin + window.location.pathname + '#' + newCode);
+        const targetHash = this.e2eEnabled ? ('#' + newCode + ':' + phrase) : ('#' + newCode);
+        const urlEl = document.getElementById('share-url');
+        if (urlEl) urlEl.dataset.url = targetUrl;
+        window.history.replaceState(null, '', targetHash);
+        this.renderInlineQr(targetUrl);
+        UI.toast('Room ID changed to: ' + newCode, 'success');
+    }
+
+    _onRoomKeyRotated(newKey) {
+        this.crypto.importKey(newKey);
+        document.getElementById('display-secret-phrase').textContent = newKey;
+        const code = this.conn.getRoomCode();
+        if (code) {
+            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, newKey) : (window.location.origin + window.location.pathname + '#' + code);
+            const targetHash = this.e2eEnabled ? ('#' + code + ':' + newKey) : ('#' + code);
+            const urlEl = document.getElementById('share-url');
+            if (urlEl) urlEl.dataset.url = targetUrl;
+            window.history.replaceState(null, '', targetHash);
+            this.renderInlineQr(targetUrl);
+        }
+        UI.toast('Room Key was rotated by Host!', 'success');
+    }
+
     async changePassphrase(phrase) {
         if (!phrase || !phrase.trim()) { UI.toast('Passphrase cannot be empty', 'error'); return; }
         await this.crypto.importKey(phrase.trim());
@@ -381,6 +516,9 @@ class App {
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
         this.toggleE2E(this.e2eEnabled);
+        this.togglePersonalE2E(false); // Personal E2E off by default
+        const hmBtn = document.getElementById('btn-host-manage');
+        if (hmBtn) hmBtn.style.display = (this.conn.isCreator || this.conn.isAdmin) ? 'inline-flex' : 'none';
         try {
             sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                 roomCode: code,
@@ -398,9 +536,13 @@ class App {
         const rs = document.getElementById('screen-room');
         if (rs && rs.classList.contains('active')) { this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers()); return; }
         UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
+        if (this.personalE2E) this.renderPersonalRecipients();
     }
 
-    _onPeerLeft() { UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId()); }
+    _onPeerLeft() {
+        UI.updateDevicesList(this.conn.getPeers(), this.conn.getSocketId());
+        if (this.personalE2E) this.renderPersonalRecipients();
+    }
 
     _buildShareUrl(code, phrase) {
         return window.location.origin + window.location.pathname + '#' + code + ':' + phrase;
@@ -597,6 +739,12 @@ class App {
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
+        const btnHostEnter = document.getElementById('btn-host-enter-room');
+        if (btnHostEnter) {
+            btnHostEnter.addEventListener('click', () => {
+                this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
+            });
+        }
         document.getElementById('btn-create').addEventListener('click', () => this.createRoom());
         document.getElementById('btn-join-screen').addEventListener('click', () => UI.showScreen('screen-join'));
         document.getElementById('btn-join-submit').addEventListener('click', () => {
@@ -707,10 +855,66 @@ class App {
         const bShareOff = document.getElementById('btn-share-encrypt-off');
         if (bRoomOn) bRoomOn.addEventListener('click', () => this.toggleE2E(true));
         if (bRoomOff) bRoomOff.addEventListener('click', () => this.toggleE2E(false));
-        if (bShareOn) bShareOn.addEventListener('click', () => this.toggleE2E(true));
-        if (bShareOff) bShareOff.addEventListener('click', () => this.toggleE2E(false));
+        if (bShareOn) bShareOn.addEventListener('click', () => this.togglePersonalE2E(true));
+        if (bShareOff) bShareOff.addEventListener('click', () => this.togglePersonalE2E(false));
         const oldToggle = document.getElementById('toggle-e2e');
         if (oldToggle) oldToggle.addEventListener('change', (e) => this.toggleE2E(e.target.checked));
+
+        // Host Governance modal events
+        const btnHostManage = document.getElementById('btn-host-manage');
+        if (btnHostManage) btnHostManage.addEventListener('click', () => this.openHostManageModal());
+        const btnCloseHostManage = document.getElementById('btn-close-host-manage');
+        if (btnCloseHostManage) btnCloseHostManage.addEventListener('click', () => document.getElementById('modal-host-manage').style.display = 'none');
+        document.getElementById('modal-host-manage').addEventListener('click', (e) => { if (e.target.id === 'modal-host-manage') e.target.style.display = 'none'; });
+        const btnSaveRoomId = document.getElementById('btn-save-room-id');
+        if (btnSaveRoomId) {
+            btnSaveRoomId.addEventListener('click', () => {
+                const newId = document.getElementById('input-new-room-id').value.trim();
+                if (newId) {
+                    this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
+                    this._onRoomIdChanged(newId);
+                    document.getElementById('modal-host-manage').style.display = 'none';
+                }
+            });
+        }
+        const btnRotateKey = document.getElementById('btn-rotate-room-key');
+        if (btnRotateKey) {
+            btnRotateKey.addEventListener('click', () => {
+                const newKey = document.getElementById('input-rotate-room-key').value.trim();
+                if (newKey) {
+                    this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
+                    this._onRoomKeyRotated(newKey);
+                    document.getElementById('modal-host-manage').style.display = 'none';
+                }
+            });
+        }
+        const btnDeleteRoom = document.getElementById('btn-host-delete-room');
+        if (btnDeleteRoom) {
+            btnDeleteRoom.addEventListener('click', () => {
+                if (confirm('Are you sure you want to delete this room and disconnect all members?')) {
+                    this.conn._broadcast({ type: 'room-deleted' });
+                    this.disconnect();
+                    document.getElementById('modal-host-manage').style.display = 'none';
+                }
+            });
+        }
+        const btnSelectAllRecipients = document.getElementById('btn-select-all-recipients');
+        if (btnSelectAllRecipients) {
+            btnSelectAllRecipients.addEventListener('click', async () => {
+                if (!this.crypto.myPersonalKey) await this.crypto.generatePersonalKey();
+                const peers = this.conn.getPeers() || [];
+                const myId = this.conn.getSocketId();
+                if (!this.selectedPersonalRecipients) this.selectedPersonalRecipients = new Set();
+                peers.forEach(p => {
+                    if (p.id !== myId) {
+                        this.selectedPersonalRecipients.add(p.id);
+                        this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
+                    }
+                });
+                this.renderPersonalRecipients();
+                UI.toast('Shared personal encryption key with all recipients', 'success');
+            });
+        }
 
         // Passphrase modal
         document.getElementById('btn-edit-passphrase').addEventListener('click', () => {

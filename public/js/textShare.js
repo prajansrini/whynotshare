@@ -13,7 +13,10 @@ class TextShare {
         try {
             const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
             let payload;
-            if (this.encryptionEnabled && this.crypto.hasKey()) {
+            if (window.app && window.app.personalE2E) {
+                const encrypted = await this.crypto.encryptWithPersonalKey(text);
+                payload = { id: msgId, personalEncrypted: true, encrypted, timestamp: Date.now() };
+            } else if (this.encryptionEnabled && this.crypto.hasKey()) {
                 const encrypted = await this.crypto.encrypt(text);
                 payload = { id: msgId, encrypted, timestamp: Date.now() };
             } else {
@@ -33,7 +36,13 @@ class TextShare {
         try {
             const msgId = data.id || (Date.now() + '-' + Math.random().toString(36).substr(2, 5));
             let text;
-            if (data.raw !== undefined) {
+            if (data.personalEncrypted) {
+                try {
+                    text = await this.crypto.decryptWithPersonalKey(data.encrypted, data.from);
+                } catch (e) {
+                    text = '🔒 [Encrypted Message — Key Required]';
+                }
+            } else if (data.raw !== undefined) {
                 text = data.raw;
             } else if (data.encrypted) {
                 if (!this.crypto.hasKey()) { text = '[Encrypted - No Key Set]'; }

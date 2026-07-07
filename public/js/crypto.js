@@ -160,6 +160,76 @@ class CryptoManager {
 
     getPhrase() { return this.phrase; }
     hasKey() { return this.key !== null; }
+
+    /* --- Personal E2E Encryption Methods --- */
+    async generatePersonalKey() {
+        const indices = new Uint32Array(3);
+        if (window.crypto && window.crypto.getRandomValues) {
+            window.crypto.getRandomValues(indices);
+        } else {
+            for (let i = 0; i < 3; i++) indices[i] = Math.floor(Math.random() * WORDS.length);
+        }
+        const words = Array.from(indices).map(i => WORDS[i % WORDS.length]);
+        this.myPersonalKeyStr = 'pk-' + words.join('-') + '-' + Math.random().toString(36).slice(2, 6);
+        this.myPersonalKey = await this._deriveKey(this.myPersonalKeyStr);
+        if (!this.peerPersonalKeys) this.peerPersonalKeys = new Map();
+        return this.myPersonalKeyStr;
+    }
+
+    async importPeerPersonalKey(peerId, keyStr) {
+        if (!this.peerPersonalKeys) this.peerPersonalKeys = new Map();
+        if (!keyStr) {
+            this.peerPersonalKeys.delete(peerId);
+            return;
+        }
+        const derived = await this._deriveKey(keyStr);
+        this.peerPersonalKeys.set(peerId, derived);
+    }
+
+    async encryptWithPersonalKey(text) {
+        if (!this.myPersonalKey) await this.generatePersonalKey();
+        const enc = new TextEncoder().encode(text);
+        const iv = new Uint8Array(12);
+        if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(iv);
+        else for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
+
+        if (this.hasSubtle && this.myPersonalKey instanceof CryptoKey) {
+            const ciphertext = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.myPersonalKey, enc);
+            return {
+                ciphertext: this._bufToBase64(ciphertext),
+                iv: this._bufToBase64(iv.buffer),
+                personalEncrypted: true
+            };
+        } else {
+            const ciphertext = this._fallbackCrypt(enc.buffer, iv, this.myPersonalKey);
+            return {
+                ciphertext: this._bufToBase64(ciphertext),
+                iv: this._bufToBase64(iv.buffer),
+                personalEncrypted: true
+            };
+        }
+    }
+
+    async decryptWithPersonalKey(encryptedObj, senderId) {
+        if (!this.peerPersonalKeys || !this.peerPersonalKeys.has(senderId)) {
+            throw new Error('Key Required');
+        }
+        const peerKey = this.peerPersonalKeys.get(senderId);
+        const ciphertextBuf = this._base64ToBuf(encryptedObj.ciphertext);
+        const ivBuf = this._base64ToBuf(encryptedObj.iv);
+
+        if (this.hasSubtle && peerKey instanceof CryptoKey) {
+            try {
+                const dec = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(ivBuf) }, peerKey, ciphertextBuf);
+                return new TextDecoder().decode(dec);
+            } catch (e) {
+                throw new Error('Key Required');
+            }
+        } else {
+            const dec = this._fallbackCrypt(ciphertextBuf, new Uint8Array(ivBuf), peerKey);
+            return new TextDecoder().decode(dec);
+        }
+    }
 }
 
 window.CryptoManager = CryptoManager;

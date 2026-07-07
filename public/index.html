@@ -73,29 +73,32 @@
                 <div class="security-mode-section mt-md">
                     <div class="security-mode-label">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        Security &amp; Encryption Mode
+                        Room Access &amp; Key Mode
                     </div>
                     <div class="security-switch-bar">
                         <div class="sec-slider"></div>
                         <button id="btn-room-encrypt-on" class="sec-pill-btn active">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>E2E Encrypted</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Room Key Required</span>
                         </button>
                         <button id="btn-room-encrypt-off" class="sec-pill-btn">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Plaintext Mode</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>No Room Key</span>
                         </button>
                     </div>
                 </div>
                 <div id="secret-phrase-container" class="secret-phrase-section">
-                    <div class="secret-phrase-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Secret Phrase (for encryption)</div>
+                    <div class="secret-phrase-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</div>
                     <div id="display-secret-phrase" class="secret-phrase-value">---</div>
-                    <button id="btn-copy-phrase" class="btn btn-secondary btn-full mt-md"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy Phrase</button>
+                    <button id="btn-copy-phrase" class="btn btn-secondary btn-full mt-md"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy Key</button>
                 </div>
                 <div class="share-link-section mt-lg" style="display:flex;gap:12px">
                     <button id="btn-copy-link" class="btn btn-primary" style="flex:2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Copy Share Link</button>
                     <button id="btn-back-from-room" class="btn btn-secondary" style="flex:1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Cancel</button>
                     <div id="share-url" style="display:none"></div>
                 </div>
-                <div class="waiting-indicator" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--glass-border)"><div class="waiting-dots"><span></span><span></span><span></span></div><span>Waiting for devices to join...</span><span style="font-size:0.8rem;color:var(--text-tertiary)">Share the room code &amp; secret phrase with other devices</span></div>
+                <div class="enter-room-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--glass-border)">
+                    <button id="btn-host-enter-room" class="btn btn-primary btn-full" style="padding:14px;font-size:1.05rem;font-weight:700;box-shadow:0 4px 16px rgba(108, 92, 231, 0.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:-4px"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Enter Live Room</button>
+                    <p style="font-size:0.8rem;color:var(--text-tertiary);text-align:center;margin-top:8px">Enter the chat instantly as Host — devices can join at any time</p>
+                </div>
             </div>
         </div>
 
@@ -137,16 +140,17 @@
                         <button id="btn-show-qr-share" class="btn btn-secondary" style="padding:6px 10px;border-radius:18px;font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;height:32px" title="Show QR Code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>QR</button>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <div class="security-switch-bar sec-bar-sm">
+                        <button id="btn-host-manage" class="btn btn-secondary" style="display:none;padding:6px 12px;border-radius:18px;font-size:0.8rem;align-items:center;gap:5px;height:32px;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.3)" title="Host Governance Settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Manage</button>
+                        <div class="security-switch-bar sec-bar-sm" title="Personal Encryption: Encrypt messages only for selected recipients">
                             <div class="sec-slider"></div>
-                            <button id="btn-share-encrypt-on" class="sec-pill-btn active">
-                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Encrypted</span>
+                            <button id="btn-share-encrypt-on" class="sec-pill-btn">
+                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Personal E2E: ON</span>
                             </button>
-                            <button id="btn-share-encrypt-off" class="sec-pill-btn">
-                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Plaintext</span>
+                            <button id="btn-share-encrypt-off" class="sec-pill-btn active-plaintext">
+                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Personal E2E: OFF</span>
                             </button>
                         </div>
-                        <button id="btn-edit-passphrase" class="btn btn-secondary" style="padding:6px 12px;border-radius:18px;font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;height:32px;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="View or Change Encryption Key"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Key</button>
+                        <button id="btn-edit-passphrase" class="btn btn-secondary" style="padding:6px 12px;border-radius:18px;font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;height:32px;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-primary)" title="View Room Key"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key</button>
                     </div>
                 </div>
                 <button id="btn-disconnect" class="btn btn-danger" style="padding:8px 16px;font-size:0.85rem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Leave</button>
@@ -176,6 +180,13 @@
                 </div>
                 <div id="transfers-list" style="margin-bottom:8px"></div>
                 <div id="staged-files-chat" style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column"></div>
+                <div id="personal-recipients-container" style="display:none;padding:10px 14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;margin-bottom:8px;flex-direction:column;gap:8px">
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between">
+                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Select Recipients who can read your encrypted messages:</span>
+                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:2px 8px;font-size:0.75rem;height:auto">Select All</button>
+                    </div>
+                    <div id="personal-recipients-list" style="display:flex;flex-wrap:wrap;gap:8px;max-height:100px;overflow-y:auto"></div>
+                </div>
                 <div class="text-input-area">
                     <textarea id="text-input" placeholder="Type a message..." rows="1"></textarea>
                     <button id="btn-attach-chat" class="btn-send" style="margin-right:8px;background:var(--accent-gradient);color:white;border:none;box-shadow:0 4px 14px rgba(99,102,241,0.35)" title="Attach & Send File"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
@@ -194,6 +205,51 @@
                 </div>
                 <div id="staged-files-tab" style="display:none;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;margin-bottom:16px;flex-direction:column"></div>
                 <div id="received-files"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOST MANAGEMENT MODAL -->
+    <div id="modal-host-manage" class="modal-overlay" style="display:none">
+        <div class="modal-card glass-card" style="max-width:440px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg>Host Governance Panel</h3>
+                <button id="btn-close-host-manage" class="btn-send" style="width:28px;height:28px;font-size:1rem;display:flex;align-items:center;justify-content:center;background:var(--glass-bg)">✕</button>
+            </div>
+            
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <!-- Change Room ID -->
+                <div style="padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px">
+                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:6px">Change Room ID</div>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="input-new-room-id" class="input-field text-mono" placeholder="New Room Code (e.g. VIP-ROOM)" style="padding:8px 12px;font-size:0.85rem">
+                        <button id="btn-save-room-id" class="btn btn-primary" style="padding:8px 14px;font-size:0.8rem">Rename</button>
+                    </div>
+                </div>
+
+                <!-- Rotate Room Key -->
+                <div style="padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px">
+                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:6px">Rotate Room Key</div>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="input-rotate-room-key" class="input-field text-mono" placeholder="New Room Key / Passphrase" style="padding:8px 12px;font-size:0.85rem">
+                        <button id="btn-rotate-room-key" class="btn btn-primary" style="padding:8px 14px;font-size:0.8rem">Rotate</button>
+                    </div>
+                </div>
+
+                <!-- Manage Members List -->
+                <div style="padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px">
+                    <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px">Room Members & Privileges</div>
+                    <div id="host-members-list" style="display:flex;flex-direction:column;gap:8px;max-height:160px;overflow-y:auto"></div>
+                </div>
+
+                <!-- Delete Room -->
+                <div style="padding:12px;background:rgba(239, 68, 68, 0.1);border:1px solid rgba(239, 68, 68, 0.3);border-radius:12px;display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <div style="font-size:0.85rem;font-weight:700;color:#f87171">Delete Room</div>
+                        <div style="font-size:0.75rem;color:var(--text-tertiary)">Disconnect all members & destroy room</div>
+                    </div>
+                    <button id="btn-host-delete-room" class="btn btn-danger" style="padding:6px 12px;font-size:0.8rem">Delete Room</button>
+                </div>
             </div>
         </div>
     </div>
