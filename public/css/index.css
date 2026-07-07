@@ -91,6 +91,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+*, *::before, *::after {
+    -webkit-tap-highlight-color: transparent !important;
+}
+a, button, label, .btn, .sec-pill-btn, .btn-rename-pill, .device-item, .devices-dropdown-trigger, .theme-toggle, .room-badge, svg, span, .security-switch-bar {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent !important;
+}
 a { color: var(--accent-secondary); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, textarea { font-family: inherit; }

@@ -59,7 +59,7 @@ body.light-theme .glass-card,
 body.light-theme .transfer-card,
 body.light-theme .modal-card,
 body.light-theme .devices-panel,
-body.light-theme .message-received {
+body.light-theme .message-received .message-bubble {
     background: var(--glass-bg) !important;
     border-color: var(--glass-border) !important;
     box-shadow: var(--shadow-md) !important;
@@ -124,13 +124,19 @@ body.light-theme .sec-pill-btn:not(.active):not(.active-plaintext):hover {
     color: var(--text-primary);
 }
 
+body.light-theme .sec-slider {
+    background: linear-gradient(135deg, #f97316, #ea580c) !important;
+    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
 body.light-theme .sec-pill-btn.active,
 body.light-theme .sec-pill-btn.active-plaintext {
-    background: linear-gradient(135deg, #f97316, #ea580c) !important;
+    background: transparent !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3) !important;
+    box-shadow: none !important;
     border-color: transparent !important;
 }
+
 
 body.light-theme .room-badge {
     background: rgba(234, 88, 12, 0.12) !important;
@@ -159,17 +165,15 @@ body.light-theme .tab-btn:not(.active):hover {
     color: var(--text-primary) !important;
     background: rgba(255, 255, 255, 0.6) !important;
 }
-body.light-theme .tab-btn.active {
+body.light-theme .tab-slider {
     background: linear-gradient(135deg, #f97316, #ea580c) !important;
-    color: #ffffff !important;
     box-shadow: 0 2px 10px rgba(234, 88, 12, 0.3) !important;
-    border-bottom: none !important;
 }
-
-body.light-theme .messages-container {
-    background: rgba(255, 255, 255, 0.6) !important;
-    border: 1px solid rgba(235, 150, 120, 0.3) !important;
-    box-shadow: inset 0 2px 8px rgba(220, 130, 100, 0.05) !important;
+body.light-theme .tab-btn.active {
+    background: transparent !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
 }
 body.light-theme .btn-send {
     background: linear-gradient(135deg, #f97316, #ea580c) !important;

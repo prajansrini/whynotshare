@@ -50,7 +50,6 @@ class App {
         };
 
         this._bindEvents();
-        this._showPageUrl();
         this.updateMyNameDisplay();
 
         try {
@@ -111,8 +110,10 @@ class App {
             const code = await this.conn.createRoom();
             document.getElementById('display-room-code').textContent = code;
             document.getElementById('display-secret-phrase').textContent = phrase;
-            document.getElementById('share-url').dataset.url = this._buildShareUrl(code, phrase);
-            window.history.replaceState(null, '', '#' + code + ':' + phrase);
+            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
+            const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
+            document.getElementById('share-url').dataset.url = targetUrl;
+            window.history.replaceState(null, '', targetHash);
             try {
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                     roomCode: code,
@@ -303,6 +304,8 @@ class App {
         if (roomOn && roomOff) {
             roomOn.classList.toggle('active', enabled);
             roomOff.classList.toggle('active-plaintext', !enabled);
+            const roomBar = roomOn.closest('.security-switch-bar');
+            if (roomBar) roomBar.classList.toggle('plaintext-mode', !enabled);
         }
 
         // Update Share screen security pills
@@ -311,16 +314,22 @@ class App {
         if (shareOn && shareOff) {
             shareOn.classList.toggle('active', enabled);
             shareOff.classList.toggle('active-plaintext', !enabled);
+            const shareBar = shareOn.closest('.security-switch-bar');
+            if (shareBar) shareBar.classList.toggle('plaintext-mode', !enabled);
         }
         const btnEditPass = document.getElementById('btn-edit-passphrase');
         if (btnEditPass) {
-            btnEditPass.style.display = enabled ? 'inline-flex' : 'none';
+            btnEditPass.classList.toggle('collapsed', !enabled);
         }
 
         // Toggle visibility of secret phrase container on Room screen with smooth slide animation
         const phraseContainer = document.getElementById('secret-phrase-container');
         if (phraseContainer) {
             phraseContainer.classList.toggle('collapsed', !enabled);
+        }
+        const qrSection = document.getElementById('inline-qr-section');
+        if (qrSection) {
+            qrSection.style.display = enabled ? 'flex' : 'none';
         }
 
         // Update Share URL dataset and location hash
@@ -367,7 +376,7 @@ class App {
         }
         const dList = document.getElementById('devices-list');
         const dChev = document.getElementById('devices-dropdown-chevron');
-        if (dList) dList.style.display = 'none';
+        if (dList) { dList.classList.remove('expanded'); dList.style.display = ''; }
         if (dChev) dChev.style.transform = 'rotate(0deg)';
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
@@ -395,11 +404,6 @@ class App {
 
     _buildShareUrl(code, phrase) {
         return window.location.origin + window.location.pathname + '#' + code + ':' + phrase;
-    }
-
-    _showPageUrl() {
-        const el = document.getElementById('network-url');
-        if (el) { const u = window.location.origin + window.location.pathname; el.textContent = u; el.onclick = () => UI.copyToClipboard(u); }
     }
 
     _checkUrlHash() {
@@ -526,18 +530,18 @@ class App {
         if (!window.QRCodeStyling || !url) return null;
         const isLight = document.body.classList.contains('light-theme');
         const dotColor = isLight ? '#1e1b4b' : '#ffffff';
-        const cornerColor = isLight ? '#4338ca' : '#818cf8';
-        const centerDotColor = isLight ? '#1e1b4b' : '#a5b4fc';
-        const logoColor = isLight ? '#1e1b4b' : '#818cf8';
+        const cornerColor = isLight ? '#f97316' : '#818cf8';
+        const centerDotColor = isLight ? '#ea580c' : '#a5b4fc';
+        const logoColor = isLight ? '#f97316' : '#818cf8';
 
-        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="12 10 76 80">
             <path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke="${logoColor}" stroke-width="6" stroke-linejoin="round"/>
             <g transform="translate(34, 34) scale(1.3)" stroke="${logoColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
                 <line x1="22" y1="2" x2="11" y2="13"/>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </g>
         </svg>`;
-        const logoUrl = 'data:image/svg+xml;base64,' + btoa(svgIcon);
+        const logoUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgIcon);
 
         return new QRCodeStyling({
             type: "svg",
@@ -548,7 +552,7 @@ class App {
             cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
             cornersDotOptions: { color: centerDotColor, type: "dot" },
             backgroundOptions: { color: "transparent" },
-            imageOptions: { crossOrigin: "anonymous", margin: 6, imageSize: 0.3, hideBackgroundDots: true },
+            imageOptions: { crossOrigin: "anonymous", margin: 8, imageSize: 0.44, hideBackgroundDots: true },
             image: logoUrl
         });
     }
@@ -572,6 +576,11 @@ class App {
     }
 
     renderInlineQr(url) {
+        const section = document.getElementById('inline-qr-section');
+        if (section) {
+            section.style.display = this.e2eEnabled ? 'flex' : 'none';
+        }
+        if (!this.e2eEnabled) return;
         if (!url) {
             const urlEl = document.getElementById('share-url');
             url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
@@ -623,7 +632,7 @@ class App {
             btnDlQr.addEventListener('click', () => {
                 if (this.qrCodeObj) {
                     const isLight = document.body.classList.contains('light-theme');
-                    const bgColor = isLight ? '#fde8df' : '#0c1022';
+                    const bgColor = isLight ? '#ffffff' : '#0c1022';
                     this.qrCodeObj.update({ backgroundOptions: { color: bgColor } });
                     this.qrCodeObj.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
                     setTimeout(() => {
@@ -682,6 +691,8 @@ class App {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 btn.classList.add('active');
+                const nav = btn.closest('.tab-nav');
+                if (nav) nav.dataset.active = btn.dataset.tab;
                 document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
             });
         });
