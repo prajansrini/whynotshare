@@ -123,6 +123,8 @@ class App {
                 }));
             } catch {}
             UI.showScreen('screen-room');
+            const urlEl = document.getElementById('share-url');
+            this.renderInlineQr(urlEl ? urlEl.dataset.url : null);
         } catch (err) {
             UI.toast('Failed: ' + err.message, 'error');
         } finally {
@@ -143,7 +145,12 @@ class App {
             btn.innerHTML = '<div class="waiting-dots" style="display:inline-flex;margin:0 8px 0 0"><span></span><span></span><span></span></div><span>Connecting...</span>';
         }
         try {
-            if (phrase && phrase.trim()) await this.crypto.importKey(phrase.trim());
+            if (phrase && phrase.trim()) {
+                await this.crypto.importKey(phrase.trim());
+                this.toggleE2E(true);
+            } else {
+                this.toggleE2E(false);
+            }
             const peers = await this.conn.joinRoom(code);
             this._enterShareScreen(code, peers);
         } catch (err) {
@@ -279,6 +286,14 @@ class App {
 
     toggleE2E(enabled) {
         this.e2eEnabled = enabled;
+        try {
+            const savedSess = sessionStorage.getItem('whynotshare_active_session');
+            if (savedSess) {
+                const sess = JSON.parse(savedSess);
+                sess.e2eEnabled = enabled;
+                sessionStorage.setItem('whynotshare_active_session', JSON.stringify(sess));
+            }
+        } catch {}
         if (this.textShare) this.textShare.setEncryption(enabled);
         if (this.fileTransfer) this.fileTransfer.setEncryption(enabled);
 
@@ -321,6 +336,11 @@ class App {
             if (window.location.hash.startsWith('#' + code)) {
                 window.history.replaceState(null, '', enabled && phrase ? '#' + code + ':' + phrase : '#' + code);
             }
+            const sr = document.getElementById('screen-room');
+            if (sr && sr.classList.contains('active')) {
+                const urlEl = document.getElementById('share-url');
+                this.renderInlineQr(urlEl ? urlEl.dataset.url : null);
+            }
         }
     }
 
@@ -345,6 +365,10 @@ class App {
         } else {
             UI.showEmptyMessages();
         }
+        const dList = document.getElementById('devices-list');
+        const dChev = document.getElementById('devices-dropdown-chevron');
+        if (dList) dList.style.display = 'none';
+        if (dChev) dChev.style.transform = 'rotate(0deg)';
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
         this.toggleE2E(this.e2eEnabled);
@@ -391,6 +415,7 @@ class App {
             setTimeout(() => {
                 document.getElementById('input-room-code').value = code;
                 document.getElementById('input-secret-phrase').value = phrase || '';
+                this.toggleE2E(Boolean(phrase && phrase.trim()));
                 UI.showScreen('screen-join');
             }, 300);
         }
@@ -497,6 +522,69 @@ class App {
         this.renameMyDevice(newName);
     }
 
+    _createQrInstance(url, size = 240) {
+        if (!window.QRCodeStyling || !url) return null;
+        const isLight = document.body.classList.contains('light-theme');
+        const dotColor = isLight ? '#1e1b4b' : '#ffffff';
+        const cornerColor = isLight ? '#4338ca' : '#818cf8';
+        const centerDotColor = isLight ? '#1e1b4b' : '#a5b4fc';
+        const logoColor = isLight ? '#1e1b4b' : '#818cf8';
+
+        const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke="${logoColor}" stroke-width="6" stroke-linejoin="round"/>
+            <g transform="translate(34, 34) scale(1.3)" stroke="${logoColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </g>
+        </svg>`;
+        const logoUrl = 'data:image/svg+xml;base64,' + btoa(svgIcon);
+
+        return new QRCodeStyling({
+            type: "svg",
+            width: size,
+            height: size,
+            data: url,
+            dotsOptions: { color: dotColor, type: "dots" },
+            cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
+            cornersDotOptions: { color: centerDotColor, type: "dot" },
+            backgroundOptions: { color: "transparent" },
+            imageOptions: { crossOrigin: "anonymous", margin: 6, imageSize: 0.3, hideBackgroundDots: true },
+            image: logoUrl
+        });
+    }
+
+    showQrModal(url) {
+        if (!url) {
+            const urlEl = document.getElementById('share-url');
+            url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+        }
+        const modal = document.getElementById('modal-qr');
+        const container = document.getElementById('qr-container');
+        if (!modal || !container) return;
+        container.innerHTML = '';
+        this.qrCodeObj = this._createQrInstance(url, 240);
+        if (this.qrCodeObj) {
+            this.qrCodeObj.append(container);
+        } else {
+            container.textContent = 'QR Library not loaded';
+        }
+        modal.style.display = 'flex';
+    }
+
+    renderInlineQr(url) {
+        if (!url) {
+            const urlEl = document.getElementById('share-url');
+            url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+        }
+        const container = document.getElementById('inline-qr-container');
+        if (!container) return;
+        container.innerHTML = '';
+        this.inlineQrObj = this._createQrInstance(url, 200);
+        if (this.inlineQrObj) {
+            this.inlineQrObj.append(container);
+        }
+    }
+
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
@@ -516,6 +604,47 @@ class App {
                 UI.copyToClipboard(urlEl && urlEl.dataset.url ? urlEl.dataset.url : window.location.href);
             });
         }
+        const openQr = () => {
+            const urlEl = document.getElementById('share-url');
+            const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+            this.showQrModal(url);
+        };
+        const btnShowQrRoom = document.getElementById('btn-show-qr-room');
+        const btnShowQrShare = document.getElementById('btn-show-qr-share');
+        if (btnShowQrRoom) btnShowQrRoom.addEventListener('click', openQr);
+        if (btnShowQrShare) btnShowQrShare.addEventListener('click', openQr);
+
+        const btnCloseQr = document.getElementById('btn-close-qr');
+        const modalQr = document.getElementById('modal-qr');
+        if (btnCloseQr) btnCloseQr.addEventListener('click', () => { if (modalQr) modalQr.style.display = 'none'; });
+        if (modalQr) modalQr.addEventListener('click', (e) => { if (e.target.id === 'modal-qr') modalQr.style.display = 'none'; });
+        const btnDlQr = document.getElementById('btn-download-qr');
+        if (btnDlQr) {
+            btnDlQr.addEventListener('click', () => {
+                if (this.qrCodeObj) {
+                    const isLight = document.body.classList.contains('light-theme');
+                    const bgColor = isLight ? '#fde8df' : '#0c1022';
+                    this.qrCodeObj.update({ backgroundOptions: { color: bgColor } });
+                    this.qrCodeObj.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
+                    setTimeout(() => {
+                        if (this.qrCodeObj) this.qrCodeObj.update({ backgroundOptions: { color: 'transparent' } });
+                    }, 600);
+                }
+            });
+        }
+
+        const devHeader = document.getElementById('devices-header');
+        if (devHeader) {
+            devHeader.addEventListener('click', () => {
+                const list = document.getElementById('devices-list');
+                const chevron = document.getElementById('devices-dropdown-chevron');
+                if (list) {
+                    const isExp = list.classList.toggle('expanded');
+                    if (chevron) chevron.style.transform = isExp ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            });
+        }
+
         document.getElementById('btn-back-from-room').addEventListener('click', () => this.leaveRoom());
         document.getElementById('btn-send-text').addEventListener('click', () => this.sendText());
         document.getElementById('btn-disconnect').addEventListener('click', () => this.leaveRoom());
@@ -531,6 +660,16 @@ class App {
                     sun.style.display = isLight ? 'block' : 'none';
                 }
                 try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch {}
+                const urlEl = document.getElementById('share-url');
+                const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+                const mq = document.getElementById('modal-qr');
+                if (mq && mq.style.display !== 'none') {
+                    this.showQrModal(url);
+                }
+                const sr = document.getElementById('screen-room');
+                if (sr && sr.classList.contains('active')) {
+                    this.renderInlineQr(url);
+                }
             });
         }
 
