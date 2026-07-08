@@ -51,6 +51,7 @@ class App {
 
         this._bindEvents();
         this.updateMyNameDisplay();
+        try { window.history.replaceState({ screenId: 'screen-landing' }, '', window.location.href); } catch {}
 
         try {
             if (localStorage.getItem('whynotshare_theme') === 'light') {
@@ -169,7 +170,7 @@ class App {
         }
     }
 
-    leaveRoom() {
+    leaveRoom(pushToHistory = true) {
         try { sessionStorage.removeItem('whynotshare_active_session'); } catch {}
         this.conn.leaveRoom();
         this.textShare.clear();
@@ -184,7 +185,7 @@ class App {
         if (btnC) { btnC.disabled = false; btnC.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Room'; }
         const btnJ = document.getElementById('btn-join-submit');
         if (btnJ) { btnJ.disabled = false; btnJ.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connect'; }
-        UI.showScreen('screen-landing');
+        UI.showScreen('screen-landing', pushToHistory);
         this.init(); // re-init callbacks
     }
 
@@ -964,6 +965,17 @@ class App {
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
+        window.addEventListener('popstate', (e) => {
+            const state = e.state;
+            const targetScreenId = state && state.screenId ? state.screenId : 'screen-landing';
+            const currentActive = document.querySelector('.screen.active');
+            const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
+            if (currentScreenId === 'screen-share' && (targetScreenId === 'screen-landing' || targetScreenId === 'screen-room')) {
+                this.leaveRoom(false);
+            } else {
+                UI.showScreen(targetScreenId, false);
+            }
+        });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const activeModals = document.querySelectorAll('.modal-overlay');

@@ -59,11 +59,11 @@ class RoomManager {
                 room.peers.delete(socketId);
                 room.lastActivity = Date.now();
                 if (room.peers.size === 0) {
-                    // Keep empty room for 2 min for reconnect
+                    // Keep empty room active for 10 min for reconnects or rejoining
                     setTimeout(() => {
                         const r = this.rooms.get(code);
                         if (r && r.peers.size === 0) this.rooms.delete(code);
-                    }, 2 * 60 * 1000);
+                    }, 10 * 60 * 1000);
                 }
                 return { code, remainingPeers: this.getPeers(code) };
             }

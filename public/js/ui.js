@@ -2,12 +2,22 @@ class UI {
     static $(sel) { return document.querySelector(sel); }
     static $$(sel) { return document.querySelectorAll(sel); }
 
-    static showScreen(screenId) {
+    static showScreen(screenId, pushToHistory = true) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const t = document.getElementById(screenId);
         if (t) t.classList.add('active');
-        if (typeof window !== 'undefined' && window.app && typeof window.app.updateMyNameDisplay === 'function') {
-            try { window.app.updateMyNameDisplay(); } catch {}
+        if (typeof window !== 'undefined') {
+            if (pushToHistory && window.history && window.history.pushState) {
+                try {
+                    const currentState = window.history.state;
+                    if (!currentState || currentState.screenId !== screenId) {
+                        window.history.pushState({ screenId }, '', window.location.href);
+                    }
+                } catch {}
+            }
+            if (window.app && typeof window.app.updateMyNameDisplay === 'function') {
+                try { window.app.updateMyNameDisplay(); } catch {}
+            }
         }
     }
 
