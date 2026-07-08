@@ -790,6 +790,20 @@ button .waiting-dots span {
     cursor: default;
     user-select: none;
     -webkit-user-select: none;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.device-id-badge > div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    overflow: hidden;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 .device-icon-span {
@@ -805,12 +819,19 @@ button .waiting-dots span {
 }
 
 .device-name-text {
-    font-weight: 600;
-    color: var(--accent-secondary);
+    font-weight: 700;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
+    min-width: 0;
+}
+
+.device-os-text {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .btn-rename-pill {
@@ -885,27 +906,26 @@ button .waiting-dots span {
 }
 
 .btn-close-modal {
-    width: 32px;
-    height: 32px;
-    font-size: 1.05rem;
-    display: flex;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     flex-shrink: 0;
 }
 
 .btn-close-modal:hover {
-    background: var(--accent-gradient);
-    color: white;
-    border-color: transparent;
-    transform: scale(1.05);
+    background: rgba(255, 99, 132, 0.2);
+    border-color: rgba(255, 99, 132, 0.4);
+    color: #ff6b81;
+    transform: translateY(-1px);
 }
 
 /* --- File Transfer Drop Zone --- */
@@ -1098,12 +1118,16 @@ button .waiting-dots span {
 
 /* --- Responsive --- */
 @media (max-width: 600px) {
-    .app-title { font-size: 1.6rem; }
+    .app-title { font-size: 1.5rem; }
     .room-code-value { font-size: 2.2rem; }
-    .messages-container { flex: 1 1 0; min-height: 80px; -webkit-overflow-scrolling: touch; }
+    .share-header-top { margin-bottom: 6px !important; }
+    .share-header-card { padding: 8px 10px !important; margin-bottom: 6px !important; gap: 6px !important; }
+    .tab-nav { margin: 6px 0 !important; padding: 3px !important; }
+    .tab-btn { font-size: 0.85rem; padding: 6px 12px; }
+    .messages-container { flex: 1 1 0; min-height: 80px; margin-bottom: 8px; padding: 10px; -webkit-overflow-scrolling: touch; }
+    .text-input-area { padding-bottom: max(6px, env(safe-area-inset-bottom, 6px)); }
     .share-header { flex-wrap: wrap; gap: var(--space-sm); }
     .device-chip { font-size: 0.8rem; padding: 6px 10px; }
-    .tab-btn { font-size: 0.85rem; padding: 8px 12px; }
 }
 
 @media (max-width: 400px) {

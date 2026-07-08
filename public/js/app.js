@@ -98,6 +98,9 @@ class App {
         } catch { }
 
         this._checkUrlHash();
+        window.addEventListener('hashchange', () => {
+            this._checkUrlHash();
+        });
     }
 
     async createRoom() {
@@ -168,7 +171,7 @@ class App {
                 peers = await this.conn.joinRoom(code);
             } catch (err) {
                 const isMyRoom = (this.lastCreatedRoomCode && code === this.lastCreatedRoomCode) || (this.lastRoomCodeLeft && code === this.lastRoomCodeLeft);
-                if (err.message === 'Room not found.' || (err && err.message && err.message.includes('Timed out')) || isMyRoom) {
+                if (isMyRoom || err.message === 'Room not found.') {
                     await this.conn.createRoom(code);
                     peers = this.conn.getPeers();
                 } else {
@@ -519,7 +522,11 @@ class App {
         const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
         const inputKey = document.getElementById('input-rotate-room-key');
 
-        if (boxToggleOpenRoom) boxToggleOpenRoom.style.display = isPrivileged ? 'flex' : 'none';
+        if (boxToggleOpenRoom) {
+            boxToggleOpenRoom.style.display = 'block';
+            boxToggleOpenRoom.style.opacity = isPrivileged ? '1' : '0.55';
+            boxToggleOpenRoom.style.pointerEvents = isPrivileged ? 'auto' : 'none';
+        }
 
         if (toggleOpenRoom) {
             toggleOpenRoom.checked = isOpenRoom;
@@ -551,8 +558,17 @@ class App {
         }
         if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isPrivileged) ? 'inline-flex' : 'none';
 
-        const deleteBox = document.getElementById('box-delete-room');
-        if (deleteBox) deleteBox.style.display = isPrivileged ? 'flex' : 'none';
+        const deleteBtn = document.getElementById('btn-host-delete-room');
+        if (deleteBtn) {
+            deleteBtn.style.display = isPrivileged ? 'flex' : 'none';
+            deleteBtn.dataset.confirming = 'false';
+            deleteBtn.style.background = 'rgba(239, 68, 68, 0.12)';
+            deleteBtn.style.borderColor = 'rgba(239, 68, 68, 0.35)';
+            const mainTxt = document.getElementById('txt-delete-room-main');
+            const subTxt = document.getElementById('txt-delete-room-sub');
+            if (mainTxt) mainTxt.textContent = 'Delete Room';
+            if (subTxt) subTxt.textContent = 'Disconnect all members & destroy room';
+        }
 
         const bottomActions = document.getElementById('host-manage-bottom-actions');
         if (bottomActions) bottomActions.style.display = isPrivileged ? 'flex' : 'none';
@@ -772,11 +788,13 @@ class App {
         }
         if (code) {
             setTimeout(() => {
-                document.getElementById('input-room-code').value = code;
-                document.getElementById('input-secret-phrase').value = phrase || '';
+                const codeInput = document.getElementById('input-room-code');
+                const phraseInput = document.getElementById('input-secret-phrase');
+                if (codeInput) codeInput.value = code;
+                if (phraseInput) phraseInput.value = phrase || '';
                 this.toggleE2E(Boolean(phrase && phrase.trim()));
                 UI.showScreen('screen-join');
-            }, 300);
+            }, 20);
         }
     }
 
@@ -811,16 +829,18 @@ class App {
         if (badge.querySelector('.inline-rename-box')) return;
 
         const nameSpan = badge.querySelector('.display-device-name');
+        const osSpan = badge.querySelector('.display-os-name');
         const editBtn = badge.querySelector('.btn-rename-pill');
         if (!nameSpan || !editBtn) return;
 
         const currentName = nameSpan.textContent;
         nameSpan.style.display = 'none';
+        if (osSpan) osSpan.style.display = 'none';
         editBtn.style.display = 'none';
 
         const editBox = document.createElement('div');
         editBox.className = 'inline-rename-box';
-        editBox.style.cssText = 'display:flex;align-items:center;gap:6px;flex:1;margin-right:6px;transform-origin:left center;overflow:hidden;animation:expandInlineRename 0.25s cubic-bezier(0.16,1,0.3,1) forwards;';
+        editBox.style.cssText = 'display:flex;align-items:center;gap:6px;flex:1;margin-right:6px;animation:fadeInFast 0.18s ease forwards;';
         editBox.innerHTML = `
             <input type="text" class="input-field inline-input-el" value="${currentName}" style="padding:4px 8px;font-size:0.85rem;height:28px;min-width:110px;flex:1" maxlength="32" autocomplete="off" spellcheck="false">
             <button class="btn-rename-pill btn-random-inline" title="Random Name" style="padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></button>
@@ -836,21 +856,26 @@ class App {
         const randomBtn = editBox.querySelector('.btn-random-inline');
 
         let closed = false;
+        let isCancelling = false;
+        let isRandomizing = false;
+
         const closeEdit = () => {
             if (closed) return;
             closed = true;
             editBox.remove();
             nameSpan.style.display = '';
+            if (osSpan) osSpan.style.display = '';
             editBtn.style.display = '';
             nameSpan.style.animation = 'fadeInFast 0.15s ease forwards';
+            if (osSpan) osSpan.style.animation = 'fadeInFast 0.15s ease forwards';
             editBtn.style.animation = 'fadeInFast 0.15s ease forwards';
         };
 
         const saveEdit = () => {
             if (closed) return;
             const val = inputEl.value.trim();
-            if (!val) {
-                UI.toast('Device name cannot be empty', 'error');
+            if (!val || val === currentName) {
+                closeEdit();
                 return;
             }
             this.renameMyDevice(val);
@@ -863,22 +888,28 @@ class App {
         });
         cancelBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
+            isCancelling = true;
             closeEdit();
         });
         randomBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
+            isRandomizing = true;
             const newName = DeviceInfo.generateRandomName();
             inputEl.value = newName;
-            inputEl.focus();
+            setTimeout(() => { isRandomizing = false; inputEl.focus(); inputEl.select(); }, 10);
         });
         inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') saveEdit();
-            if (e.key === 'Escape') closeEdit();
+            if (e.key === 'Escape') {
+                isCancelling = true;
+                closeEdit();
+            }
         });
         inputEl.addEventListener('blur', () => {
             setTimeout(() => {
-                closeEdit();
-            }, 150);
+                if (closed || isCancelling || isRandomizing) return;
+                saveEdit();
+            }, 120);
         });
 
         setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
@@ -1009,16 +1040,20 @@ class App {
             const targetScreenId = state && state.screenId ? state.screenId : 'screen-landing';
             const currentActive = document.querySelector('.screen.active');
             const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
-            if (currentScreenId === 'screen-share' && (targetScreenId === 'screen-landing' || targetScreenId === 'screen-room')) {
+            if (currentScreenId === 'screen-share' && (targetScreenId === 'screen-landing' || targetScreenId === 'screen-room' || targetScreenId === 'screen-join')) {
                 this.leaveRoom(false);
             } else if (targetScreenId === 'screen-share' && !this.conn.getRoomCode()) {
                 const codeToRejoin = this.lastRoomCodeLeft || (window.location.hash ? window.location.hash.slice(1).split(':')[0] : null);
-                if (codeToRejoin && codeToRejoin !== 'create-room') {
-                    UI.toast('Rejoining room as member...', 'info');
-                    this.joinRoom(codeToRejoin);
+                if (this.lastCreatedRoomCode || codeToRejoin === 'create-room') {
+                    UI.showScreen('screen-room', false);
                     return;
                 }
-                UI.toast('Room session disconnected. Please join or enter the room again.', 'warning');
+                if (codeToRejoin && codeToRejoin !== 'create-room') {
+                    const joinInput = document.getElementById('join-room-code');
+                    if (joinInput) joinInput.value = codeToRejoin;
+                    UI.showScreen('screen-join', false);
+                    return;
+                }
                 UI.showScreen('screen-landing', false);
             } else {
                 UI.showScreen(targetScreenId, false);
@@ -1364,7 +1399,24 @@ class App {
         const btnDeleteRoom = document.getElementById('btn-host-delete-room');
         if (btnDeleteRoom) {
             btnDeleteRoom.addEventListener('click', () => {
-                if (confirm('Are you sure you want to delete this room and disconnect all members?')) {
+                if (btnDeleteRoom.dataset.confirming !== 'true') {
+                    btnDeleteRoom.dataset.confirming = 'true';
+                    btnDeleteRoom.style.background = 'rgba(239, 68, 68, 0.28)';
+                    btnDeleteRoom.style.borderColor = '#ef4444';
+                    const mainTxt = document.getElementById('txt-delete-room-main');
+                    const subTxt = document.getElementById('txt-delete-room-sub');
+                    if (mainTxt) mainTxt.textContent = 'Are you sure? Click again to Delete';
+                    if (subTxt) subTxt.textContent = 'This option cannot be undone';
+                    clearTimeout(btnDeleteRoom._confirmTimer);
+                    btnDeleteRoom._confirmTimer = setTimeout(() => {
+                        btnDeleteRoom.dataset.confirming = 'false';
+                        btnDeleteRoom.style.background = 'rgba(239, 68, 68, 0.12)';
+                        btnDeleteRoom.style.borderColor = 'rgba(239, 68, 68, 0.35)';
+                        if (mainTxt) mainTxt.textContent = 'Delete Room';
+                        if (subTxt) subTxt.textContent = 'Disconnect all members & destroy room';
+                    }, 5000);
+                } else {
+                    clearTimeout(btnDeleteRoom._confirmTimer);
                     this.conn._broadcast({ type: 'room-deleted' });
                     document.getElementById('modal-host-manage').style.display = 'none';
                     setTimeout(() => {

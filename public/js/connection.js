@@ -107,14 +107,13 @@ class ConnectionManager {
         conn.on('data', (data) => this._onMessage(data, peerId));
         conn.on('close', () => {
             this.connections.delete(peerId);
+            const hostId = this._roomCodeToPeerId(this.roomCode);
+            const wasHost = (peerId === hostId);
             const peer = this.peers.find(p => p.id === peerId);
-            const wasCreator = peer ? peer.isCreator : (peerId === this._roomCodeToPeerId(this.roomCode));
             this.peers = this.peers.filter(p => p.id !== peerId);
-            if (this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Unknown' });
+            if (this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Member' });
             if (this.isCreator) {
-                this._broadcast({ type: 'peer-update', payload: this.peers }, peerId);
-            } else if (wasCreator && this.peers.length > 0) {
-                this.scheduleHostSuccession(5000);
+                this._broadcast({ type: 'peer-update', payload: [...this.peers] }, peerId);
             }
             if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
             else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
@@ -132,11 +131,11 @@ class ConnectionManager {
                 break;
             }
             case 'peer-info': {
-                const info = data.payload;
+                const payload = data.payload || {};
                 if (this.isCreator && window.app && window.app.e2eEnabled) {
                     const hostAuth = window.app.crypto ? window.app.crypto.authHash : null;
-                    if (hostAuth && info.authHash !== hostAuth) {
-                        const reason = !info.authHash ? 'Room Key required! This room is encrypted.' : 'Incorrect Room Key! Access denied.';
+                    if (hostAuth && payload.authHash !== hostAuth) {
+                        const reason = !payload.authHash ? 'Room Key required! This room is encrypted.' : 'Incorrect Room Key! Access denied.';
                         const c = this.connections.get(fromId);
                         if (c && c.open) {
                             try { c.send({ type: 'join-rejected', payload: { reason } }); } catch {}
@@ -146,16 +145,26 @@ class ConnectionManager {
                         break;
                     }
                 }
+                const info = {
+                    id: payload.id || fromId,
+                    deviceName: payload.deviceName || 'Member Device',
+                    deviceType: payload.deviceType || 'laptop',
+                    systemName: payload.systemName || '',
+                    ...payload
+                };
+                info.id = info.id || fromId;
+                info.deviceName = info.deviceName || 'Member Device';
+                info.isCreator = (info.id === this._roomCodeToPeerId(this.roomCode));
                 const ex = this.peers.find(p => p.id === info.id);
                 if (!ex) this.peers.push(info); else Object.assign(ex, info);
                 if (this.onPeerJoined) this.onPeerJoined(info);
                 if (this.isCreator) {
                     const c = this.connections.get(fromId);
-                    if (c && c.open) {
+                    if (c && (c.open || c._open)) {
                         try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch {}
-                        try { c.send({ type: 'peer-update', payload: this.peers }); } catch {}
+                        try { c.send({ type: 'peer-update', payload: [...this.peers] }); } catch {}
                     }
-                    this._broadcast({ type: 'peer-update', payload: this.peers });
+                    this._broadcast({ type: 'peer-update', payload: [...this.peers] }, fromId);
                     if (this.onSyncRequest) {
                         const history = this.onSyncRequest();
                         if (history && history.length > 0) {
@@ -188,7 +197,11 @@ class ConnectionManager {
             }
             case 'peer-update': {
                 const oldHost = (this.peers || []).find(p => p.isCreator);
-                this.peers = data.payload;
+                this.peers = (Array.isArray(data.payload) ? data.payload : []).map(p => ({
+                    deviceName: 'Member Device',
+                    deviceType: 'laptop',
+                    ...p
+                }));
                 const newHost = (this.peers || []).find(p => p.isCreator);
                 if (oldHost && newHost && oldHost.id !== newHost.id && typeof UI !== 'undefined') {
                     UI.toast(`${newHost.deviceName || 'Admin'} is now the Room Host!`, 'info');
@@ -200,7 +213,9 @@ class ConnectionManager {
                 break;
             }
             case 'host-leaving':
-                this.scheduleHostSuccession(5000);
+                if (fromId === this._roomCodeToPeerId(this.roomCode)) {
+                    this.scheduleHostSuccession(5000);
+                }
                 break;
             case 'chat-history': {
                 if (this.onHistoryReceived) this.onHistoryReceived(data.payload);
@@ -227,7 +242,7 @@ class ConnectionManager {
                     } else if (typeof UI !== 'undefined') {
                         UI.updateDevicesList(this.peers, this.myPeerId);
                     }
-                    if (this.isCreator) this._broadcast({ type: 'peer-update', payload: this.peers });
+                    if (this.isCreator) this._broadcast({ type: 'peer-update', payload: [...this.peers] });
                 }
                 break;
             }
@@ -328,13 +343,13 @@ class ConnectionManager {
     _broadcast(message, excludeId) {
         const recipients = message && message.payload && message.payload.recipients ? message.payload.recipients : null;
         for (const [pid, conn] of this.connections) {
-            if (pid !== excludeId && conn.open) {
+            if (pid !== excludeId && conn && (conn.open || conn._open)) {
                 if (recipients && Array.isArray(recipients) && recipients.length > 0) {
-                    if (!recipients.includes(pid) && pid !== this._roomCodeToPeerId(this.roomCode) && pid !== message.payload.senderId && pid !== message.payload.from) {
+                    if (!recipients.includes(pid) && pid !== this._roomCodeToPeerId(this.roomCode) && pid !== (message.payload && message.payload.senderId) && pid !== (message.payload && message.payload.from)) {
                         continue;
                     }
                 }
-                conn.send(message);
+                try { conn.send(message); } catch (e) {}
             }
         }
     }
@@ -442,17 +457,18 @@ class ConnectionManager {
             }
             if (!this.isCreator && this.roomCode) {
                 const hostPeerId = this._roomCodeToPeerId(this.roomCode);
-                if (!this.connections.has(hostPeerId) || !this.connections.get(hostPeerId).open) {
+                const hostConn = this.connections.get(hostPeerId);
+                if (!hostConn || (!hostConn.open && !hostConn._open)) {
                     this._reconnectToHost();
                 }
             }
-        }, 3500);
+        }, 5000);
     }
 
     _reconnectToHost() {
         if (!this.roomCode || !this.peer || this.peer.destroyed || this._reconnecting) return;
         this._reconnecting = true;
-        setTimeout(() => { this._reconnecting = false; }, 3000);
+        setTimeout(() => { this._reconnecting = false; }, 4000);
         try {
             const hostPeerId = this._roomCodeToPeerId(this.roomCode);
             const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
@@ -461,15 +477,7 @@ class ConnectionManager {
                 this._register(conn, hostPeerId);
                 conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo } });
             });
-            conn.on('error', () => {
-                this.scheduleHostSuccession(5000);
-            });
-            setTimeout(() => {
-                if (!conn.open) this.scheduleHostSuccession(5000);
-            }, 1800);
-        } catch {
-            this._handleHostSuccession();
-        }
+        } catch {}
     }
 
     leaveRoom() {
