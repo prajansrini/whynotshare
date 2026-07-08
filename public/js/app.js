@@ -1129,16 +1129,11 @@ class App {
         document.getElementById('btn-send-text').addEventListener('click', () => this.sendText());
         document.getElementById('btn-disconnect').addEventListener('click', () => this.leaveRoom());
 
-        const themeBtn = document.getElementById('btn-theme-toggle');
-        if (themeBtn) {
+        document.querySelectorAll('.btn-theme-toggle').forEach(themeBtn => {
             themeBtn.addEventListener('click', () => {
                 const isLight = document.body.classList.toggle('light-theme');
-                const moon = document.querySelector('.icon-moon');
-                const sun = document.querySelector('.icon-sun');
-                if (moon && sun) {
-                    moon.style.display = isLight ? 'none' : 'block';
-                    sun.style.display = isLight ? 'block' : 'none';
-                }
+                document.querySelectorAll('.icon-moon').forEach(moon => moon.style.display = isLight ? 'none' : 'block');
+                document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'block' : 'none');
                 try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch {}
                 const urlEl = document.getElementById('share-url');
                 const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
@@ -1151,7 +1146,7 @@ class App {
                     this.renderInlineQr(url);
                 }
             });
-        }
+        });
 
         const ti = document.getElementById('text-input');
         ti.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendText(); } });
