@@ -74,7 +74,7 @@ class App {
                     if (sess.isCreator) {
                         UI.showScreen('screen-room');
                         document.getElementById('display-room-code').textContent = sess.roomCode;
-                        document.getElementById('display-secret-phrase').textContent = sess.passphrase || 'None (Plaintext)';
+                        this.updatePhraseUI(sess.passphrase, !sess.e2eEnabled);
                         const urlEl = document.getElementById('share-url');
                         if (urlEl) urlEl.dataset.url = this._buildShareUrl(sess.roomCode, sess.passphrase);
                         this.conn.createRoom(sess.roomCode).then(() => {
@@ -106,10 +106,15 @@ class App {
             btn.innerHTML = '<div class="waiting-dots" style="display:inline-flex;margin:0 8px 0 0"><span></span><span></span><span></span></div><span>Creating Room...</span>';
         }
         try {
-            const phrase = await this.crypto.generateKey();
+            let phrase = '';
+            if (this.e2eEnabled) {
+                phrase = await this.crypto.generateKey();
+            } else {
+                await this.crypto.importKey('');
+            }
             const code = await this.conn.createRoom();
             document.getElementById('display-room-code').textContent = code;
-            document.getElementById('display-secret-phrase').textContent = phrase;
+            this.updatePhraseUI(phrase, !this.e2eEnabled);
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
@@ -285,8 +290,50 @@ class App {
         }
     }
 
+    updatePhraseUI(phrase, isOpen) {
+        const el = document.getElementById('display-secret-phrase');
+        if (!el) return;
+        if ('value' in el && el.tagName === 'INPUT') {
+            if (isOpen || !this.e2eEnabled) {
+                el.value = '';
+                el.placeholder = 'Open Room (No Encryption)';
+                el.disabled = true;
+                el.style.opacity = '0.4';
+                el.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+            } else {
+                el.value = phrase || '';
+                el.placeholder = 'Room Key';
+                el.disabled = false;
+                el.style.opacity = '1';
+                el.style.backgroundColor = '';
+            }
+        } else {
+            el.textContent = (isOpen || !this.e2eEnabled) ? 'None (Open Room)' : (phrase || '');
+        }
+        const btnGen = document.getElementById('btn-gen-room-key');
+        if (btnGen) btnGen.style.display = (isOpen || !this.e2eEnabled) ? 'none' : 'inline-flex';
+    }
+
     toggleE2E(enabled) {
         this.e2eEnabled = enabled;
+        if (!enabled && this.crypto) {
+            this.crypto.importKey('');
+            this.updatePhraseUI('', true);
+        } else if (enabled && this.crypto && !this.crypto.getPhrase() && (!this.conn || this.conn.isCreator || !this.conn.getRoomCode())) {
+            this.crypto.generateKey().then(phrase => {
+                this.updatePhraseUI(phrase || '', false);
+                const code = this.conn ? this.conn.getRoomCode() : null;
+                const urlEl = document.getElementById('share-url');
+                if (code && urlEl && code !== '---') {
+                    urlEl.dataset.url = this._buildShareUrl(code, phrase);
+                    if (window.location.hash.startsWith('#' + code)) window.history.replaceState(null, '', '#' + code + ':' + phrase);
+                    const sr = document.getElementById('screen-room');
+                    if (sr && sr.classList.contains('active')) this.renderInlineQr(urlEl.dataset.url);
+                }
+            });
+        } else if (enabled && this.crypto) {
+            this.updatePhraseUI(this.crypto.getPhrase(), false);
+        }
         try {
             const savedSess = sessionStorage.getItem('whynotshare_active_session');
             if (savedSess) {
@@ -371,7 +418,7 @@ class App {
         const pe2ePill = document.getElementById('pe2e-status-pill');
         if (pe2ePill) {
             pe2ePill.textContent = enabled ? 'ON' : 'OFF';
-            pe2ePill.style.color = enabled ? '#a855f7' : 'var(--text-tertiary)';
+            pe2ePill.style.color = enabled ? 'var(--accent-primary)' : 'var(--text-tertiary)';
         }
         this.renderPersonalRecipients();
         if (enabled && !this.crypto.myPersonalKey) {
@@ -394,12 +441,9 @@ class App {
             const isSel = this.selectedPersonalRecipients.has(p.id);
             const chip = document.createElement('div');
             chip.className = 'recipient-chip ' + (isSel ? 'selected' : '');
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:0.82rem;font-weight:500;cursor:pointer;user-select:none;transition:all 0.2s ease;' +
-                (isSel ? 'background:linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.3));border:1px solid rgba(168,85,247,0.8);color:var(--text-primary);box-shadow:0 2px 10px rgba(168,85,247,0.3)' :
-                         'background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);opacity:0.8');
             
             const iconSpan = document.createElement('span');
-            iconSpan.style.cssText = 'display:flex;align-items:center;' + (isSel ? 'color:#c084fc;' : 'color:var(--text-tertiary);');
+            iconSpan.className = 'chip-icon';
             iconSpan.innerHTML = isSel ? 
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
@@ -432,7 +476,8 @@ class App {
     openHostManageModal() {
         const isPrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
         const roomCode = this.conn.getRoomCode() || '';
-        const phrase = this.crypto.getPhrase() || '';
+        const isOpenRoom = !this.e2eEnabled || !this.crypto.getPhrase() || this.crypto.getPhrase().trim() === '';
+        const phrase = isOpenRoom ? '' : (this.crypto.getPhrase() || '');
         const url = this._buildShareUrl(roomCode, phrase);
 
         document.getElementById('input-new-room-id').value = roomCode;
@@ -453,11 +498,17 @@ class App {
 
         if (boxToggleOpenRoom) boxToggleOpenRoom.style.display = isPrivileged ? 'flex' : 'none';
 
-        const isOpenRoom = !phrase || phrase.trim() === '';
         if (toggleOpenRoom) {
             toggleOpenRoom.checked = isOpenRoom;
             toggleOpenRoom.disabled = !isPrivileged;
         }
+
+        const barKeyMode = document.getElementById('bar-room-key-mode');
+        if (barKeyMode) barKeyMode.classList.toggle('plaintext-mode', isOpenRoom);
+        const btnKeyReq = document.getElementById('btn-room-key-required');
+        if (btnKeyReq) btnKeyReq.classList.toggle('active', !isOpenRoom);
+        const btnKeyOpen = document.getElementById('btn-room-key-open');
+        if (btnKeyOpen) btnKeyOpen.classList.toggle('active-plaintext', isOpenRoom);
 
         if (inputKey) {
             if (isOpenRoom) {
@@ -480,6 +531,8 @@ class App {
         const deleteBox = document.getElementById('box-delete-room');
         if (deleteBox) deleteBox.style.display = isPrivileged ? 'flex' : 'none';
 
+        const bottomActions = document.getElementById('host-manage-bottom-actions');
+        if (bottomActions) bottomActions.style.display = isPrivileged ? 'flex' : 'none';
         const btnSaveManage = document.getElementById('btn-save-host-manage');
         if (btnSaveManage) btnSaveManage.style.display = isPrivileged ? 'inline-flex' : 'none';
 
@@ -501,7 +554,8 @@ class App {
             left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : (p.isAdmin ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(234,88,12,0.2);color:#ea580c;border-radius:10px;font-weight:600">Admin</span>' : '')}`;
             row.appendChild(left);
 
-            if (p.id !== myId && !p.isCreator) {
+            const isMePrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
+            if (isMePrivileged && p.id !== myId && !p.isCreator) {
                 const btns = document.createElement('div');
                 btns.style.cssText = 'display:flex;gap:6px';
                 if (!p.isAdmin) {
@@ -571,9 +625,11 @@ class App {
         UI.toast('Room ID changed to: ' + newCode, 'success');
     }
 
-    _onRoomKeyRotated(newKey) {
-        this.crypto.importKey(newKey);
-        document.getElementById('display-secret-phrase').textContent = newKey;
+    async _onRoomKeyRotated(newKey) {
+        const isEnc = Boolean(newKey && newKey.trim());
+        this.toggleE2E(isEnc);
+        await this.crypto.importKey(newKey || '');
+        this.updatePhraseUI(newKey, !isEnc);
         const code = this.conn.getRoomCode();
         if (code) {
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, newKey) : (window.location.origin + window.location.pathname + '#' + code);
@@ -585,13 +641,14 @@ class App {
                 const saved = sessionStorage.getItem('whynotshare_active_session');
                 if (saved) {
                     const s = JSON.parse(saved);
-                    s.passphrase = newKey;
+                    s.passphrase = newKey || '';
+                    s.e2eEnabled = this.e2eEnabled;
                     sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
                 }
             } catch {}
             this.renderInlineQr(targetUrl);
         }
-        UI.toast('Room Key was rotated by Host!', 'success');
+        UI.toast(isEnc ? 'Room Key was rotated / updated!' : 'Room changed to Open Room!', 'success');
     }
 
     async changePassphrase(phrase) {
@@ -600,7 +657,7 @@ class App {
         await this.crypto.importKey(cleanKey);
         if (this.conn.isCreator || this.conn.isAdmin) {
             this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: cleanKey } });
-            document.getElementById('display-secret-phrase').textContent = cleanKey;
+            this.updatePhraseUI(cleanKey, false);
             const code = this.conn.getRoomCode();
             if (code) {
                 const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, cleanKey) : (window.location.origin + window.location.pathname + '#' + code);
@@ -774,6 +831,15 @@ class App {
             if (e.key === 'Enter') saveEdit();
             if (e.key === 'Escape') closeEdit();
         });
+        inputEl.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (editBox.parentNode && inputEl.value.trim()) {
+                    saveEdit();
+                } else if (editBox.parentNode) {
+                    closeEdit();
+                }
+            }, 150);
+        });
 
         setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
     }
@@ -800,7 +866,10 @@ class App {
         const hmBtn = document.getElementById('btn-host-manage');
         const hmText = document.getElementById('btn-host-manage-text');
         const passBtn = document.getElementById('btn-edit-passphrase');
-        if (hmBtn) hmBtn.style.display = 'inline-flex';
+        if (hmBtn) {
+            hmBtn.style.display = 'inline-flex';
+            hmBtn.classList.toggle('btn-host-privileged', isPrivileged);
+        }
         if (hmText) hmText.textContent = isPrivileged ? 'Host Manage' : 'Room Info';
         if (passBtn) passBtn.style.display = 'none';
     }
@@ -822,17 +891,20 @@ class App {
         </svg>`;
         const logoUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgIcon);
 
+        // 4x High-DPI / Retina super-sampling prevents bitmap blurring when zoomed in and eliminates sub-pixel gap scratches
+        const renderSize = size * 4;
+
         return new QRCodeStyling({
             type: "canvas",
-            width: size,
-            height: size,
+            width: renderSize,
+            height: renderSize,
             data: url,
             qrOptions: { errorCorrectionLevel: "H" },
-            dotsOptions: { color: dotColor, type: "dots" },
+            dotsOptions: { color: dotColor, type: "rounded" },
             cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
             cornersDotOptions: { color: centerDotColor, type: "dot" },
             backgroundOptions: { color: "rgba(0, 0, 0, 0)" },
-            imageOptions: { margin: 8, imageSize: 0.35, hideBackgroundDots: true },
+            imageOptions: { margin: 10, imageSize: 0.28, hideBackgroundDots: true },
             image: logoUrl
         });
     }
@@ -850,6 +922,12 @@ class App {
         this.qrCodeObj = this._createQrInstance(url, 240);
         if (this.qrCodeObj) {
             this.qrCodeObj.append(container);
+            const canvasEl = container.querySelector('canvas');
+            if (canvasEl) {
+                canvasEl.style.width = '240px';
+                canvasEl.style.height = '240px';
+                canvasEl.style.display = 'block';
+            }
         } else {
             container.textContent = 'QR Library not loaded';
         }
@@ -860,9 +938,13 @@ class App {
         if (section) {
             section.style.display = 'flex';
         }
+        const urlEl = document.getElementById('share-url');
         if (!url) {
-            const urlEl = document.getElementById('share-url');
             url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+        }
+        if (urlEl && url) {
+            urlEl.dataset.url = url;
+            if ('value' in urlEl) urlEl.value = url;
         }
         const container = document.getElementById('inline-qr-container');
         if (!container) return;
@@ -870,6 +952,12 @@ class App {
         this.inlineQrObj = this._createQrInstance(url, 200);
         if (this.inlineQrObj) {
             this.inlineQrObj.append(container);
+            const canvasEl = container.querySelector('canvas');
+            if (canvasEl) {
+                canvasEl.style.width = '200px';
+                canvasEl.style.height = '200px';
+                canvasEl.style.display = 'block';
+            }
         }
     }
 
@@ -915,7 +1003,50 @@ class App {
         });
         document.getElementById('btn-back-landing').addEventListener('click', () => UI.showScreen('screen-landing'));
         document.getElementById('btn-copy-code').addEventListener('click', () => UI.copyToClipboard(document.getElementById('display-room-code').textContent));
-        document.getElementById('btn-copy-phrase').addEventListener('click', () => UI.copyToClipboard(document.getElementById('display-secret-phrase').textContent));
+        document.getElementById('btn-copy-phrase').addEventListener('click', () => {
+            const el = document.getElementById('display-secret-phrase');
+            UI.copyToClipboard(el ? (el.value !== undefined && el.tagName === 'INPUT' ? el.value : el.textContent) : '');
+        });
+        const btnGenRoomKey = document.getElementById('btn-gen-room-key');
+        if (btnGenRoomKey) {
+            btnGenRoomKey.addEventListener('click', async () => {
+                if (!this.e2eEnabled) return;
+                const newPhrase = this.crypto.generateRandomPhrase();
+                await this.crypto.importKey(newPhrase);
+                this.updatePhraseUI(newPhrase, false);
+                const code = this.conn ? this.conn.getRoomCode() : null;
+                const urlEl = document.getElementById('share-url');
+                if (code && urlEl && code !== '---') {
+                    const targetUrl = this._buildShareUrl(code, newPhrase);
+                    urlEl.dataset.url = targetUrl;
+                    window.history.replaceState(null, '', '#' + code + ':' + newPhrase);
+                    this.renderInlineQr(targetUrl);
+                }
+                if (this.conn && (this.conn.isCreator || this.conn.isAdmin)) {
+                    this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newPhrase } });
+                }
+                UI.toast('Generated new room key!', 'success');
+            });
+        }
+        const phraseInput = document.getElementById('display-secret-phrase');
+        if (phraseInput) {
+            phraseInput.addEventListener('input', async (e) => {
+                if (!this.e2eEnabled) return;
+                const val = e.target.value.trim();
+                await this.crypto.importKey(val);
+                const code = this.conn ? this.conn.getRoomCode() : null;
+                const urlEl = document.getElementById('share-url');
+                if (code && urlEl && code !== '---') {
+                    const targetUrl = val ? this._buildShareUrl(code, val) : (window.location.origin + window.location.pathname + '#' + code);
+                    urlEl.dataset.url = targetUrl;
+                    if (val) window.history.replaceState(null, '', '#' + code + ':' + val);
+                    this.renderInlineQr(targetUrl);
+                }
+                if (this.conn && (this.conn.isCreator || this.conn.isAdmin)) {
+                    this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: val } });
+                }
+            });
+        }
         document.getElementById('btn-copy-link').addEventListener('click', () => UI.copyToClipboard(document.getElementById('share-url').dataset.url));
         const btnCopyRoomLink = document.getElementById('btn-copy-room-link');
         if (btnCopyRoomLink) {
@@ -1058,53 +1189,56 @@ class App {
         const btnCloseHostManage = document.getElementById('btn-close-host-manage');
         if (btnCloseHostManage) btnCloseHostManage.addEventListener('click', () => document.getElementById('modal-host-manage').style.display = 'none');
         document.getElementById('modal-host-manage').addEventListener('click', (e) => { if (e.target.id === 'modal-host-manage') e.target.style.display = 'none'; });
+        const setRoomKeyMode = async (isOpen) => {
+            const toggle = document.getElementById('toggle-open-room');
+            if (toggle) toggle.checked = isOpen;
+            const bar = document.getElementById('bar-room-key-mode');
+            if (bar) bar.classList.toggle('plaintext-mode', isOpen);
+            const btnReq = document.getElementById('btn-room-key-required');
+            if (btnReq) btnReq.classList.toggle('active', !isOpen);
+            const btnOpen = document.getElementById('btn-room-key-open');
+            if (btnOpen) btnOpen.classList.toggle('active-plaintext', isOpen);
+            
+            const inputEl = document.getElementById('input-rotate-room-key');
+            const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
+            if (inputEl) {
+                if (isOpen) {
+                    inputEl.value = '';
+                    inputEl.placeholder = 'Open Room (No Encryption)';
+                    inputEl.disabled = true;
+                    inputEl.style.opacity = '0.4';
+                    inputEl.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+                } else {
+                    let phrase = this.crypto.getPhrase();
+                    if (!phrase || !phrase.trim()) {
+                        phrase = this.crypto.generateRandomPhrase();
+                    }
+                    inputEl.value = phrase;
+                    inputEl.placeholder = 'Room Key';
+                    inputEl.disabled = false;
+                    inputEl.readOnly = false;
+                    inputEl.style.opacity = '1';
+                    inputEl.style.backgroundColor = '';
+                }
+            }
+            if (btnGenKey) btnGenKey.style.display = !isOpen ? 'inline-flex' : 'none';
+        };
+
+        const btnKeyReq = document.getElementById('btn-room-key-required');
+        const btnKeyOpen = document.getElementById('btn-room-key-open');
+        if (btnKeyReq) btnKeyReq.addEventListener('click', () => setRoomKeyMode(false));
+        if (btnKeyOpen) btnKeyOpen.addEventListener('click', () => setRoomKeyMode(true));
+
         const toggleOpenRoom = document.getElementById('toggle-open-room');
         if (toggleOpenRoom) {
-            toggleOpenRoom.addEventListener('change', async (e) => {
-                const isChecked = e.target.checked;
-                const inputEl = document.getElementById('input-rotate-room-key');
-                const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
-                if (inputEl) {
-                    if (isChecked) {
-                        inputEl.value = '';
-                        inputEl.placeholder = 'Open Room (No Encryption)';
-                        inputEl.disabled = true;
-                        inputEl.style.opacity = '0.4';
-                        inputEl.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
-                    } else {
-                        let phrase = this.crypto.getPhrase();
-                        if (!phrase || !phrase.trim()) {
-                            phrase = await this.crypto.generateKey();
-                        }
-                        inputEl.value = phrase;
-                        inputEl.placeholder = 'Room Key';
-                        inputEl.disabled = false;
-                        inputEl.readOnly = false;
-                        inputEl.style.opacity = '1';
-                        inputEl.style.backgroundColor = '';
-                    }
-                }
-                if (btnGenKey) btnGenKey.style.display = !isChecked ? 'inline-flex' : 'none';
-            });
+            toggleOpenRoom.addEventListener('change', (e) => setRoomKeyMode(e.target.checked));
         }
         const btnGenRotateKey = document.getElementById('btn-gen-rotate-room-key');
         if (btnGenRotateKey) {
-            btnGenRotateKey.addEventListener('click', async () => {
-                const phrase = await this.crypto.generateKey();
+            btnGenRotateKey.addEventListener('click', () => {
+                const phrase = this.crypto.generateRandomPhrase();
                 const inputEl = document.getElementById('input-rotate-room-key');
                 if (inputEl) inputEl.value = phrase;
-            });
-        }
-        const btnCopyAllModal = document.getElementById('btn-copy-all-modal');
-        if (btnCopyAllModal) {
-            btnCopyAllModal.addEventListener('click', () => {
-                const id = document.getElementById('input-new-room-id').value.trim();
-                const link = document.getElementById('input-modal-room-link').value.trim();
-                const key = document.getElementById('input-rotate-room-key').value.trim() || 'None (Open Room)';
-                const text = `Room ID: ${id}\nShare Link: ${link}\nRoom Key: ${key}`;
-                navigator.clipboard.writeText(text).then(() => {
-                    UI.toast('All connection details copied!', 'success');
-                }).catch(() => UI.toast('Failed to copy', 'error'));
             });
         }
         const btnCancelHostManage = document.getElementById('btn-cancel-host-manage');
@@ -1125,7 +1259,7 @@ class App {
                 const isOpen = toggle && toggle.checked;
                 const newKey = isOpen ? '' : document.getElementById('input-rotate-room-key').value.trim();
                 const currentKey = this.crypto.getPhrase() || '';
-                if (newKey !== currentKey) {
+                if (newKey !== currentKey || isOpen === this.e2eEnabled) {
                     this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
                     this._onRoomKeyRotated(newKey);
                 }

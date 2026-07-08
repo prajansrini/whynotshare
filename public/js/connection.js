@@ -56,27 +56,28 @@ class ConnectionManager {
         return new Promise((resolve, reject) => {
             this.peer = new Peer(undefined, { pingInterval: 5000 });
             let settled = false;
+            this._joinResolve = (peers) => { if (!settled) { settled = true; resolve(peers); } };
+            this._joinReject = (err) => { if (!settled) { settled = true; reject(err); } };
             this.peer.on('open', (id) => {
                 this.myPeerId = id;
                 this.roomCode = code;
                 this.isCreator = false;
                 const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
                 conn.on('open', () => {
-                    if (settled) return; settled = true;
                     this._register(conn, hostPeerId);
-                    conn.send({ type: 'peer-info', payload: { id, ...this.myInfo } });
+                    const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
+                    conn.send({ type: 'peer-info', payload: { id, ...this.myInfo, authHash } });
                     this.peers = [
                         { id: hostPeerId, deviceName: 'Room Host', deviceType: 'laptop', isCreator: true },
                         { id, ...this.myInfo, isCreator: false }
                     ];
-                    resolve(this.peers);
                 });
-                conn.on('error', () => { if (!settled) { settled = true; reject(new Error('Connection failed')); } });
-                setTimeout(() => { if (!settled) { settled = true; reject(new Error('Timed out. Room may not exist.')); } }, 12000);
+                conn.on('error', () => { if (this._joinReject) this._joinReject(new Error('Connection failed')); });
+                setTimeout(() => { if (this._joinReject) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
             });
             this.peer.on('error', (err) => {
-                if (!settled) { settled = true;
-                    reject(new Error(err.type === 'peer-unavailable' ? 'Room not found.' : (err.message || 'Failed')));
+                if (this._joinReject) {
+                    this._joinReject(new Error(err.type === 'peer-unavailable' ? 'Room not found.' : (err.message || 'Failed')));
                 }
             });
         });
@@ -85,7 +86,6 @@ class ConnectionManager {
     _handleIncoming(conn) {
         conn.on('open', () => {
             this._register(conn, conn.peer);
-            if (this.isCreator) conn.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } });
         });
     }
 
@@ -120,10 +120,27 @@ class ConnectionManager {
             }
             case 'peer-info': {
                 const info = data.payload;
+                if (this.isCreator && window.app && window.app.e2eEnabled) {
+                    const hostAuth = window.app.crypto ? window.app.crypto.authHash : null;
+                    if (hostAuth && info.authHash !== hostAuth) {
+                        const reason = !info.authHash ? 'Room Key required! This room is encrypted.' : 'Incorrect Room Key! Access denied.';
+                        const c = this.connections.get(fromId);
+                        if (c && c.open) {
+                            try { c.send({ type: 'join-rejected', payload: { reason } }); } catch {}
+                            setTimeout(() => { try { c.close(); } catch {} }, 300);
+                        }
+                        this.connections.delete(fromId);
+                        break;
+                    }
+                }
                 const ex = this.peers.find(p => p.id === info.id);
                 if (!ex) this.peers.push(info); else Object.assign(ex, info);
                 if (this.onPeerJoined) this.onPeerJoined(info);
                 if (this.isCreator) {
+                    const c = this.connections.get(fromId);
+                    if (c && c.open) {
+                        try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch {}
+                    }
                     this._broadcast({ type: 'peer-update', payload: this.peers });
                     if (this.onSyncRequest) {
                         const history = this.onSyncRequest();
@@ -139,7 +156,18 @@ class ConnectionManager {
                 const hi = data.payload;
                 const idx = this.peers.findIndex(p => p.id === hi.id);
                 if (idx >= 0) this.peers[idx] = hi; else this.peers.unshift(hi);
+                if (this._joinResolve) { this._joinResolve(this.peers); this._joinResolve = null; }
                 if (this.onPeerJoined) this.onPeerJoined(hi);
+                break;
+            }
+            case 'join-rejected': {
+                if (this._joinReject) {
+                    this._joinReject(new Error(data.payload.reason || 'Room Key required! This room is encrypted.'));
+                    this._joinReject = null;
+                    this._joinResolve = null;
+                }
+                if (window.UI && typeof UI.toast === 'function') UI.toast(data.payload.reason || 'Room Key required!', 'error');
+                if (this.peer) { try { this.peer.destroy(); } catch {} }
                 break;
             }
             case 'peer-update':
@@ -273,8 +301,16 @@ class ConnectionManager {
     }
 
     _broadcast(message, excludeId) {
+        const recipients = message && message.payload && message.payload.recipients ? message.payload.recipients : null;
         for (const [pid, conn] of this.connections) {
-            if (pid !== excludeId && conn.open) conn.send(message);
+            if (pid !== excludeId && conn.open) {
+                if (recipients && Array.isArray(recipients) && recipients.length > 0) {
+                    if (!recipients.includes(pid) && pid !== this._roomCodeToPeerId(this.roomCode) && pid !== message.payload.senderId && pid !== message.payload.from) {
+                        continue;
+                    }
+                }
+                conn.send(message);
+            }
         }
     }
 

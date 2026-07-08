@@ -62,9 +62,9 @@
                     <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal()" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
                 </div>
                 <div class="room-code-display">
-                    <div class="room-code-label">Room Code</div>
+                    <div class="room-code-label" style="display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Room Code</div>
                     <div id="display-room-code" class="room-code-value">---</div>
-                    <button id="btn-copy-code" class="btn btn-secondary mt-md" style="margin:12px auto 0;display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy Code</button>
+                    <button id="btn-copy-code" class="btn btn-secondary mt-md" style="margin:12px auto 0;display:flex">Copy Code</button>
                 </div>
                 <div id="inline-qr-section" style="margin:20px 0 12px;display:flex;flex-direction:column;align-items:center;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px">
                     <div style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:12px;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>Scan to Join Instantly</div>
@@ -72,28 +72,36 @@
                 </div>
                 <div class="security-mode-section mt-md">
                     <div class="security-mode-label">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         Room Access &amp; Key Mode
                     </div>
                     <div class="security-switch-bar">
                         <div class="sec-slider"></div>
                         <button id="btn-room-encrypt-on" class="sec-pill-btn active">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Room Key Required</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Encrypted Room</span>
                         </button>
                         <button id="btn-room-encrypt-off" class="sec-pill-btn">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>No Room Key</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Open Room</span>
                         </button>
                     </div>
                 </div>
-                <div id="secret-phrase-container" class="secret-phrase-section">
-                    <div class="secret-phrase-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</div>
-                    <div id="display-secret-phrase" class="secret-phrase-value">---</div>
-                    <button id="btn-copy-phrase" class="btn btn-secondary btn-full mt-md"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy Key</button>
+                <div id="secret-phrase-container" class="secret-phrase-section mt-md">
+                    <div class="secret-phrase-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</div>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="display-secret-phrase" class="input-field text-mono" placeholder="Room Key" style="margin:0;flex:1;transition:all 0.2s ease" autocomplete="off" autocapitalize="none" spellcheck="false">
+                        <button id="btn-gen-room-key" class="btn btn-secondary" style="padding:0 16px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center" title="Generate Random Passphrase"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+                        <button id="btn-copy-phrase" class="btn btn-secondary" style="padding:0 20px;font-size:0.95rem;border-radius:var(--radius-md);display:flex;align-items:center;gap:6px" title="Copy Room Key">Copy</button>
+                    </div>
                 </div>
-                <div class="share-link-section mt-lg" style="display:flex;gap:12px">
-                    <button id="btn-copy-link" class="btn btn-primary" style="flex:2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Copy Share Link</button>
-                    <button id="btn-back-from-room" class="btn btn-secondary" style="flex:1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Cancel</button>
-                    <div id="share-url" style="display:none"></div>
+                <div class="share-link-section mt-md">
+                    <div class="secret-phrase-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Share Link</div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px">
+                        <input type="text" id="share-url" class="input-field text-mono" readonly placeholder="Generating share link..." style="padding:8px 12px;font-size:0.85rem;height:42px;margin:0;flex:1;background:rgba(0,0,0,0.25);color:var(--text-secondary);cursor:copy" onclick="this.select(); document.getElementById('btn-copy-link').click();" title="Click to copy share link">
+                    </div>
+                    <div style="display:flex;gap:12px">
+                        <button id="btn-copy-link" class="btn btn-primary" style="flex:2">Copy Share Link</button>
+                        <button id="btn-back-from-room" class="btn btn-secondary" style="flex:1">Cancel</button>
+                    </div>
                 </div>
                 <div class="enter-room-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--glass-border)">
                     <button id="btn-host-enter-room" class="btn btn-primary btn-full" style="padding:14px;font-size:1.05rem;font-weight:700;box-shadow:0 4px 16px rgba(108, 92, 231, 0.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:8px;vertical-align:-4px"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Enter Live Room</button>
@@ -107,7 +115,7 @@
             <div class="glass-card">
                 <div class="logo-section" style="margin-bottom:var(--space-lg)">
                     <h2 style="font-size:1.4rem;font-weight:700">Join a Room</h2>
-                    <p class="text-secondary" style="font-size:0.9rem;margin-top:4px">Enter the room code and secret phrase from the host device</p>
+                    <p class="text-secondary" style="font-size:0.9rem;margin-top:4px">Enter the room code and room key (passphrase) from the host device</p>
                 </div>
                 <div class="device-id-badge" style="margin: 0 0 24px 0;">
                     <span class="device-icon-span"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
@@ -118,8 +126,8 @@
                     <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal()" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
                 </div>
                 <div class="join-form">
-                    <div class="input-group"><label class="input-label" for="input-room-code">Room Code</label><input type="text" id="input-room-code" class="input-field text-mono" placeholder="e.g. ABC-123" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
-                    <div class="input-group"><label class="input-label" for="input-secret-phrase">Secret Phrase (optional if E2E off)</label><input type="text" id="input-secret-phrase" class="input-field text-mono" placeholder="e.g. tiger-ocean-lamp-rocket" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+                    <div class="input-group"><label class="input-label" for="input-room-code"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Room Code</label><input type="text" id="input-room-code" class="input-field text-mono" placeholder="e.g. ABC-123" maxlength="7" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+                    <div class="input-group"><label class="input-label" for="input-secret-phrase"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</label><input type="text" id="input-secret-phrase" class="input-field text-mono" placeholder="e.g. tiger-ocean-lamp-rocket" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
                     <div style="display:flex;gap:12px">
                         <button id="btn-back-landing" class="btn btn-secondary" style="flex:1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back</button>
                         <button id="btn-join-submit" class="btn btn-primary" style="flex:2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connect</button>
@@ -135,14 +143,14 @@
             <div class="share-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
                 <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px">
                     <div style="display:flex;align-items:center;gap:8px;user-select:none">
-                        <svg width="28" height="28" viewBox="0 0 100 100" fill="none" stroke="url(#logo-grad-share)"><defs><linearGradient id="logo-grad-share" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#c084fc"/></linearGradient></defs><path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke-width="6" stroke-linejoin="round"/><g transform="translate(34, 34) scale(1.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></g></svg>
+                        <div class="chat-logo-icon"><svg width="38" height="38" viewBox="0 0 100 100" fill="none" stroke="currentColor"><path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke-width="6" stroke-linejoin="round"/><g transform="translate(34, 34) scale(1.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></g></svg></div>
                         <h2 class="app-title" style="font-size:1.45rem;margin:0;letter-spacing:-0.5px">Why<span class="text-gradient">Not</span>Share</h2>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                         <div class="room-badge" id="btn-room-badge-copy" title="Click to copy Room ID" style="height:34px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:0.88rem;font-weight:700;cursor:pointer;user-select:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:block;flex-shrink:0"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span id="share-room-code" style="line-height:1">---</span></div>
                         <button id="btn-copy-room-link" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Copy Room Share Link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy Link</button>
                         <button id="btn-show-qr-share" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:500" title="Show QR Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M7 7h.01"/><path d="M18 7h.01"/><path d="M7 18h.01"/><path d="M18 18h.01"/></svg>QR</button>
-                        <button id="btn-host-manage" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:600;background:var(--accent-gradient);color:white;border:none;box-shadow:0 2px 8px rgba(108,92,231,0.35)" title="Room Info & Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg><span id="btn-host-manage-text">Host Manage</span></button>
+                        <button id="btn-host-manage" class="btn btn-secondary" style="padding:0 14px;border-radius:18px;font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;height:34px;font-weight:600" title="Room Info & Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z"/></svg><span id="btn-host-manage-text">Host Manage</span></button>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
@@ -220,20 +228,23 @@
                 <!-- Edit Room Key -->
                 <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                        <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary)">Room Key (E2E Passphrase)</div>
-                        <div id="box-toggle-open-room" style="display:flex;align-items:center;gap:12px">
-                            <label style="display:flex;align-items:center;gap:8px;font-size:0.78rem;font-weight:600;color:var(--text-secondary);cursor:pointer;user-select:none">
-                                <span>Open Room (No Key)</span>
-                                <div class="toggle-switch">
-                                    <input type="checkbox" id="toggle-open-room">
-                                    <span class="toggle-slider"></span>
-                                </div>
-                            </label>
-                            <button id="btn-gen-rotate-room-key" style="background:none;border:none;color:var(--accent-secondary);font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:6px" title="Generate Random Passphrase">Generate Random</button>
+                        <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary)">Room Key (Passphrase)</div>
+                        <div id="box-toggle-open-room" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                            <input type="checkbox" id="toggle-open-room" style="display:none">
+                            <div class="security-switch-bar sec-bar-sm" id="bar-room-key-mode" style="margin:0" title="Room Encryption Mode">
+                                <div class="sec-slider"></div>
+                                <button id="btn-room-key-required" class="sec-pill-btn active">
+                                    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Encrypted Room</span>
+                                </button>
+                                <button id="btn-room-key-open" class="sec-pill-btn">
+                                    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Open Room</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div style="display:flex;gap:6px">
                         <input type="text" id="input-rotate-room-key" class="input-field text-mono" placeholder="Room Key" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0;flex:1;transition:all 0.2s ease">
+                        <button id="btn-gen-rotate-room-key" class="btn btn-secondary" style="padding:0 12px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center" title="Generate Random Key"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
                         <button id="btn-copy-modal-room-key" class="btn btn-secondary" style="padding:0 14px;height:38px;font-size:0.8rem;border-radius:10px" title="Copy Room Key">Copy</button>
                     </div>
                 </div>
@@ -254,8 +265,7 @@
                 </div>
 
                 <!-- Bottom Action Buttons -->
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;padding-top:10px;border-top:1px solid var(--glass-border)">
-                    <button id="btn-copy-all-modal" class="btn btn-secondary" style="padding:0 16px;height:38px;font-size:0.82rem;border-radius:10px">Copy</button>
+                <div id="host-manage-bottom-actions" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;padding-top:10px;border-top:1px solid var(--glass-border)">
                     <button id="btn-cancel-host-manage" class="btn btn-secondary" style="padding:0 16px;height:38px;font-size:0.82rem;border-radius:10px">Cancel</button>
                     <button id="btn-save-host-manage" class="btn btn-primary" style="padding:0 18px;height:38px;font-size:0.82rem;border-radius:10px;background:var(--accent-gradient);color:white;border:none">Save</button>
                 </div>
@@ -287,7 +297,7 @@
     <div id="modal-qr" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card" style="text-align:center;max-width:360px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;text-align:left">
-                <h3 style="font-size:1.15rem;font-weight:700;margin:0">Room Share Link</h3>
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0">Scan to Join Instantly</h3>
                 <button id="btn-close-qr-top" class="btn-close-modal" title="Close">✕</button>
             </div>
             <p class="text-secondary" style="font-size:0.85rem;margin-bottom:20px">Scan this QR code with any camera or scanner to join instantly</p>
@@ -304,7 +314,7 @@
         <div class="modal-card glass-card" style="max-width:480px;width:90%">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                 <h3 style="font-size:1.15rem;font-weight:700;margin:0">Connected Devices (<span id="devices-count-modal">0</span>)</h3>
-                <button id="btn-close-devices-modal" class="btn-close-modal" title="Close">&times;</button>
+                <button id="btn-close-devices-modal" class="btn-close-modal" title="Close">✕</button>
             </div>
             <div id="devices-list" class="devices-list" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
         </div>
@@ -315,7 +325,7 @@
         <div class="modal-card glass-card" style="max-width:500px;width:90%">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                 <h3 style="font-size:1.15rem;font-weight:700;margin:0">Personal E2E Encryption</h3>
-                <button id="btn-close-pe2e-modal" class="btn-close-modal" title="Close">&times;</button>
+                <button id="btn-close-pe2e-modal" class="btn-close-modal" title="Close">✕</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:16px">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;flex-wrap:wrap;gap:10px">
@@ -333,10 +343,10 @@
                         </button>
                     </div>
                 </div>
-                <div id="personal-recipients-container" style="display:none;flex-direction:column;gap:10px;padding:12px;background:var(--glass-bg);border:1px solid rgba(168,85,247,0.35);border-radius:14px">
+                <div id="personal-recipients-container" style="display:none;flex-direction:column;gap:12px;padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
                     <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between">
-                        <span style="display:flex;align-items:center;gap:6px;color:#c084fc"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Authorized Recipients:</span>
-                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;height:auto;border-radius:14px;background:rgba(168,85,247,0.2);color:#e9d5ff;border:1px solid rgba(168,85,247,0.4)">Select All</button>
+                        <span style="display:flex;align-items:center;gap:6px;color:var(--text-primary)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Authorized Recipients:</span>
+                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:4px 12px;font-size:0.75rem;height:auto;border-radius:14px">Select All</button>
                     </div>
                     <div id="personal-recipients-list" style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto"></div>
                 </div>

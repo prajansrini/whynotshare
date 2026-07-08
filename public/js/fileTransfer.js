@@ -12,10 +12,16 @@ class FileTransfer {
     }
 
     async sendFile(file) {
+        const isPersonal = Boolean(window.app && window.app.personalE2E);
+        const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        if (isPersonal && (!recipients || recipients.length === 0)) {
+            if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            return;
+        }
         const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         const totalChunks = Math.ceil(file.size / this.chunkSize);
-        const encrypt = this.encryptionEnabled && this.crypto.hasKey();
-        const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks, encrypted: encrypt };
+        const encrypt = (this.encryptionEnabled && this.crypto.hasKey()) || isPersonal;
+        const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks, encrypted: encrypt, personalEncrypted: isPersonal, recipients };
         this.conn.sendFileEvent('file-meta', meta);
         const start = Date.now();
         for (let i = 0; i < totalChunks; i++) {
@@ -26,11 +32,14 @@ class FileTransfer {
             const s = i * this.chunkSize, e = Math.min(s + this.chunkSize, file.size);
             const buf = await file.slice(s, e).arrayBuffer();
             let payload;
-            if (encrypt) {
+            if (isPersonal) {
+                const enc = await this.crypto.encryptBufferWithPersonalKey(buf);
+                payload = { fileId, index: i, data: enc.ciphertext, iv: enc.iv, personalEncrypted: true, recipients };
+            } else if (encrypt) {
                 const enc = await this.crypto.encryptBuffer(buf);
-                payload = { fileId, index: i, data: this.crypto._bufToBase64(enc.ciphertext), iv: this.crypto._bufToBase64(enc.iv) };
+                payload = { fileId, index: i, data: this.crypto._bufToBase64(enc.ciphertext), iv: this.crypto._bufToBase64(enc.iv), recipients };
             } else {
-                payload = { fileId, index: i, data: this.crypto._bufToBase64(buf) };
+                payload = { fileId, index: i, data: this.crypto._bufToBase64(buf), recipients };
             }
             this.conn.sendFileEvent('file-chunk', payload);
             const progress = Math.min(1, (i + 1) / totalChunks);
@@ -61,6 +70,11 @@ class FileTransfer {
     handleFileEvent(type, data) {
         const senderId = data.senderId;
         if (senderId === this.conn.myPeerId) return;
+        if (data.recipients && Array.isArray(data.recipients) && data.recipients.length > 0) {
+            if (!data.recipients.includes(this.conn.myPeerId) && senderId !== this.conn.myPeerId) {
+                return;
+            }
+        }
         switch (type) {
             case 'file-meta': this._onMeta(data); break;
             case 'file-chunk': this._onChunk(data); break;
@@ -78,7 +92,17 @@ class FileTransfer {
         const info = this.incoming.get(data.fileId);
         if (!info) return;
         let buf;
-        if (data.iv && info.meta.encrypted && this.crypto.hasKey()) {
+        if (data.iv && data.personalEncrypted) {
+            try {
+                buf = await this.crypto.decryptBufferWithPersonalKey(data.data, data.iv, info.senderId);
+            } catch (err) {
+                if (typeof UI !== 'undefined') UI.toast('Personal E2E decryption failed! You are not an authorized recipient.', 'error');
+                this.incoming.delete(data.fileId);
+                const tc = document.getElementById('transfer-' + data.fileId);
+                if (tc) tc.remove();
+                return;
+            }
+        } else if (data.iv && info.meta.encrypted && this.crypto.hasKey()) {
             try {
                 buf = await this.crypto.decryptBuffer(this.crypto._base64ToBuf(data.data), this.crypto._base64ToBuf(data.iv));
             } catch (err) {

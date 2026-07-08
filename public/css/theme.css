@@ -39,6 +39,10 @@ body.light-theme {
 body.light-theme .bg-animation {
     opacity: 0.7;
 }
+body.light-theme .bg-orb {
+    display: block;
+    opacity: 0.35;
+}
 body.light-theme .bg-orb-1 {
     background: radial-gradient(circle, rgba(255, 160, 122, 0.35), transparent 70%);
 }

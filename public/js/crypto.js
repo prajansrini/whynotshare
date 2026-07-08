@@ -23,11 +23,23 @@ class CryptoManager {
     constructor() {
         this.key = null;
         this.phrase = null;
+        this.authHash = null;
         // Check if native Web Crypto API is available and over HTTPS (ensures matching ciphers during local HTTP testing)
         this.hasSubtle = typeof window !== 'undefined' && window.crypto && window.crypto.subtle && window.location && window.location.protocol === 'https:';
     }
 
-    async generateKey() {
+    _computeAuthHash(passphrase) {
+        if (!passphrase || !passphrase.trim()) return null;
+        const str = 'whynotshare-auth-' + passphrase.trim();
+        let h = 0x811c9dc5;
+        for (let i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = Math.imul(h, 0x01000193);
+        }
+        return 'auth-v1-' + (h >>> 0).toString(16);
+    }
+
+    generateRandomPhrase() {
         const indices = new Uint32Array(4);
         if (window.crypto && window.crypto.getRandomValues) {
             window.crypto.getRandomValues(indices);
@@ -35,14 +47,26 @@ class CryptoManager {
             for (let i = 0; i < 4; i++) indices[i] = Math.floor(Math.random() * WORDS.length);
         }
         const words = Array.from(indices).map(i => WORDS[i % WORDS.length]);
-        this.phrase = words.join('-');
+        return words.join('-');
+    }
+
+    async generateKey() {
+        this.phrase = this.generateRandomPhrase();
         this.key = await this._deriveKey(this.phrase);
+        this.authHash = this._computeAuthHash(this.phrase);
         return this.phrase;
     }
 
     async importKey(phrase) {
-        this.phrase = phrase;
-        this.key = await this._deriveKey(phrase);
+        if (!phrase || !phrase.trim()) {
+            this.phrase = null;
+            this.key = null;
+            this.authHash = null;
+            return;
+        }
+        this.phrase = phrase.trim();
+        this.key = await this._deriveKey(this.phrase);
+        this.authHash = this._computeAuthHash(this.phrase);
     }
 
     async _deriveKey(passphrase) {
@@ -207,6 +231,50 @@ class CryptoManager {
                 iv: this._bufToBase64(iv.buffer),
                 personalEncrypted: true
             };
+        }
+    }
+
+    async encryptBufferWithPersonalKey(buffer) {
+        if (!this.myPersonalKey) await this.generatePersonalKey();
+        const iv = new Uint8Array(12);
+        if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(iv);
+        else for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
+
+        if (this.hasSubtle && this.myPersonalKey instanceof CryptoKey) {
+            const ciphertext = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.myPersonalKey, buffer);
+            return {
+                ciphertext: this._bufToBase64(ciphertext),
+                iv: this._bufToBase64(iv.buffer),
+                personalEncrypted: true
+            };
+        } else {
+            const ciphertext = this._fallbackCrypt(buffer, iv, this.myPersonalKey);
+            return {
+                ciphertext: this._bufToBase64(ciphertext),
+                iv: this._bufToBase64(iv.buffer),
+                personalEncrypted: true
+            };
+        }
+    }
+
+    async decryptBufferWithPersonalKey(ciphertextBase64, ivBase64, senderId) {
+        if (!this.peerPersonalKeys || !this.peerPersonalKeys.has(senderId)) {
+            throw new Error('Key Required');
+        }
+        const peerKey = this.peerPersonalKeys.get(senderId);
+        const ciphertextBuf = this._base64ToBuf(ciphertextBase64);
+        const ivBuf = this._base64ToBuf(ivBase64);
+
+        if (this.hasSubtle && peerKey instanceof CryptoKey) {
+            try {
+                const dec = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(ivBuf) }, peerKey, ciphertextBuf);
+                return dec;
+            } catch (e) {
+                throw new Error('Key Required');
+            }
+        } else {
+            const dec = this._fallbackCrypt(ciphertextBuf, new Uint8Array(ivBuf), peerKey);
+            return dec;
         }
     }
 

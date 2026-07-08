@@ -10,17 +10,23 @@ class TextShare {
 
     async send(text) {
         if (!text.trim()) return;
+        const isPersonal = Boolean(window.app && window.app.personalE2E);
+        const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        if (isPersonal && (!recipients || recipients.length === 0)) {
+            if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            return;
+        }
         try {
             const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
             let payload;
-            if (window.app && window.app.personalE2E) {
+            if (isPersonal) {
                 const encrypted = await this.crypto.encryptWithPersonalKey(text);
-                payload = { id: msgId, personalEncrypted: true, encrypted, timestamp: Date.now() };
+                payload = { id: msgId, personalEncrypted: true, encrypted, timestamp: Date.now(), recipients };
             } else if (this.encryptionEnabled && this.crypto.hasKey()) {
                 const encrypted = await this.crypto.encrypt(text);
-                payload = { id: msgId, encrypted, timestamp: Date.now() };
+                payload = { id: msgId, encrypted, timestamp: Date.now(), recipients };
             } else {
-                payload = { id: msgId, raw: text, timestamp: Date.now() };
+                payload = { id: msgId, raw: text, timestamp: Date.now(), recipients };
             }
             this.conn.sendText(payload);
             const msg = { id: msgId, type: 'text', text, sender: { name: 'You', id: this.conn.getSocketId() }, timestamp: Date.now(), isSent: true };
@@ -33,6 +39,11 @@ class TextShare {
     }
 
     async receive(data) {
+        if (data.recipients && Array.isArray(data.recipients) && data.recipients.length > 0) {
+            if (!data.recipients.includes(this.conn.getSocketId()) && data.from !== this.conn.getSocketId()) {
+                return;
+            }
+        }
         try {
             const msgId = data.id || (Date.now() + '-' + Math.random().toString(36).substr(2, 5));
             let text;
