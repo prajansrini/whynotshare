@@ -193,11 +193,23 @@ input, textarea { font-family: inherit; }
 
 .screen.share-screen.active {
     height: calc(100vh - 40px);
+    height: calc(100dvh - 40px);
     max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+}
+
+@media (max-width: 600px) {
+    .screen.share-screen.active {
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        padding: 10px;
+    }
 }
 
 /* --- Glass Card --- */

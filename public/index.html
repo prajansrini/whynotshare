@@ -175,7 +175,7 @@
                     <div class="messages-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>No messages yet</span><span style="font-size:0.8rem">Messages are encrypted when E2E is enabled</span></div>
                 </div>
                 <div id="transfers-list" style="margin-bottom:8px"></div>
-                <div id="staged-files-chat" style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column"></div>
+                <div id="staged-files-chat" style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column;flex-shrink:0;max-height:110px;overflow-y:auto"></div>
                 <div class="text-input-area">
                     <textarea id="text-input" placeholder="Type a message..." rows="1"></textarea>
                     <button id="btn-attach-chat" class="btn-send" style="background:var(--accent-gradient);color:white;border:none;box-shadow:0 4px 14px rgba(99,102,241,0.35)" title="Attach & Send File"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>

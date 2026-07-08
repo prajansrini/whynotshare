@@ -434,10 +434,12 @@ button .waiting-dots span {
 /* --- Messages / Text Share --- */
 .messages-container {
     width: 100%;
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
     height: auto;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -1074,7 +1076,7 @@ button .waiting-dots span {
 @media (max-width: 600px) {
     .app-title { font-size: 1.6rem; }
     .room-code-value { font-size: 2.2rem; }
-    .messages-container { flex: 1; min-height: 300px; height: auto; }
+    .messages-container { flex: 1 1 0; min-height: 80px; -webkit-overflow-scrolling: touch; }
     .share-header { flex-wrap: wrap; gap: var(--space-sm); }
     .device-chip { font-size: 0.8rem; padding: 6px 10px; }
     .tab-btn { font-size: 0.85rem; padding: 8px 12px; }
