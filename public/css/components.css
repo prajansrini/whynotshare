@@ -112,6 +112,14 @@ body.light-theme .chat-logo-icon {
     letter-spacing: 0.12em;
     color: var(--text-tertiary);
     margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.room-code-label svg {
+    transform: translateY(-1px);
+    flex-shrink: 0;
 }
 
 .room-code-value {
@@ -821,9 +829,25 @@ button .waiting-dots span {
 }
 
 .btn-rename-pill:hover {
-    background: var(--accent-gradient);
-    color: white;
-    border-color: transparent;
+    background: rgba(99, 102, 241, 0.16);
+    color: #c7d2fe;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+}
+
+@keyframes expandInlineRename {
+    0% { opacity: 0; max-width: 0px; transform: scaleX(0.88); }
+    100% { opacity: 1; max-width: 380px; transform: scaleX(1); }
+}
+
+@keyframes compressInlineRename {
+    0% { opacity: 1; max-width: 380px; transform: scaleX(1); }
+    100% { opacity: 0; max-width: 0px; transform: scaleX(0.88); }
+}
+
+@keyframes fadeInFast {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
 }
 
 .btn-save-inline {
@@ -1248,3 +1272,67 @@ body.light-theme #btn-host-manage.btn-host-privileged {
         right: 16px !important;
     }
 }
+
+/* ==========================================================================
+   LIGHT THEME OVERRIDES FOR MESSAGES, TEXT INPUT & TRANSFER CARDS
+   ========================================================================== */
+body.light-theme .messages-container {
+    background: #ffffff !important;
+    border: 1px solid rgba(225, 213, 205, 0.9) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.light-theme .text-input-area textarea {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 200, 190, 0.9) !important;
+    color: #1A1817 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.light-theme .text-input-area textarea:focus {
+    border-color: #F97316 !important;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14) !important;
+}
+
+body.light-theme .text-input-area textarea::placeholder {
+    color: #8C827A !important;
+}
+
+body.light-theme .transfer-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(225, 213, 205, 0.9) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-theme .transfer-bar {
+    background: rgba(0, 0, 0, 0.08) !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-theme .transfer-bar-fill {
+    background: linear-gradient(90deg, #F97316, #EA580C, #D97706, #F97316) !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.35) !important;
+}
+
+body.light-theme .transfer-icon {
+    background: rgba(249, 115, 22, 0.12) !important;
+    color: #EA580C !important;
+}
+
+/* --- Button Loading Transitions --- */
+@keyframes slideInLeftSvg {
+    0% { opacity: 0; transform: translateX(-16px) scale(0.85); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes slideShiftLeftText {
+    0% { transform: translateX(6px); }
+        100% { transform: translateX(0); }
+    }
+    @keyframes morphIngIn {
+        0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes slideInRightDots {
+        0% { opacity: 0; transform: translateX(-14px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }

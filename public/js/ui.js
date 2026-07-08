@@ -26,8 +26,7 @@ class UI {
         if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
         const t = document.createElement('div');
         t.className = 'toast toast-' + type;
-        const icons = { success: '✓', error: '✕', info: 'ℹ' };
-        t.innerHTML = '<span>' + (icons[type] || 'ℹ') + '</span><span>' + message + '</span>';
+        t.textContent = message;
         c.appendChild(t);
         setTimeout(() => { if (t.parentNode) t.remove(); }, duration);
     }

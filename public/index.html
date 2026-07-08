@@ -41,7 +41,7 @@
                     <span class="device-name-text display-device-name" style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">---</span>
                     <span class="device-os-text display-os-name" style="font-size:0.75rem;color:var(--text-tertiary)">---</span>
                 </div>
-                <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal()" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
+                <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal(this)" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
             </div>
             <div class="action-buttons">
                 <button id="btn-create" class="btn btn-primary btn-full"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Room</button>
@@ -58,7 +58,7 @@
                         <span class="device-name-text display-device-name" style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">---</span>
                         <span class="device-os-text display-os-name" style="font-size:0.75rem;color:var(--text-tertiary)">---</span>
                     </div>
-                    <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal()" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
+                    <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal(this)" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
                 </div>
                 <div class="room-code-display">
                     <div class="room-code-label" style="display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Room Code</div>
@@ -95,7 +95,7 @@
                 <div class="share-link-section mt-md">
                     <div class="secret-phrase-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Share Link</div>
                     <div style="display:flex;gap:8px;margin-bottom:12px">
-                        <input type="text" id="share-url" class="input-field text-mono" readonly placeholder="Generating share link..." style="padding:8px 12px;font-size:0.85rem;height:42px;margin:0;flex:1;background:rgba(0,0,0,0.25);color:var(--text-secondary);cursor:copy" onclick="this.select(); document.getElementById('btn-copy-link').click();" title="Click to copy share link">
+                        <input type="text" id="share-url" class="input-field text-mono" readonly placeholder="Generating share link..." style="padding:8px 12px;font-size:0.85rem;height:42px;margin:0;flex:1;background:rgba(0,0,0,0.25);color:var(--text-secondary);cursor:text" onclick="this.select()">
                     </div>
                     <div style="display:flex;gap:12px">
                         <button id="btn-copy-link" class="btn btn-primary" style="flex:2">Copy Share Link</button>
@@ -122,7 +122,7 @@
                         <span class="device-name-text display-device-name" style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">---</span>
                         <span class="device-os-text display-os-name" style="font-size:0.75rem;color:var(--text-tertiary)">---</span>
                     </div>
-                    <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal()" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
+                    <button class="btn-rename-pill" onclick="window.app && window.app.openRenameModal(this)" title="Edit Device Name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit</button>
                 </div>
                 <div class="join-form">
                     <div class="input-group"><label class="input-label" for="input-room-code"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Room Code</label><input type="text" id="input-room-code" class="input-field text-mono" placeholder="e.g. ABC-123" maxlength="7" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>

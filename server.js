@@ -13,7 +13,7 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e8 // 100MB for file chunks
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 7890;
 const MAX_PEERS = parseInt(process.env.MAX_PEERS_PER_ROOM) || 10;
 const EXPIRY = parseInt(process.env.ROOM_EXPIRY_MINUTES) || 60;
 

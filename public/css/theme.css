@@ -188,7 +188,11 @@ body.light-theme .btn-send:hover {
 }
 
 body.light-theme .waiting-dots span {
-    background: #ea580c !important;
+    background: #ea580c;
+}
+body.light-theme .btn .waiting-dots span,
+body.light-theme button .waiting-dots span {
+    background: #ffffff !important;
 }
 
 body.light-theme .btn-danger {

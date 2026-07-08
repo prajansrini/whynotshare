@@ -39,7 +39,7 @@ class App {
             if (tc) tc.remove();
             const card = UI.renderReceivedFile(fid, meta, blob);
             document.getElementById('received-files').prepend(card);
-            
+
             const peer = this.conn.getPeers().find(p => p.id === senderId);
             const senderName = peer ? peer.deviceName : 'Peer';
             const senderColor = this.textShare ? this.textShare._getPeerColor(senderId || 'unknown') : 'var(--text-secondary)';
@@ -51,7 +51,7 @@ class App {
 
         this._bindEvents();
         this.updateMyNameDisplay();
-        try { window.history.replaceState({ screenId: 'screen-landing' }, '', window.location.href); } catch {}
+        try { window.history.replaceState({ screenId: 'screen-landing' }, '', window.location.href); } catch { }
 
         try {
             if (localStorage.getItem('whynotshare_theme') === 'light') {
@@ -60,7 +60,7 @@ class App {
                 const sun = document.querySelector('.icon-sun');
                 if (moon && sun) { moon.style.display = 'none'; sun.style.display = 'block'; }
             }
-        } catch {}
+        } catch { }
 
         try {
             const savedSess = sessionStorage.getItem('whynotshare_active_session');
@@ -95,7 +95,7 @@ class App {
                     return;
                 }
             }
-        } catch {}
+        } catch { }
 
         this._checkUrlHash();
     }
@@ -104,7 +104,7 @@ class App {
         const btn = document.getElementById('btn-create');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<div class="waiting-dots" style="display:inline-flex;margin:0 8px 0 0"><span></span><span></span><span></span></div><span>Creating Room...</span>';
+            btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;width:100%"><span style="display:inline-flex;align-items:center;animation:slideInLeftSvg 0.35s cubic-bezier(0.16,1,0.3,1) forwards"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 13 32 6" fill="#ffffff" preserveAspectRatio="none" style="width:34px;height:16px;margin-right:8px;display:inline-block;vertical-align:middle"><path opacity="0.8" transform="translate(0 0)" d="M2 14 V18 H6 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.5" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.1s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.25" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.2s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path></svg></span><span style="display:inline-flex;align-items:center"><span style="animation:slideShiftLeftText 0.35s cubic-bezier(0.16,1,0.3,1) forwards">Creat</span><span style="display:inline-flex;position:relative;overflow:hidden"><span style="animation:morphIngIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards">ing</span></span><span>&nbsp;Room</span><span style="animation:slideInRightDots 0.35s cubic-bezier(0.16,1,0.3,1) forwards">...</span></span></span>';
         }
         try {
             let phrase = '';
@@ -114,12 +114,13 @@ class App {
                 await this.crypto.importKey('');
             }
             const code = await this.conn.createRoom();
+            this.lastCreatedRoomCode = code;
             document.getElementById('display-room-code').textContent = code;
             this.updatePhraseUI(phrase, !this.e2eEnabled);
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
-            window.history.replaceState(null, '', targetHash);
+            window.history.replaceState(null, '', '#create-room');
             try {
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                     roomCode: code,
@@ -128,12 +129,16 @@ class App {
                     e2eEnabled: this.e2eEnabled,
                     inWaitingRoom: true
                 }));
-            } catch {}
+            } catch { }
             UI.showScreen('screen-room');
             const urlEl = document.getElementById('share-url');
             this.renderInlineQr(urlEl ? urlEl.dataset.url : null);
         } catch (err) {
-            UI.toast('Failed: ' + err.message, 'error');
+            const msg = err && err.message ? err.message : 'Connection failed';
+            const detail = (msg.includes('Connection failed') || msg.includes('Lost connection') || msg.includes('Timed out'))
+                ? `${msg} (0.peerjs.com cloud server may be experiencing downtime)`
+                : msg;
+            UI.toast(detail, 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -149,7 +154,7 @@ class App {
         const btn = document.getElementById('btn-join-submit');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<div class="waiting-dots" style="display:inline-flex;margin:0 8px 0 0"><span></span><span></span><span></span></div><span>Connecting...</span>';
+            btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;width:100%"><span style="display:inline-flex;align-items:center;animation:slideInLeftSvg 0.35s cubic-bezier(0.16,1,0.3,1) forwards"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 13 32 6" fill="#ffffff" preserveAspectRatio="none" style="width:34px;height:16px;margin-right:8px;display:inline-block;vertical-align:middle"><path opacity="0.8" transform="translate(0 0)" d="M2 14 V18 H6 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.5" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.1s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.25" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.2s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path></svg></span><span style="display:inline-flex;align-items:center"><span style="animation:slideShiftLeftText 0.35s cubic-bezier(0.16,1,0.3,1) forwards">Connect</span><span style="display:inline-flex;position:relative;overflow:hidden"><span style="animation:morphIngIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards">ing</span></span><span style="animation:slideInRightDots 0.35s cubic-bezier(0.16,1,0.3,1) forwards">...</span></span></span>';
         }
         try {
             if (phrase && phrase.trim()) {
@@ -158,10 +163,25 @@ class App {
             } else {
                 this.toggleE2E(false);
             }
-            const peers = await this.conn.joinRoom(code);
+            let peers;
+            try {
+                peers = await this.conn.joinRoom(code);
+            } catch (err) {
+                const isMyRoom = (this.lastCreatedRoomCode && code === this.lastCreatedRoomCode) || (this.lastRoomCodeLeft && code === this.lastRoomCodeLeft);
+                if (err.message === 'Room not found.' || (err && err.message && err.message.includes('Timed out')) || isMyRoom) {
+                    await this.conn.createRoom(code);
+                    peers = this.conn.getPeers();
+                } else {
+                    throw err;
+                }
+            }
             this._enterShareScreen(code, peers);
         } catch (err) {
-            UI.toast(err.message || 'Failed to join', 'error');
+            const msg = err && err.message ? err.message : 'Failed to join';
+            const detail = (msg.includes('Connection failed') || msg.includes('Lost connection') || msg.includes('Timed out'))
+                ? `${msg} (0.peerjs.com cloud server may be experiencing downtime)`
+                : msg;
+            UI.toast(detail, 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -171,7 +191,9 @@ class App {
     }
 
     leaveRoom(pushToHistory = true) {
-        try { sessionStorage.removeItem('whynotshare_active_session'); } catch {}
+        try { sessionStorage.removeItem('whynotshare_active_session'); } catch { }
+        const currentCode = this.conn ? this.conn.getRoomCode() : null;
+        if (currentCode) this.lastRoomCodeLeft = currentCode;
         this.conn.leaveRoom();
         this.textShare.clear();
         this.crypto = new CryptoManager();
@@ -218,7 +240,7 @@ class App {
             }
             el.style.display = 'flex';
             el.innerHTML = '';
-            
+
             const title = document.createElement('div');
             title.style.cssText = 'width:100%;font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px';
             title.textContent = 'Staged for sending (' + this.stagedFiles.length + '):';
@@ -282,7 +304,7 @@ class App {
             const card = UI.renderSentFile(file);
             const rcv = document.getElementById('received-files');
             if (rcv) rcv.prepend(card);
-            
+
             const url = URL.createObjectURL(file);
             const meta = { fileName: file.name, fileSize: file.size, fileType: file.type };
             if (this.textShare) {
@@ -342,7 +364,7 @@ class App {
                 sess.e2eEnabled = enabled;
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify(sess));
             }
-        } catch {}
+        } catch { }
         if (this.textShare) this.textShare.setEncryption(enabled);
         if (this.fileTransfer) this.fileTransfer.setEncryption(enabled);
 
@@ -434,7 +456,7 @@ class App {
         const peers = this.conn.getPeers() || [];
         const myId = this.conn.getSocketId();
         if (!this.selectedPersonalRecipients) this.selectedPersonalRecipients = new Set();
-        
+
         let count = 0;
         peers.forEach(p => {
             if (p.id === myId) return;
@@ -442,10 +464,10 @@ class App {
             const isSel = this.selectedPersonalRecipients.has(p.id);
             const chip = document.createElement('div');
             chip.className = 'recipient-chip ' + (isSel ? 'selected' : '');
-            
+
             const iconSpan = document.createElement('span');
             iconSpan.className = 'chip-icon';
-            iconSpan.innerHTML = isSel ? 
+            iconSpan.innerHTML = isSel ?
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
             chip.appendChild(iconSpan);
@@ -581,7 +603,7 @@ class App {
                     this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
                     this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
                     if (this.conn.connections && this.conn.connections.has(p.id)) {
-                        try { this.conn.connections.get(p.id).close(); } catch(e){}
+                        try { this.conn.connections.get(p.id).close(); } catch (e) { }
                         this.conn.connections.delete(p.id);
                     }
                     this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
@@ -621,7 +643,7 @@ class App {
                 s.roomCode = newCode;
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
             }
-        } catch {}
+        } catch { }
         this.renderInlineQr(targetUrl);
         UI.toast('Room ID changed to: ' + newCode, 'success');
     }
@@ -646,7 +668,7 @@ class App {
                     s.e2eEnabled = this.e2eEnabled;
                     sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
                 }
-            } catch {}
+            } catch { }
             this.renderInlineQr(targetUrl);
         }
         UI.toast(isEnc ? 'Room Key was rotated / updated!' : 'Room changed to Open Room!', 'success');
@@ -673,7 +695,7 @@ class App {
                         s.passphrase = cleanKey;
                         sessionStorage.setItem('whynotshare_active_session', JSON.stringify(s));
                     }
-                } catch {}
+                } catch { }
                 this.renderInlineQr(targetUrl);
             }
             UI.toast('Room Key updated & broadcasted to all members!', 'success');
@@ -714,14 +736,20 @@ class App {
                 e2eEnabled: this.e2eEnabled,
                 inWaitingRoom: false
             }));
-        } catch {}
+        } catch { }
+        const phrase = this.crypto.getPhrase() || '';
+        const targetHash = this.e2eEnabled && phrase ? ('#' + code + ':' + phrase) : ('#' + code);
+        try { window.history.replaceState(null, '', targetHash); } catch { }
         UI.showScreen('screen-share');
         setTimeout(() => { const i = document.getElementById('text-input'); if (i) i.focus(); }, 300);
     }
 
     _onPeerJoined(peer) {
         const rs = document.getElementById('screen-room');
-        if (rs && rs.classList.contains('active')) { this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers()); return; }
+        if (!rs || !rs.classList.contains('active')) {
+            this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
+            return;
+        }
         this.refreshPeerLists();
     }
 
@@ -769,13 +797,16 @@ class App {
         });
     }
 
-    openRenameModal() {
-        this.startInlineRename();
+    openRenameModal(btnEl) {
+        this.startInlineRename(btnEl);
     }
 
-    startInlineRename() {
-        const activeScreen = document.querySelector('.screen.active') || document;
-        const badge = activeScreen.querySelector('.device-id-badge');
+    startInlineRename(btnEl) {
+        let badge = btnEl && btnEl.closest ? btnEl.closest('.device-id-badge') : null;
+        if (!badge) {
+            const activeScreen = document.querySelector('.screen.active') || document;
+            badge = activeScreen.querySelector('.device-id-badge');
+        }
         if (!badge) return;
         if (badge.querySelector('.inline-rename-box')) return;
 
@@ -789,7 +820,7 @@ class App {
 
         const editBox = document.createElement('div');
         editBox.className = 'inline-rename-box';
-        editBox.style.cssText = 'display:flex;align-items:center;gap:6px;flex:1;margin-right:6px;';
+        editBox.style.cssText = 'display:flex;align-items:center;gap:6px;flex:1;margin-right:6px;transform-origin:left center;overflow:hidden;animation:expandInlineRename 0.25s cubic-bezier(0.16,1,0.3,1) forwards;';
         editBox.innerHTML = `
             <input type="text" class="input-field inline-input-el" value="${currentName}" style="padding:4px 8px;font-size:0.85rem;height:28px;min-width:110px;flex:1" maxlength="32" autocomplete="off" spellcheck="false">
             <button class="btn-rename-pill btn-random-inline" title="Random Name" style="padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></button>
@@ -804,13 +835,19 @@ class App {
         const cancelBtn = editBox.querySelector('.btn-cancel-inline');
         const randomBtn = editBox.querySelector('.btn-random-inline');
 
+        let closed = false;
         const closeEdit = () => {
+            if (closed) return;
+            closed = true;
             editBox.remove();
             nameSpan.style.display = '';
             editBtn.style.display = '';
+            nameSpan.style.animation = 'fadeInFast 0.15s ease forwards';
+            editBtn.style.animation = 'fadeInFast 0.15s ease forwards';
         };
 
         const saveEdit = () => {
+            if (closed) return;
             const val = inputEl.value.trim();
             if (!val) {
                 UI.toast('Device name cannot be empty', 'error');
@@ -820,12 +857,18 @@ class App {
             closeEdit();
         };
 
-        saveBtn.addEventListener('click', saveEdit);
-        cancelBtn.addEventListener('click', closeEdit);
-        randomBtn.addEventListener('click', () => {
+        saveBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            saveEdit();
+        });
+        cancelBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            closeEdit();
+        });
+        randomBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
             const newName = DeviceInfo.generateRandomName();
             inputEl.value = newName;
-            this.renameMyDevice(newName);
             inputEl.focus();
         });
         inputEl.addEventListener('keydown', (e) => {
@@ -834,11 +877,7 @@ class App {
         });
         inputEl.addEventListener('blur', () => {
             setTimeout(() => {
-                if (editBox.parentNode && inputEl.value.trim()) {
-                    saveEdit();
-                } else if (editBox.parentNode) {
-                    closeEdit();
-                }
+                closeEdit();
             }, 150);
         });
 
@@ -972,11 +1011,47 @@ class App {
             const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
             if (currentScreenId === 'screen-share' && (targetScreenId === 'screen-landing' || targetScreenId === 'screen-room')) {
                 this.leaveRoom(false);
+            } else if (targetScreenId === 'screen-share' && !this.conn.getRoomCode()) {
+                const codeToRejoin = this.lastRoomCodeLeft || (window.location.hash ? window.location.hash.slice(1).split(':')[0] : null);
+                if (codeToRejoin && codeToRejoin !== 'create-room') {
+                    UI.toast('Rejoining room as member...', 'info');
+                    this.joinRoom(codeToRejoin);
+                    return;
+                }
+                UI.toast('Room session disconnected. Please join or enter the room again.', 'warning');
+                UI.showScreen('screen-landing', false);
             } else {
                 UI.showScreen(targetScreenId, false);
             }
         });
         document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toUpperCase() : '';
+                if (activeTag !== 'TEXTAREA') {
+                    const screenRoom = document.getElementById('screen-room');
+                    const screenJoin = document.getElementById('screen-join');
+                    if (screenRoom && screenRoom.classList.contains('active')) {
+                        const btnEnter = document.getElementById('btn-host-enter-room');
+                        if (btnEnter && !btnEnter.disabled) {
+                            e.preventDefault();
+                            btnEnter.click();
+                            return;
+                        }
+                    } else if (screenJoin && screenJoin.classList.contains('active')) {
+                        if (activeTag === 'INPUT') {
+                            e.preventDefault();
+                            document.activeElement.blur();
+                            return;
+                        }
+                        const btnJoin = document.getElementById('btn-join-submit');
+                        if (btnJoin && !btnJoin.disabled) {
+                            e.preventDefault();
+                            btnJoin.click();
+                            return;
+                        }
+                    }
+                }
+            }
             if (e.key === 'Escape') {
                 const activeModals = document.querySelectorAll('.modal-overlay');
                 let closedAny = false;
@@ -1004,8 +1079,20 @@ class App {
         });
         const btnHostEnter = document.getElementById('btn-host-enter-room');
         if (btnHostEnter) {
-            btnHostEnter.addEventListener('click', () => {
-                this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
+            btnHostEnter.addEventListener('click', async () => {
+                let code = this.conn.getRoomCode();
+                if (!code) {
+                    const codeEl = document.getElementById('display-room-code');
+                    const savedCode = codeEl ? codeEl.textContent.trim() : null;
+                    if (savedCode && savedCode !== '---') {
+                        code = await this.conn.createRoom(savedCode);
+                    }
+                }
+                if (!code) {
+                    UI.toast('No active room found. Please create a room.', 'error');
+                    return;
+                }
+                this._enterShareScreen(code, this.conn.getPeers());
             });
         }
         document.getElementById('btn-create').addEventListener('click', () => this.createRoom());
@@ -1146,7 +1233,7 @@ class App {
                 const isLight = document.body.classList.toggle('light-theme');
                 document.querySelectorAll('.icon-moon').forEach(moon => moon.style.display = isLight ? 'none' : 'block');
                 document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'block' : 'none');
-                try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch {}
+                try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch { }
                 const urlEl = document.getElementById('share-url');
                 const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
                 const mq = document.getElementById('modal-qr');
@@ -1205,7 +1292,7 @@ class App {
             if (btnReq) btnReq.classList.toggle('active', !isOpen);
             const btnOpen = document.getElementById('btn-room-key-open');
             if (btnOpen) btnOpen.classList.toggle('active-plaintext', isOpen);
-            
+
             const inputEl = document.getElementById('input-rotate-room-key');
             const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
             if (inputEl) {

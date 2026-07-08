@@ -49,6 +49,23 @@ class DeviceInfo {
         "Jigarthanda Drink", "Palm Nectar", "Bel Panna", "Mint Cooler", "Cucumber Juice",
         "Carrot Juice", "Beetroot Juice", "Ash Gourd", "Jamun Juice", "Wood Apple"
     ];
+    static DRINK_NAMES = [
+    "Mango Lassi", "Aam Panna", "Kokum Sharbat", "Sol Kadhi", "Nimbu Pani",
+    "Jeera Water", "Ajwain Water", "Saunf Water", "Coriander Water",
+    "Amla Juice", "Aloe Juice", "Sugarcane Juice", "Coconut Water",
+    "Turmeric Milk", "Badam Milk", "Kashmiri Kahwa", "Tulsi Tea",
+    "Ginger Tea", "Lemongrass Tea", "Kanji Drink", "Jaggery Water",
+    "Ragi Malt", "Ragi Ambli", "Jowar Malt", "Bajra Raab",
+    "Barley Water", "Kambu Sharbat","Neer Mor", "Majjige Chaas", "Panakam Drink", "Nannari Sharbat",
+    "Elaneer Sharbat", "Nungu Juice", "Goli Soda", "Jigarthanda Drink",
+    "Rose Milk", "Filter Coffee", "Sukku Kaapi", "Paruthi Paal",
+    "Vetiver Sharbat", "Badam Pisin", "Sabja Sharbat", "Vetrilai Sharbat",
+    "Thandai Milk", "Rooh Afza", "Punjabi Lassi", "Jaljeera Pani",
+    "Kesar Doodh", "Noon Chai", "Kala Khatta", "Sattu Sharbat","Falsa Sharbat", "Aamras Drink", "Kairi Panha", "Piyush Drink",
+    "Matho Chaas", "Gujarati Chaas","Doi Ghol", "Borhani Drink", "Tetul Sharbat", "Lebu Sharbat",
+    "Chuski Sharbat", "Assam Tea","Mint Cooler", "Cucumber Juice", "Carrot Juice", "Beetroot Juice",
+    "Ash Gourd", "Jamun Juice", "Wood Apple", "Bael Sharbat", "Palm Nectar"
+    ];
 
     static getFriendlyName(ua) {
         try {
