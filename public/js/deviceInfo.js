@@ -39,39 +39,30 @@ class DeviceInfo {
         return 'Unknown';
     }
 
+
     static DRINK_NAMES = [
-        "Mango Lassi", "Salted Chaas", "Sattu Sharbat", "Aam Panna", "Kokum Sharbat",
-        "Sol Kadhi", "Ragi Malt", "Badam Milk", "Turmeric Milk", "Kashmiri Kahwa",
-        "Tulsi Tea", "Ginger Tea", "Lemongrass Tea", "Jeera Water", "Ajwain Water",
-        "Saunf Water", "Coriander Water", "Barley Water", "Amla Juice", "Aloe Juice",
-        "Sugarcane Juice", "Coconut Water", "Nimbu Pani", "Bael Sharbat", "Panakam Drink",
-        "Jowar Malt", "Bajra Raab", "Ragi Ambli", "Kanji Drink", "Neer Mor",
-        "Jigarthanda Drink", "Palm Nectar", "Bel Panna", "Mint Cooler", "Cucumber Juice",
-        "Carrot Juice", "Beetroot Juice", "Ash Gourd", "Jamun Juice", "Wood Apple"
-    ];
-    static DRINK_NAMES = [
-    "Mango Lassi", "Aam Panna", "Kokum Sharbat", "Sol Kadhi", "Nimbu Pani",
-    "Jeera Water", "Ajwain Water", "Saunf Water", "Coriander Water",
-    "Amla Juice", "Aloe Juice", "Sugarcane Juice", "Coconut Water",
-    "Turmeric Milk", "Badam Milk", "Kashmiri Kahwa", "Tulsi Tea",
-    "Ginger Tea", "Lemongrass Tea", "Kanji Drink", "Jaggery Water",
-    "Ragi Malt", "Ragi Ambli", "Jowar Malt", "Bajra Raab",
-    "Barley Water", "Kambu Sharbat","Neer Mor", "Majjige Chaas", "Panakam Drink", "Nannari Sharbat",
-    "Elaneer Sharbat", "Nungu Juice", "Goli Soda", "Jigarthanda Drink",
-    "Rose Milk", "Filter Coffee", "Sukku Kaapi", "Paruthi Paal",
-    "Vetiver Sharbat", "Badam Pisin", "Sabja Sharbat", "Vetrilai Sharbat",
-    "Thandai Milk", "Rooh Afza", "Punjabi Lassi", "Jaljeera Pani",
-    "Kesar Doodh", "Noon Chai", "Kala Khatta", "Sattu Sharbat","Falsa Sharbat", "Aamras Drink", "Kairi Panha", "Piyush Drink",
-    "Matho Chaas", "Gujarati Chaas","Doi Ghol", "Borhani Drink", "Tetul Sharbat", "Lebu Sharbat",
-    "Chuski Sharbat", "Assam Tea","Mint Cooler", "Cucumber Juice", "Carrot Juice", "Beetroot Juice",
-    "Ash Gourd", "Jamun Juice", "Wood Apple", "Bael Sharbat", "Palm Nectar"
+        "Mango Lassi", "Aam Panna", "Kokum Sharbat", "Sol Kadhi", "Nimbu Pani",
+        "Jeera Water", "Ajwain Water", "Saunf Water", "Coriander Water",
+        "Amla Juice", "Aloe Juice", "Sugarcane Juice", "Coconut Water",
+        "Turmeric Milk", "Badam Milk", "Kashmiri Kahwa", "Tulsi Tea",
+        "Ginger Tea", "Lemongrass Tea", "Kanji Drink", "Jaggery Water",
+        "Ragi Malt", "Ragi Ambli", "Jowar Malt", "Bajra Raab",
+        "Barley Water", "Kambu Sharbat", "Neer Mor", "Majjige Chaas", "Panakam Drink", "Nannari Sharbat",
+        "Elaneer Sharbat", "Nungu Juice", "Goli Soda", "Jigarthanda Drink",
+        "Rose Milk", "Filter Coffee", "Sukku Kaapi", "Paruthi Paal",
+        "Vetiver Sharbat", "Badam Pisin", "Sabja Sharbat", "Vetrilai Sharbat",
+        "Thandai Milk", "Rooh Afza", "Punjabi Lassi", "Jaljeera Pani",
+        "Kesar Doodh", "Noon Chai", "Kala Khatta", "Sattu Sharbat", "Falsa Sharbat", "Aamras Drink", "Kairi Panha", "Piyush Drink",
+        "Matho Chaas", "Gujarati Chaas", "Doi Ghol", "Borhani Drink", "Tetul Sharbat", "Lebu Sharbat",
+        "Chuski Sharbat", "Assam Tea", "Mint Cooler", "Cucumber Juice", "Carrot Juice", "Beetroot Juice",
+        "Ash Gourd", "Jamun Juice", "Wood Apple", "Bael Sharbat", "Palm Nectar"
     ];
 
     static getFriendlyName(ua) {
         try {
             const saved = localStorage.getItem('whynotshare_drink_name');
             if (saved && saved.trim()) return saved.trim();
-            
+
             const old = localStorage.getItem('whynotshare_device_name');
             if (old && old.trim()) {
                 let cleanOld = old.trim();
@@ -85,7 +76,7 @@ class DeviceInfo {
                     return cleanOld;
                 }
             }
-        } catch {}
+        } catch { }
         return DeviceInfo.generateRandomName();
     }
 
@@ -94,7 +85,7 @@ class DeviceInfo {
         try {
             localStorage.setItem('whynotshare_drink_name', randomDrink);
             localStorage.setItem('whynotshare_device_name', randomDrink);
-        } catch {}
+        } catch { }
         return randomDrink;
     }
 
@@ -104,7 +95,7 @@ class DeviceInfo {
         try {
             localStorage.setItem('whynotshare_drink_name', clean);
             localStorage.setItem('whynotshare_device_name', clean);
-        } catch {}
+        } catch { }
         return clean;
     }
 

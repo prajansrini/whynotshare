@@ -45,11 +45,16 @@ class UI {
         const el = document.createElement('div');
         el.className = 'device-chip' + (isYou ? ' is-you' : '');
         el.dataset.peerId = peer.id;
-        el.innerHTML = '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) +
-            '</span><span class="device-name">' + peer.deviceName + '</span>' + 
-            (peer.isCreator ? '<span style="font-size:0.7rem;color:var(--accent-primary);background:rgba(108,92,231,0.15);padding:2px 8px;border-radius:9999px;font-weight:600;margin-left:6px">Host</span>' : (peer.isAdmin ? '<span style="font-size:0.7rem;color:#ea580c;background:rgba(234,88,12,0.15);padding:2px 8px;border-radius:9999px;font-weight:600;margin-left:6px">Admin</span>' : '')) +
-            (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:6px">' + peer.systemName + '</span>' : '') +
-            (isYou ? '<span class="device-tag" style="margin-left:auto">You</span>' : '');
+        const leftSide = '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
+            '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) + '</span>' +
+            '<span class="device-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + peer.deviceName + '</span>' +
+            (peer.isCreator ? '<span style="font-size:0.7rem;color:var(--accent-primary);background:rgba(108,92,231,0.15);padding:2px 8px;border-radius:9999px;font-weight:600">Host</span>' : (peer.isAdmin ? '<span style="font-size:0.7rem;color:#ea580c;background:rgba(234,88,12,0.15);padding:2px 8px;border-radius:9999px;font-weight:600">Admin</span>' : '')) +
+            '</div>';
+        const rightSide = '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+            (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);white-space:nowrap">' + peer.systemName + '</span>' : '') +
+            (isYou ? '<span class="device-tag">You</span>' : '') +
+            '</div>';
+        el.innerHTML = leftSide + rightSide;
         return el;
     }
 

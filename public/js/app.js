@@ -5,6 +5,9 @@ class App {
         this.textShare = null;
         this.fileTransfer = null;
         this.e2eEnabled = true;
+        this.personalE2E = true;
+        this.selectedPersonalRecipients = new Set();
+        this._knownPeersForPersonalE2E = new Set();
         this.stagedFiles = [];
     }
 
@@ -58,7 +61,7 @@ class App {
                 document.body.classList.add('light-theme');
                 const moon = document.querySelector('.icon-moon');
                 const sun = document.querySelector('.icon-sun');
-                if (moon && sun) { moon.style.display = 'none'; sun.style.display = 'block'; }
+                if (moon && sun) { moon.style.display = 'block'; sun.style.display = 'none'; }
             }
         } catch { }
 
@@ -427,29 +430,29 @@ class App {
     }
 
     /* --- Personal E2E & Host Governance Methods --- */
-    togglePersonalE2E(enabled) {
-        this.personalE2E = enabled;
-        const shareOn = document.getElementById('btn-share-encrypt-on');
-        const shareOff = document.getElementById('btn-share-encrypt-off');
-        if (shareOn && shareOff) {
-            shareOn.classList.toggle('active', enabled);
-            shareOff.classList.toggle('active-plaintext', !enabled);
-            const shareBar = shareOn.closest('.security-switch-bar');
-            if (shareBar) shareBar.classList.toggle('plaintext-mode', !enabled);
-        }
+    togglePersonalE2E(enabled = true) {
+        this.personalE2E = true;
         const container = document.getElementById('personal-recipients-container');
         if (container) {
-            container.style.display = enabled ? 'flex' : 'none';
+            container.style.display = 'flex';
         }
         const pe2ePill = document.getElementById('pe2e-status-pill');
         if (pe2ePill) {
-            pe2ePill.textContent = enabled ? 'ON' : 'OFF';
-            pe2ePill.style.color = enabled ? 'var(--accent-primary)' : 'var(--text-tertiary)';
+            pe2ePill.textContent = 'ON';
+            pe2ePill.style.color = 'var(--accent-primary)';
+        }
+        if (!this.crypto.myPersonalKey) {
+            this.crypto.generatePersonalKey().then(() => {
+                const peers = this.conn.getPeers() || [];
+                const myId = this.conn.getSocketId();
+                peers.forEach(p => {
+                    if (p.id !== myId && this.selectedPersonalRecipients && this.selectedPersonalRecipients.has(p.id)) {
+                        this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
+                    }
+                });
+            });
         }
         this.renderPersonalRecipients();
-        if (enabled && !this.crypto.myPersonalKey) {
-            this.crypto.generatePersonalKey();
-        }
     }
 
     renderPersonalRecipients() {
@@ -459,11 +462,19 @@ class App {
         const peers = this.conn.getPeers() || [];
         const myId = this.conn.getSocketId();
         if (!this.selectedPersonalRecipients) this.selectedPersonalRecipients = new Set();
+        if (!this._knownPeersForPersonalE2E) this._knownPeersForPersonalE2E = new Set();
 
         let count = 0;
         peers.forEach(p => {
             if (p.id === myId) return;
             count++;
+            if (!this._knownPeersForPersonalE2E.has(p.id)) {
+                this._knownPeersForPersonalE2E.add(p.id);
+                this.selectedPersonalRecipients.add(p.id);
+                if (this.crypto.myPersonalKeyStr) {
+                    this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
+                }
+            }
             const isSel = this.selectedPersonalRecipients.has(p.id);
             const chip = document.createElement('div');
             chip.className = 'recipient-chip ' + (isSel ? 'selected' : '');
@@ -499,7 +510,77 @@ class App {
         }
     }
 
+    _triggerAutoSaveHostSettings(closeModal = false) {
+        if (!this.conn || !this.conn.isCreator) return;
+        const inputId = document.getElementById('input-new-room-id');
+        const newId = inputId ? inputId.value.trim() : null;
+        if (newId && newId !== this.conn.getRoomCode()) {
+            this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
+            this._onRoomIdChanged(newId);
+        }
+        const toggle = document.getElementById('toggle-open-room');
+        const isOpen = toggle && toggle.checked;
+        const inputKeyEl = document.getElementById('input-rotate-room-key');
+        const newKey = isOpen ? '' : (inputKeyEl ? inputKeyEl.value.trim() : '');
+        const currentKey = this.crypto.getPhrase() || '';
+        if (newKey !== currentKey || isOpen === this.e2eEnabled) {
+            this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
+            this._onRoomKeyRotated(newKey);
+        }
+
+        const saveBtn = document.getElementById('btn-save-host-manage');
+        const spinner = saveBtn ? saveBtn.querySelector('.save-spinner') : null;
+        const txt = document.getElementById('txt-save-btn');
+        if (saveBtn && txt) {
+            if (spinner) spinner.style.display = 'inline-block';
+            txt.textContent = 'Saving...';
+            clearTimeout(this._saveAnimTimeout);
+            clearTimeout(this._saveResetTimeout);
+            this._saveAnimTimeout = setTimeout(() => {
+                if (spinner) spinner.style.display = 'none';
+                txt.textContent = 'Saved';
+                if (closeModal) {
+                    this._initialHostManageState = {
+                        roomCode: this.conn.getRoomCode() || '',
+                        e2eEnabled: this.e2eEnabled,
+                        phrase: this.crypto.getPhrase() || ''
+                    };
+                    this._saveResetTimeout = setTimeout(() => {
+                        const modal = document.getElementById('modal-host-manage');
+                        if (modal) modal.style.display = 'none';
+                        txt.textContent = 'Save';
+                    }, 350);
+                } else {
+                    this._saveResetTimeout = setTimeout(() => {
+                        txt.textContent = 'Save';
+                    }, 1400);
+                }
+            }, 450);
+        }
+    }
+
+    revertHostManageSettings() {
+        if (this._initialHostManageState) {
+            const init = this._initialHostManageState;
+            if (init.roomCode && init.roomCode !== this.conn.getRoomCode()) {
+                this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: init.roomCode } });
+                this._onRoomIdChanged(init.roomCode);
+            }
+            const currentKey = this.crypto.getPhrase() || '';
+            if (init.phrase !== currentKey || init.e2eEnabled !== this.e2eEnabled) {
+                this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: init.phrase } });
+                this._onRoomKeyRotated(init.phrase);
+            }
+        }
+        document.getElementById('modal-host-manage').style.display = 'none';
+    }
+
     openHostManageModal() {
+        this._initialHostManageState = {
+            roomCode: this.conn.getRoomCode() || '',
+            e2eEnabled: this.e2eEnabled,
+            phrase: this.crypto.getPhrase() || ''
+        };
         const isPrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
         const roomCode = this.conn.getRoomCode() || '';
         const isOpenRoom = !this.e2eEnabled || !this.crypto.getPhrase() || this.crypto.getPhrase().trim() === '';
@@ -522,23 +603,31 @@ class App {
         const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
         const inputKey = document.getElementById('input-rotate-room-key');
 
+        const isCreator = Boolean(this.conn && this.conn.isCreator);
+
         if (boxToggleOpenRoom) {
             boxToggleOpenRoom.style.display = 'block';
-            boxToggleOpenRoom.style.opacity = isPrivileged ? '1' : '0.55';
-            boxToggleOpenRoom.style.pointerEvents = isPrivileged ? 'auto' : 'none';
+            boxToggleOpenRoom.style.opacity = isCreator ? '1' : '0.55';
+            boxToggleOpenRoom.style.pointerEvents = isCreator ? 'auto' : 'none';
         }
 
         if (toggleOpenRoom) {
             toggleOpenRoom.checked = isOpenRoom;
-            toggleOpenRoom.disabled = !isPrivileged;
+            toggleOpenRoom.disabled = !isCreator;
         }
 
         const barKeyMode = document.getElementById('bar-room-key-mode');
         if (barKeyMode) barKeyMode.classList.toggle('plaintext-mode', isOpenRoom);
         const btnKeyReq = document.getElementById('btn-room-key-required');
-        if (btnKeyReq) btnKeyReq.classList.toggle('active', !isOpenRoom);
+        if (btnKeyReq) {
+            btnKeyReq.classList.toggle('active', !isOpenRoom);
+            btnKeyReq.style.pointerEvents = isCreator ? 'auto' : 'none';
+        }
         const btnKeyOpen = document.getElementById('btn-room-key-open');
-        if (btnKeyOpen) btnKeyOpen.classList.toggle('active-plaintext', isOpenRoom);
+        if (btnKeyOpen) {
+            btnKeyOpen.classList.toggle('active-plaintext', isOpenRoom);
+            btnKeyOpen.style.pointerEvents = isCreator ? 'auto' : 'none';
+        }
 
         if (inputKey) {
             if (isOpenRoom) {
@@ -550,17 +639,17 @@ class App {
             } else {
                 inputKey.value = phrase;
                 inputKey.placeholder = 'Room Key';
-                inputKey.disabled = !isPrivileged;
-                inputKey.readOnly = !isPrivileged;
+                inputKey.disabled = !isCreator;
+                inputKey.readOnly = !isCreator;
                 inputKey.style.opacity = '1';
                 inputKey.style.backgroundColor = '';
             }
         }
-        if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isPrivileged) ? 'inline-flex' : 'none';
+        if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isCreator) ? 'inline-flex' : 'none';
 
         const deleteBtn = document.getElementById('btn-host-delete-room');
         if (deleteBtn) {
-            deleteBtn.style.display = isPrivileged ? 'flex' : 'none';
+            deleteBtn.style.display = isCreator ? 'flex' : 'none';
             deleteBtn.dataset.confirming = 'false';
             deleteBtn.style.background = 'rgba(239, 68, 68, 0.12)';
             deleteBtn.style.borderColor = 'rgba(239, 68, 68, 0.35)';
@@ -571,9 +660,9 @@ class App {
         }
 
         const bottomActions = document.getElementById('host-manage-bottom-actions');
-        if (bottomActions) bottomActions.style.display = isPrivileged ? 'flex' : 'none';
+        if (bottomActions) bottomActions.style.display = isCreator ? 'flex' : 'none';
         const btnSaveManage = document.getElementById('btn-save-host-manage');
-        if (btnSaveManage) btnSaveManage.style.display = isPrivileged ? 'inline-flex' : 'none';
+        if (btnSaveManage) btnSaveManage.style.display = isCreator ? 'inline-flex' : 'none';
 
         this.renderHostMembersList();
         document.getElementById('modal-host-manage').style.display = 'flex';
@@ -589,8 +678,8 @@ class App {
             const row = document.createElement('div');
             row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.05)';
             const left = document.createElement('div');
-            left.style.cssText = 'display:flex;align-items:center;gap:8px';
-            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : (p.isAdmin ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(234,88,12,0.2);color:#ea580c;border-radius:10px;font-weight:600">Admin</span>' : '')}`;
+            left.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : (p.isAdmin ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(234,88,12,0.2);color:#ea580c;border-radius:10px;font-weight:600">Admin</span>' : '')}${p.systemName ? `<span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:4px">${p.systemName}</span>` : ''}`;
             row.appendChild(left);
 
             const isMePrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
@@ -742,7 +831,7 @@ class App {
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
         this.toggleE2E(this.e2eEnabled);
-        this.togglePersonalE2E(false); // Personal E2E off by default
+        this.togglePersonalE2E(true); // Personal E2E ON by default, all members selected by default
         this.updatePrivilegeUI();
         try {
             sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
@@ -1266,8 +1355,8 @@ class App {
         document.querySelectorAll('.btn-theme-toggle').forEach(themeBtn => {
             themeBtn.addEventListener('click', () => {
                 const isLight = document.body.classList.toggle('light-theme');
-                document.querySelectorAll('.icon-moon').forEach(moon => moon.style.display = isLight ? 'none' : 'block');
-                document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'block' : 'none');
+                document.querySelectorAll('.icon-moon').forEach(moon => moon.style.display = isLight ? 'block' : 'none');
+                document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'none' : 'block');
                 try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch { }
                 const urlEl = document.getElementById('share-url');
                 const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
@@ -1351,6 +1440,7 @@ class App {
                 }
             }
             if (btnGenKey) btnGenKey.style.display = !isOpen ? 'inline-flex' : 'none';
+            this._triggerAutoSaveHostSettings(false);
         };
 
         const btnKeyReq = document.getElementById('btn-room-key-required');
@@ -1368,32 +1458,40 @@ class App {
                 const phrase = this.crypto.generateRandomPhrase();
                 const inputEl = document.getElementById('input-rotate-room-key');
                 if (inputEl) inputEl.value = phrase;
+                this._triggerAutoSaveHostSettings(false);
             });
         }
+
+        const inputNewId = document.getElementById('input-new-room-id');
+        if (inputNewId) {
+            let idDebounce;
+            inputNewId.addEventListener('input', () => {
+                clearTimeout(idDebounce);
+                idDebounce = setTimeout(() => this._triggerAutoSaveHostSettings(false), 650);
+            });
+            inputNewId.addEventListener('change', () => this._triggerAutoSaveHostSettings(false));
+        }
+
+        const inputRotateKey = document.getElementById('input-rotate-room-key');
+        if (inputRotateKey) {
+            let keyDebounce;
+            inputRotateKey.addEventListener('input', () => {
+                clearTimeout(keyDebounce);
+                keyDebounce = setTimeout(() => this._triggerAutoSaveHostSettings(false), 650);
+            });
+            inputRotateKey.addEventListener('change', () => this._triggerAutoSaveHostSettings(false));
+        }
+
         const btnCancelHostManage = document.getElementById('btn-cancel-host-manage');
         if (btnCancelHostManage) {
             btnCancelHostManage.addEventListener('click', () => {
-                document.getElementById('modal-host-manage').style.display = 'none';
+                this.revertHostManageSettings();
             });
         }
         const btnSaveHostManage = document.getElementById('btn-save-host-manage');
         if (btnSaveHostManage) {
             btnSaveHostManage.addEventListener('click', () => {
-                const newId = document.getElementById('input-new-room-id').value.trim();
-                if (newId && newId !== this.conn.getRoomCode()) {
-                    this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
-                    this._onRoomIdChanged(newId);
-                }
-                const toggle = document.getElementById('toggle-open-room');
-                const isOpen = toggle && toggle.checked;
-                const newKey = isOpen ? '' : document.getElementById('input-rotate-room-key').value.trim();
-                const currentKey = this.crypto.getPhrase() || '';
-                if (newKey !== currentKey || isOpen === this.e2eEnabled) {
-                    this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
-                    this._onRoomKeyRotated(newKey);
-                }
-                document.getElementById('modal-host-manage').style.display = 'none';
-                UI.toast('Room settings updated!', 'success');
+                this._triggerAutoSaveHostSettings(true);
             });
         }
         const btnDeleteRoom = document.getElementById('btn-host-delete-room');

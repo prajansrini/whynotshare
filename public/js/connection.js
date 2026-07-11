@@ -191,7 +191,6 @@ class ConnectionManager {
                     this._joinReject = null;
                     this._joinResolve = null;
                 }
-                if (window.UI && typeof UI.toast === 'function') UI.toast(data.payload.reason || 'Room Key required!', 'error');
                 if (this.peer) { try { this.peer.destroy(); } catch {} }
                 break;
             }
