@@ -280,6 +280,21 @@ class ConnectionManager {
                 if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
                 break;
             }
+            case 'demote-admin': {
+                const target = this.peers.find(p => p.id === data.payload.targetId);
+                if (target) target.isAdmin = false;
+                if (data.payload.targetId === this.myPeerId) {
+                    this.isAdmin = false;
+                    if (typeof UI !== 'undefined') UI.toast('Your Admin privileges were removed by the Host.', 'info');
+                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
+                } else if (this.isCreator) {
+                    this._broadcast(data, fromId);
+                }
+                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+                else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
+                if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
+                break;
+            }
             case 'room-deleted': {
                 if (typeof UI !== 'undefined') UI.toast('The room was deleted by the host.', 'error');
                 if (window.app && window.app.leaveRoom) window.app.leaveRoom();

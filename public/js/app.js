@@ -104,6 +104,12 @@ class App {
         window.addEventListener('hashchange', () => {
             this._checkUrlHash();
         });
+
+        window.addEventListener('beforeunload', () => {
+            if (this.conn && this.conn.getRoomCode()) {
+                this.conn.leaveRoom();
+            }
+        });
     }
 
     async createRoom() {
@@ -529,16 +535,12 @@ class App {
         }
 
         const saveBtn = document.getElementById('btn-save-host-manage');
-        const spinner = saveBtn ? saveBtn.querySelector('.save-spinner') : null;
-        const txt = document.getElementById('txt-save-btn');
-        if (saveBtn && txt) {
-            if (spinner) spinner.style.display = 'inline-block';
-            txt.textContent = 'Saving...';
+        if (saveBtn) {
+            saveBtn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;width:100%"><span style="display:inline-flex;align-items:center;animation:slideInLeftSvg 0.35s cubic-bezier(0.16,1,0.3,1) forwards"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 13 32 6" fill="#ffffff" preserveAspectRatio="none" style="width:34px;height:16px;margin-right:8px;display:inline-block;vertical-align:middle"><path opacity="0.8" transform="translate(0 0)" d="M2 14 V18 H6 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.5" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.1s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.25" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.2s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path></svg></span><span style="display:inline-flex;align-items:center"><span style="animation:slideShiftLeftText 0.35s cubic-bezier(0.16,1,0.3,1) forwards">Sav</span><span style="display:inline-flex;position:relative;overflow:hidden"><span style="animation:morphIngIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards">ing</span></span><span style="animation:slideInRightDots 0.35s cubic-bezier(0.16,1,0.3,1) forwards">...</span></span></span>';
             clearTimeout(this._saveAnimTimeout);
             clearTimeout(this._saveResetTimeout);
             this._saveAnimTimeout = setTimeout(() => {
-                if (spinner) spinner.style.display = 'none';
-                txt.textContent = 'Saved';
+                saveBtn.innerHTML = '<span>Saved</span>';
                 if (closeModal) {
                     this._initialHostManageState = {
                         roomCode: this.conn.getRoomCode() || '',
@@ -548,11 +550,11 @@ class App {
                     this._saveResetTimeout = setTimeout(() => {
                         const modal = document.getElementById('modal-host-manage');
                         if (modal) modal.style.display = 'none';
-                        txt.textContent = 'Save';
+                        saveBtn.innerHTML = '<span>Save</span>';
                     }, 350);
                 } else {
                     this._saveResetTimeout = setTimeout(() => {
-                        txt.textContent = 'Save';
+                        saveBtn.innerHTML = '<span>Save</span>';
                     }, 1400);
                 }
             }, 450);
@@ -676,11 +678,12 @@ class App {
         const myId = this.conn.getSocketId();
         peers.forEach(p => {
             const card = document.createElement('div');
-            card.style.cssText = 'display:flex;flex-direction:column;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;transition:border-color 0.2s ease, background 0.2s ease';
+            card.className = 'member-card-item';
 
             const header = document.createElement('div');
             const isMePrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
-            const canManage = isMePrivileged && p.id !== myId && !p.isCreator;
+            const isSelfAdmin = p.id === myId && p.isAdmin && !p.isCreator;
+            const canManage = (isMePrivileged && p.id !== myId && !p.isCreator) || isSelfAdmin;
 
             header.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;${canManage ? 'cursor:pointer;' : ''}user-select:none;transition:background 0.2s ease`;
 
@@ -693,7 +696,7 @@ class App {
                 <div style="display:flex;flex-direction:column;gap:2px">
                     <span style="font-weight:600;font-size:0.88rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
                         ${p.deviceName || 'Device'}
-                        ${p.id === myId ? '<span style="font-size:0.7rem;color:var(--accent-primary);font-weight:700">(You)</span>' : ''}
+                        ${p.id === myId ? '<span class="badge-theme-accent">You</span>' : ''}
                     </span>
                     <span style="font-size:0.74rem;color:var(--text-tertiary)">${p.systemName || 'Web Client'}</span>
                 </div>
@@ -704,11 +707,11 @@ class App {
 
             let badgeHtml = '';
             if (p.isCreator) {
-                badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(108,92,231,0.22);color:var(--accent-primary);border-radius:12px;font-weight:700">Host</span>';
+                badgeHtml = '<span class="badge-theme-accent">Host</span>';
             } else if (p.isAdmin) {
                 badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(234,88,12,0.22);color:#fb923c;border-radius:12px;font-weight:700">Admin</span>';
             } else {
-                badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(255,255,255,0.07);color:var(--text-secondary);border-radius:12px;font-weight:600">Member</span>';
+                badgeHtml = '<span class="badge-theme-member">Member</span>';
             }
 
             right.innerHTML = badgeHtml + (canManage ? '<svg class="member-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform 0.25s ease;color:var(--text-tertiary)"><polyline points="6 9 12 15 18 9"/></svg>' : '');
@@ -719,62 +722,97 @@ class App {
 
             if (canManage) {
                 const drawer = document.createElement('div');
-                drawer.style.cssText = 'max-height:0px;opacity:0;overflow:hidden;transition:max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;display:flex;align-items:center;justify-content:flex-end;gap:8px;background:rgba(0,0,0,0.24);border-top:0px solid rgba(255,255,255,0.06);padding:0 14px';
+                drawer.className = 'member-card-drawer';
 
-                if (!p.isAdmin) {
-                    const btnPromote = document.createElement('button');
-                    btnPromote.className = 'btn btn-secondary';
-                    btnPromote.style.cssText = 'padding:6px 12px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
-                    btnPromote.textContent = 'Promote to Admin';
-                    btnPromote.onclick = (e) => {
+                if (isSelfAdmin) {
+                    const btnDethrone = document.createElement('button');
+                    btnDethrone.className = 'btn btn-secondary';
+                    btnDethrone.style.cssText = 'padding:6px 12px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600;background:rgba(234,88,12,0.18);border:1px solid rgba(234,88,12,0.35);color:#fb923c';
+                    btnDethrone.textContent = 'Dethrone Admin';
+                    btnDethrone.onclick = (e) => {
                         e.stopPropagation();
-                        p.isAdmin = true;
-                        this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
+                        p.isAdmin = false;
+                        this.conn.isAdmin = false;
+                        this.conn._broadcast({ type: 'demote-admin', payload: { targetId: myId } });
                         this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
-                        UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
+                        UI.toast('You stepped down from Admin', 'info');
+                        if (this.updatePrivilegeUI) this.updatePrivilegeUI();
                         this.refreshPeerLists();
                     };
-                    drawer.appendChild(btnPromote);
-                }
+                    drawer.appendChild(btnDethrone);
 
-                const btnKick = document.createElement('button');
-                btnKick.className = 'btn btn-danger';
-                btnKick.style.cssText = 'padding:6px 14px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
-                btnKick.textContent = 'Remove';
-                btnKick.onclick = (e) => {
-                    e.stopPropagation();
-                    this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
-                    this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
-                    if (this.conn.connections && this.conn.connections.has(p.id)) {
-                        try { this.conn.connections.get(p.id).close(); } catch (err) { }
-                        this.conn.connections.delete(p.id);
+                    const btnLeaveSelf = document.createElement('button');
+                    btnLeaveSelf.className = 'btn btn-danger';
+                    btnLeaveSelf.style.cssText = 'padding:6px 14px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
+                    btnLeaveSelf.textContent = 'Leave Room';
+                    btnLeaveSelf.onclick = (e) => {
+                        e.stopPropagation();
+                        document.getElementById('modal-host-manage').style.display = 'none';
+                        this.leaveRoom();
+                    };
+                    drawer.appendChild(btnLeaveSelf);
+                } else {
+                    if (!p.isAdmin) {
+                        const btnPromote = document.createElement('button');
+                        btnPromote.className = 'btn btn-secondary';
+                        btnPromote.style.cssText = 'padding:6px 12px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
+                        btnPromote.textContent = 'Promote to Admin';
+                        btnPromote.onclick = (e) => {
+                            e.stopPropagation();
+                            p.isAdmin = true;
+                            this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
+                            this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                            UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
+                            this.refreshPeerLists();
+                        };
+                        drawer.appendChild(btnPromote);
+                    } else if (this.conn && this.conn.isCreator) {
+                        const btnDemote = document.createElement('button');
+                        btnDemote.className = 'btn btn-secondary';
+                        btnDemote.style.cssText = 'padding:6px 12px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600;background:rgba(234,88,12,0.18);border:1px solid rgba(234,88,12,0.35);color:#fb923c';
+                        btnDemote.textContent = 'Demote to Member';
+                        btnDemote.onclick = (e) => {
+                            e.stopPropagation();
+                            p.isAdmin = false;
+                            this.conn._broadcast({ type: 'demote-admin', payload: { targetId: p.id } });
+                            this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                            UI.toast(`Demoted ${p.deviceName} to Member`, 'info');
+                            this.refreshPeerLists();
+                        };
+                        drawer.appendChild(btnDemote);
                     }
-                    this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
-                    this.refreshPeerLists();
-                    UI.toast(`Removed ${p.deviceName}`, 'success');
-                };
-                drawer.appendChild(btnKick);
+
+                    const btnKick = document.createElement('button');
+                    btnKick.className = 'btn btn-danger';
+                    btnKick.style.cssText = 'padding:6px 14px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
+                    btnKick.textContent = 'Remove';
+                    btnKick.onclick = (e) => {
+                        e.stopPropagation();
+                        this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
+                        this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
+                        if (this.conn.connections && this.conn.connections.has(p.id)) {
+                            try { this.conn.connections.get(p.id).close(); } catch (err) { }
+                            this.conn.connections.delete(p.id);
+                        }
+                        this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                        this.refreshPeerLists();
+                        UI.toast(`Removed ${p.deviceName}`, 'success');
+                    };
+                    drawer.appendChild(btnKick);
+                }
 
                 let isOpen = false;
                 header.addEventListener('click', () => {
                     isOpen = !isOpen;
                     const chev = header.querySelector('.member-chevron');
                     if (isOpen) {
-                        drawer.style.maxHeight = '70px';
-                        drawer.style.opacity = '1';
-                        drawer.style.padding = '10px 14px';
-                        drawer.style.borderTop = '1px solid rgba(255,255,255,0.06)';
+                        drawer.classList.add('open');
+                        card.classList.add('drawer-open');
                         if (chev) chev.style.transform = 'rotate(180deg)';
-                        card.style.borderColor = 'rgba(108,92,231,0.45)';
-                        card.style.background = 'rgba(255,255,255,0.05)';
                     } else {
-                        drawer.style.maxHeight = '0px';
-                        drawer.style.opacity = '0';
-                        drawer.style.padding = '0 14px';
-                        drawer.style.borderTop = '0px solid rgba(255,255,255,0.06)';
+                        drawer.classList.remove('open');
+                        card.classList.remove('drawer-open');
                         if (chev) chev.style.transform = 'rotate(0deg)';
-                        card.style.borderColor = 'rgba(255,255,255,0.06)';
-                        card.style.background = 'rgba(255,255,255,0.03)';
                     }
                 });
 
@@ -1091,7 +1129,7 @@ class App {
         const passBtn = document.getElementById('btn-edit-passphrase');
         if (hmBtn) {
             hmBtn.style.display = 'inline-flex';
-            hmBtn.classList.toggle('btn-host-privileged', isPrivileged);
+            hmBtn.classList.add('btn-host-privileged');
         }
         if (hmText) hmText.textContent = isPrivileged ? 'Host Manage' : 'Room Info';
         if (passBtn) passBtn.style.display = 'none';
