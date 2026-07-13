@@ -675,50 +675,113 @@ class App {
         const peers = this.conn.getPeers() || [];
         const myId = this.conn.getSocketId();
         peers.forEach(p => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.05)';
-            const left = document.createElement('div');
-            left.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
-            left.innerHTML = `<span style="font-weight:600;font-size:0.85rem">${p.deviceName || 'Device'} ${p.id === myId ? '(You)' : ''}</span>${p.isCreator ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(108,92,231,0.2);color:var(--accent-primary);border-radius:10px">Host</span>' : (p.isAdmin ? '<span style="font-size:0.7rem;padding:2px 6px;background:rgba(234,88,12,0.2);color:#ea580c;border-radius:10px;font-weight:600">Admin</span>' : '')}${p.systemName ? `<span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:4px">${p.systemName}</span>` : ''}`;
-            row.appendChild(left);
+            const card = document.createElement('div');
+            card.style.cssText = 'display:flex;flex-direction:column;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;transition:border-color 0.2s ease, background 0.2s ease';
 
+            const header = document.createElement('div');
             const isMePrivileged = this.conn && (this.conn.isCreator || this.conn.isAdmin);
-            if (isMePrivileged && p.id !== myId && !p.isCreator) {
-                const btns = document.createElement('div');
-                btns.style.cssText = 'display:flex;gap:6px';
+            const canManage = isMePrivileged && p.id !== myId && !p.isCreator;
+
+            header.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;${canManage ? 'cursor:pointer;' : ''}user-select:none;transition:background 0.2s ease`;
+
+            const left = document.createElement('div');
+            left.style.cssText = 'display:flex;align-items:center;gap:10px';
+            left.innerHTML = `
+                <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:2px">
+                    <span style="font-weight:600;font-size:0.88rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+                        ${p.deviceName || 'Device'}
+                        ${p.id === myId ? '<span style="font-size:0.7rem;color:var(--accent-primary);font-weight:700">(You)</span>' : ''}
+                    </span>
+                    <span style="font-size:0.74rem;color:var(--text-tertiary)">${p.systemName || 'Web Client'}</span>
+                </div>
+            `;
+
+            const right = document.createElement('div');
+            right.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+            let badgeHtml = '';
+            if (p.isCreator) {
+                badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(108,92,231,0.22);color:var(--accent-primary);border-radius:12px;font-weight:700">Host</span>';
+            } else if (p.isAdmin) {
+                badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(234,88,12,0.22);color:#fb923c;border-radius:12px;font-weight:700">Admin</span>';
+            } else {
+                badgeHtml = '<span style="font-size:0.72rem;padding:3px 9px;background:rgba(255,255,255,0.07);color:var(--text-secondary);border-radius:12px;font-weight:600">Member</span>';
+            }
+
+            right.innerHTML = badgeHtml + (canManage ? '<svg class="member-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform 0.25s ease;color:var(--text-tertiary)"><polyline points="6 9 12 15 18 9"/></svg>' : '');
+
+            header.appendChild(left);
+            header.appendChild(right);
+            card.appendChild(header);
+
+            if (canManage) {
+                const drawer = document.createElement('div');
+                drawer.style.cssText = 'max-height:0px;opacity:0;overflow:hidden;transition:max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;display:flex;align-items:center;justify-content:flex-end;gap:8px;background:rgba(0,0,0,0.24);border-top:0px solid rgba(255,255,255,0.06);padding:0 14px';
+
                 if (!p.isAdmin) {
                     const btnPromote = document.createElement('button');
                     btnPromote.className = 'btn btn-secondary';
-                    btnPromote.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
-                    btnPromote.textContent = 'Promote Admin';
-                    btnPromote.onclick = () => {
+                    btnPromote.style.cssText = 'padding:6px 12px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
+                    btnPromote.textContent = 'Promote to Admin';
+                    btnPromote.onclick = (e) => {
+                        e.stopPropagation();
                         p.isAdmin = true;
                         this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
                         this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                         UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
                         this.refreshPeerLists();
                     };
-                    btns.appendChild(btnPromote);
+                    drawer.appendChild(btnPromote);
                 }
+
                 const btnKick = document.createElement('button');
                 btnKick.className = 'btn btn-danger';
-                btnKick.style.cssText = 'padding:4px 8px;font-size:0.7rem;height:auto';
+                btnKick.style.cssText = 'padding:6px 14px;font-size:0.75rem;height:auto;border-radius:8px;font-weight:600';
                 btnKick.textContent = 'Remove';
-                btnKick.onclick = () => {
+                btnKick.onclick = (e) => {
+                    e.stopPropagation();
                     this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
                     this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
                     if (this.conn.connections && this.conn.connections.has(p.id)) {
-                        try { this.conn.connections.get(p.id).close(); } catch (e) { }
+                        try { this.conn.connections.get(p.id).close(); } catch (err) { }
                         this.conn.connections.delete(p.id);
                     }
                     this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                     this.refreshPeerLists();
                     UI.toast(`Removed ${p.deviceName}`, 'success');
                 };
-                btns.appendChild(btnKick);
-                row.appendChild(btns);
+                drawer.appendChild(btnKick);
+
+                let isOpen = false;
+                header.addEventListener('click', () => {
+                    isOpen = !isOpen;
+                    const chev = header.querySelector('.member-chevron');
+                    if (isOpen) {
+                        drawer.style.maxHeight = '70px';
+                        drawer.style.opacity = '1';
+                        drawer.style.padding = '10px 14px';
+                        drawer.style.borderTop = '1px solid rgba(255,255,255,0.06)';
+                        if (chev) chev.style.transform = 'rotate(180deg)';
+                        card.style.borderColor = 'rgba(108,92,231,0.45)';
+                        card.style.background = 'rgba(255,255,255,0.05)';
+                    } else {
+                        drawer.style.maxHeight = '0px';
+                        drawer.style.opacity = '0';
+                        drawer.style.padding = '0 14px';
+                        drawer.style.borderTop = '0px solid rgba(255,255,255,0.06)';
+                        if (chev) chev.style.transform = 'rotate(0deg)';
+                        card.style.borderColor = 'rgba(255,255,255,0.06)';
+                        card.style.background = 'rgba(255,255,255,0.03)';
+                    }
+                });
+
+                card.appendChild(drawer);
             }
-            listEl.appendChild(row);
+
+            listEl.appendChild(card);
         });
     }
 
