@@ -711,12 +711,15 @@ class App {
         }
         if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isCreator) ? 'inline-flex' : 'none';
 
+        const hostDangerZone = document.getElementById('host-danger-zone-container');
+        if (hostDangerZone) hostDangerZone.style.display = isCreator ? 'flex' : 'none';
+
         const removeNonAdminsBtn = document.getElementById('btn-host-remove-non-admins');
         if (removeNonAdminsBtn) {
             removeNonAdminsBtn.style.display = isCreator ? 'flex' : 'none';
             removeNonAdminsBtn.dataset.confirming = 'false';
-            removeNonAdminsBtn.style.background = 'rgba(245, 158, 11, 0.12)';
-            removeNonAdminsBtn.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+            removeNonAdminsBtn.style.background = 'rgba(239, 68, 68, 0.12)';
+            removeNonAdminsBtn.style.borderColor = 'rgba(239, 68, 68, 0.35)';
             const mainTxt = document.getElementById('txt-remove-non-admins-main');
             const subTxt = document.getElementById('txt-remove-non-admins-sub');
             if (mainTxt) mainTxt.textContent = 'Remove Non-Admin Members';
@@ -1906,8 +1909,8 @@ class App {
             if (btn && btn.dataset.confirming !== 'true') {
                 btn.dataset.confirming = 'true';
                 if (btnRemoveNonAdmins) {
-                    btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.28)';
-                    btnRemoveNonAdmins.style.borderColor = '#f59e0b';
+                    btnRemoveNonAdmins.style.background = 'rgba(239, 68, 68, 0.28)';
+                    btnRemoveNonAdmins.style.borderColor = '#ef4444';
                 }
                 const mainTxt = document.getElementById('txt-remove-non-admins-main');
                 const subTxt = document.getElementById('txt-remove-non-admins-sub');
@@ -1917,8 +1920,8 @@ class App {
                 btn._confirmTimer = setTimeout(() => {
                     btn.dataset.confirming = 'false';
                     if (btnRemoveNonAdmins) {
-                        btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.12)';
-                        btnRemoveNonAdmins.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                        btnRemoveNonAdmins.style.background = 'rgba(239, 68, 68, 0.12)';
+                        btnRemoveNonAdmins.style.borderColor = 'rgba(239, 68, 68, 0.35)';
                     }
                     if (mainTxt) mainTxt.textContent = 'Remove Non-Admin Members';
                     if (subTxt) subTxt.textContent = 'Disconnect all regular members from room';
@@ -1928,8 +1931,8 @@ class App {
                     clearTimeout(btn._confirmTimer);
                     btn.dataset.confirming = 'false';
                     if (btnRemoveNonAdmins) {
-                        btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.12)';
-                        btnRemoveNonAdmins.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                        btnRemoveNonAdmins.style.background = 'rgba(239, 68, 68, 0.12)';
+                        btnRemoveNonAdmins.style.borderColor = 'rgba(239, 68, 68, 0.35)';
                     }
                     const mainTxt = document.getElementById('txt-remove-non-admins-main');
                     const subTxt = document.getElementById('txt-remove-non-admins-sub');
