@@ -14,6 +14,18 @@ class TextShare {
         const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
         if (isPersonal && (!recipients || recipients.length === 0)) {
             if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            const msgId = Date.now() + '-no-rec';
+            const msg = {
+                id: msgId,
+                type: 'text',
+                text: text,
+                sender: { name: 'You', id: this.conn.getSocketId() },
+                timestamp: Date.now(),
+                isSent: true
+            };
+            this.messages.push(msg);
+            this._renderMessage(msg);
+            this.saveHistory();
             return;
         }
         try {
@@ -131,7 +143,7 @@ class TextShare {
         } catch {}
     }
 
-    loadHistory() {
+    async loadHistory() {
         if (!this.conn || !this.conn.getRoomCode()) return;
         try {
             const key = 'whynotshare_chat_' + this.conn.getRoomCode();
@@ -139,14 +151,34 @@ class TextShare {
             if (saved) {
                 const arr = JSON.parse(saved);
                 if (Array.isArray(arr) && arr.length > 0) {
-                    this.messages = arr;
+                    this.messages = arr.map(m => {
+                        if (m && m.type === 'file' && m.url && m.url.startsWith('blob:')) {
+                            return { ...m, url: null };
+                        }
+                        return m;
+                    });
                     this._renderAllMessages();
+                    if (window.app && window.app.fileTransfer) {
+                        let reRender = false;
+                        for (const m of this.messages) {
+                            if (m.type === 'file' && m.meta && m.meta.fileId && !m.url) {
+                                const blob = await window.app.fileTransfer.loadFromIndexedDB(m.meta.fileId);
+                                if (blob) {
+                                    m.url = URL.createObjectURL(blob);
+                                    reRender = true;
+                                } else if (m.meta.fileSize < 2 * 1024 * 1024 && this.conn.connections && this.conn.connections.size > 0) {
+                                    this.conn.sendFileEvent('request-history-file', { fileId: m.meta.fileId, targetId: this.conn.myPeerId });
+                                }
+                            }
+                        }
+                        if (reRender) this._renderAllMessages();
+                    }
                 }
             }
         } catch {}
     }
 
-    syncHistory(history) {
+    async syncHistory(history) {
         if (!Array.isArray(history) || history.length === 0) return;
         let added = false;
         const myId = this.conn.getSocketId();
@@ -155,6 +187,9 @@ class TextShare {
             if (!this.messages.some(m => m.id === item.id)) {
                 const isMyMessage = item.sender && item.sender.id === myId;
                 const msgCopy = { ...item, isSent: isMyMessage };
+                if (msgCopy.type === 'file' && msgCopy.url && msgCopy.url.startsWith('blob:')) {
+                    msgCopy.url = null;
+                }
                 if (isMyMessage) {
                     msgCopy.sender = { ...item.sender, name: 'You' };
                 } else if (item.sender && item.sender.id) {
@@ -169,6 +204,21 @@ class TextShare {
             this.messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             this._renderAllMessages();
             this.saveHistory();
+            if (window.app && window.app.fileTransfer) {
+                let reRender = false;
+                for (const m of this.messages) {
+                    if (m.type === 'file' && m.meta && m.meta.fileId && !m.url) {
+                        const blob = await window.app.fileTransfer.loadFromIndexedDB(m.meta.fileId);
+                        if (blob) {
+                            m.url = URL.createObjectURL(blob);
+                            reRender = true;
+                        } else if (m.meta.fileSize < 2 * 1024 * 1024 && this.conn.connections && this.conn.connections.size > 0) {
+                            this.conn.sendFileEvent('request-history-file', { fileId: m.meta.fileId, targetId: this.conn.myPeerId });
+                        }
+                    }
+                }
+                if (reRender) this._renderAllMessages();
+            }
         }
     }
 

@@ -15,7 +15,33 @@ class ConnectionManager {
         this.onDisconnected = null;
         this.onSyncRequest = null;
         this.onHistoryReceived = null;
+        this.onFileHistoryRequest = null;
+        this.onFileHistoryReceived = null;
+        this.auditLogs = [];
+        this.onAuditLogSync = null;
+        this.kickedPeerIds = new Set();
         this._startHeartbeat();
+    }
+
+    markKicked(peerId) {
+        if (peerId) this.kickedPeerIds.add(peerId);
+    }
+
+    addAuditLog(text, category = 'info', skipForward = false) {
+        if (this.auditLogs.length > 0 && this.auditLogs[0].text === text && (Date.now() - (this.auditLogs[0].time || 0)) < 2000) {
+            return this.auditLogs[0];
+        }
+        const entry = { time: Date.now(), text, category };
+        this.auditLogs.unshift(entry);
+        if (this.auditLogs.length > 500) this.auditLogs = this.auditLogs.slice(0, 500);
+        if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
+        if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
+        if (this.isCreator) {
+            this._broadcast({ type: 'audit-log-sync', payload: this.auditLogs });
+        } else if (this.roomCode && !skipForward) {
+            this.sendDirect(this._roomCodeToPeerId(this.roomCode), { type: 'client-audit-log', payload: { text, category } });
+        }
+        return entry;
     }
 
     _roomCodeToPeerId(code) {
@@ -44,6 +70,7 @@ class ConnectionManager {
                     this.roomCode = code;
                     this.isCreator = true;
                     this.peers = [{ id, ...this.myInfo, isCreator: true }];
+                    this.addAuditLog(`Room created (${code})`, 'success');
                     resolve(code);
                 });
                 this.peer.on('connection', (conn) => this._handleIncoming(conn));
@@ -79,6 +106,7 @@ class ConnectionManager {
                     this._register(conn, hostPeerId);
                     const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
                     conn.send({ type: 'peer-info', payload: { id, ...this.myInfo, authHash } });
+                    conn.send({ type: 'request-audit-log-sync' });
                     this.peers = [
                         { id: hostPeerId, deviceName: 'Room Host', deviceType: 'laptop', isCreator: true },
                         { id, ...this.myInfo, isCreator: false }
@@ -107,11 +135,13 @@ class ConnectionManager {
         conn.on('data', (data) => this._onMessage(data, peerId));
         conn.on('close', () => {
             this.connections.delete(peerId);
+            const isKicked = this.kickedPeerIds.has(peerId);
+            if (isKicked) this.kickedPeerIds.delete(peerId);
             const hostId = this._roomCodeToPeerId(this.roomCode);
             const wasHost = (peerId === hostId);
             const peer = this.peers.find(p => p.id === peerId);
             this.peers = this.peers.filter(p => p.id !== peerId);
-            if (this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Member' });
+            if (!isKicked && this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Member' });
             if (this.isCreator) {
                 this._broadcast({ type: 'peer-update', payload: [...this.peers] }, peerId);
             }
@@ -163,6 +193,8 @@ class ConnectionManager {
                     if (c && (c.open || c._open)) {
                         try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch {}
                         try { c.send({ type: 'peer-update', payload: [...this.peers] }); } catch {}
+                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
+                        setTimeout(() => { if (c && c.open) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
                     }
                     this._broadcast({ type: 'peer-update', payload: [...this.peers] }, fromId);
                     if (this.onSyncRequest) {
@@ -170,6 +202,13 @@ class ConnectionManager {
                         if (history && history.length > 0) {
                             const c = this.connections.get(fromId);
                             if (c && c.open) c.send({ type: 'chat-history', payload: history });
+                        }
+                    }
+                    if (this.onFileHistoryRequest) {
+                        const fileHistory = this.onFileHistoryRequest();
+                        if (fileHistory && fileHistory.length > 0) {
+                            const c = this.connections.get(fromId);
+                            if (c && c.open) c.send({ type: 'file-history', payload: fileHistory });
                         }
                     }
                 }
@@ -220,6 +259,19 @@ class ConnectionManager {
                 if (this.onHistoryReceived) this.onHistoryReceived(data.payload);
                 break;
             }
+            case 'file-history': {
+                if (this.onFileHistoryReceived) this.onFileHistoryReceived(data.payload);
+                break;
+            }
+            case 'request-history-file': {
+                if (window.app && window.app.fileTransfer && data.payload && data.payload.fileId && data.payload.targetId) {
+                    if (this.isCreator || window.app.fileTransfer.fileCache.has(data.payload.fileId)) {
+                        window.app.fileTransfer.sendCachedFileToPeer(data.payload.fileId, data.payload.targetId);
+                    }
+                }
+                if (this.isCreator) this._broadcast(data, fromId);
+                break;
+            }
             case 'text': {
                 const sid = data.payload.senderId || fromId;
                 if (sid === this.myPeerId) break;
@@ -253,7 +305,34 @@ class ConnectionManager {
             }
             case 'room-key-rotated': {
                 if (window.app && window.app._onRoomKeyRotated) window.app._onRoomKeyRotated(data.payload.newKey);
-                if (this.isCreator) this._broadcast(data, fromId);
+                if (this.isCreator) {
+                    this._broadcast(data, fromId);
+                } else if (data.payload && data.payload.newKey && data.payload.newKey.trim()) {
+                    this.addAuditLog('Room security passphrase rotated', 'sec', true);
+                } else {
+                    this.addAuditLog('Room is made Open', 'sec', true);
+                }
+                break;
+            }
+            case 'audit-log-sync': {
+                if (Array.isArray(data.payload)) {
+                    this.auditLogs = data.payload;
+                    if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
+                    if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
+                }
+                break;
+            }
+            case 'client-audit-log': {
+                if (this.isCreator && data.payload && data.payload.text) {
+                    this.addAuditLog(data.payload.text, data.payload.category || 'info');
+                }
+                break;
+            }
+            case 'request-audit-log-sync': {
+                if (this.isCreator) {
+                    const c = this.connections.get(fromId);
+                    if (c && c.open) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
+                }
                 break;
             }
             case 'kick-peer': {
@@ -288,6 +367,10 @@ class ConnectionManager {
                     if (typeof UI !== 'undefined') UI.toast('Your Admin privileges were removed by the Host.', 'info');
                     if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
                 } else if (this.isCreator) {
+                    if (data.payload.targetId === fromId) {
+                        const senderName = (target && target.deviceName) ? target.deviceName : 'An Admin';
+                        this.addAuditLog(`${senderName} stepped down from Admin`, 'sec');
+                    }
                     this._broadcast(data, fromId);
                 }
                 if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();

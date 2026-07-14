@@ -1067,47 +1067,64 @@ button .waiting-dots span {
     border-radius: var(--radius-full);
     transition: width 0.15s ease-out;
     animation: shimmerBar 1.5s infinite linear;
-    box-shadow: 0 0 10px rgba(0, 206, 201, 0.5);
 }
 
 .transfer-stats {
     display: flex;
     justify-content: space-between;
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* --- Received File Card --- */
 .received-file-card {
     background: var(--glass-bg);
-    border: 1px solid rgba(0, 206, 201, 0.3);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    animation: cardPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), fileGlow 3s infinite ease-in-out;
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    gap: 14px;
+    animation: cardPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .received-file-card:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 12px 30px rgba(0, 206, 201, 0.25);
+    transform: translateY(-2px);
+    border-color: rgba(108, 92, 231, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .file-preview-img {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     object-fit: cover;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     flex-shrink: 0;
     border: 1px solid var(--glass-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .file-preview-video, .file-preview-audio {
-    max-width: 200px;
-    max-height: 50px;
-    border-radius: var(--radius-sm);
+    max-width: 220px;
+    max-height: 48px;
+    border-radius: var(--radius-md);
+}
+
+.file-preview-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .received-file-info {
@@ -1117,17 +1134,19 @@ button .waiting-dots span {
 
 .received-file-name {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text-primary);
+    line-height: 1.3;
 }
 
 .received-file-size {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    margin-top: 2px;
+    margin-top: 3px;
+    font-weight: 500;
 }
 
 /* --- Responsive --- */
@@ -1432,31 +1451,98 @@ body.light-theme .transfer-icon {
     transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-#host-members-list,
-#modal-host-manage .modal-card {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+
+
+/* Batch Action Toolbar Buttons */
+.batch-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
 }
-#host-members-list::-webkit-scrollbar,
-#modal-host-manage .modal-card::-webkit-scrollbar {
-    width: 6px;
+.batch-action-btn.batch-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.35);
 }
-#host-members-list::-webkit-scrollbar-button,
-#modal-host-manage .modal-card::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
+.batch-action-btn.batch-danger:hover {
+    background: rgba(239, 68, 68, 0.25);
 }
-#host-members-list::-webkit-scrollbar-track,
-#modal-host-manage .modal-card::-webkit-scrollbar-track {
-    background: transparent;
+.batch-action-btn.batch-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    border-color: var(--glass-border);
 }
-#host-members-list::-webkit-scrollbar-thumb,
-#modal-host-manage .modal-card::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 4px;
+.batch-action-btn.batch-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
 }
-#host-members-list::-webkit-scrollbar-thumb:hover,
-#modal-host-manage .modal-card::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.35);
+
+/* Room Activity & Security Audit Log Cards */
+.audit-log-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    transition: background 0.2s ease;
+}
+.audit-log-left {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.audit-badge-info {
+    background: rgba(168, 85, 247, 0.16);
+    color: #c084fc;
+}
+.audit-badge-sec {
+    background: rgba(234, 88, 12, 0.18);
+    color: #fb923c;
+}
+.audit-badge-warn {
+    background: rgba(239, 68, 68, 0.16);
+    color: #f87171;
+}
+.audit-badge-success {
+    background: rgba(34, 197, 94, 0.16);
+    color: #4ade80;
+}
+.audit-log-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.audit-log-text {
+    font-weight: 500;
+    font-size: 0.76rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+.audit-log-time {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    font-weight: 500;
 }

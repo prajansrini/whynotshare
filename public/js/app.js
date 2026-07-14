@@ -20,8 +20,55 @@ class App {
         this.conn.onPeerLeft = (p) => this._onPeerLeft(p);
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (type, data) => this.fileTransfer.handleFileEvent(type, data);
-        this.conn.onSyncRequest = () => this.textShare ? this.textShare.messages : [];
+        this.conn.onSyncRequest = () => {
+            if (!this.textShare || !Array.isArray(this.textShare.messages)) return [];
+            return this.textShare.messages.map(m => {
+                if (m.type === 'file') {
+                    return { ...m, url: null };
+                }
+                return m;
+            });
+        };
         this.conn.onHistoryReceived = (history) => { if (this.textShare) this.textShare.syncHistory(history); };
+        this.conn.onFileHistoryRequest = () => {
+            const list = Array.from(this.fileTransfer.sharedFilesHistory.values());
+            if (this.textShare && Array.isArray(this.textShare.messages)) {
+                this.textShare.messages.forEach(m => {
+                    if (m.type === 'file' && m.meta && m.meta.fileId && !this.fileTransfer.sharedFilesHistory.has(m.meta.fileId)) {
+                        const item = { meta: m.meta, senderId: (m.sender ? m.sender.id : null) || this.conn.myPeerId, timestamp: m.timestamp };
+                        this.fileTransfer.sharedFilesHistory.set(m.meta.fileId, item);
+                        list.push(item);
+                    }
+                });
+            }
+            return list;
+        };
+        this.conn.onFileHistoryReceived = async (fileHistoryList) => {
+            if (!Array.isArray(fileHistoryList)) return;
+            const container = document.getElementById('received-files');
+            if (!container) return;
+            for (const item of fileHistoryList) {
+                if (!item || !item.meta || !item.meta.fileId) continue;
+                this.fileTransfer.sharedFilesHistory.set(item.meta.fileId, item);
+                if (!document.getElementById('history-card-' + item.meta.fileId)) {
+                    const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
+                    const url = blob ? URL.createObjectURL(blob) : null;
+                    const card = UI.renderHistoryFileCard(item.meta, url, item.senderId);
+                    container.appendChild(card);
+                }
+                if (this.textShare && Array.isArray(this.textShare.messages)) {
+                    const exists = this.textShare.messages.some(m => (m.meta && m.meta.fileId === item.meta.fileId) || m.id === item.meta.fileId);
+                    if (!exists) {
+                        const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
+                        const url = blob ? URL.createObjectURL(blob) : null;
+                        const peer = this.conn.getPeers().find(p => p.id === item.senderId);
+                        const senderName = peer ? peer.deviceName : 'Peer';
+                        const senderColor = this.textShare._getPeerColor(item.senderId || 'unknown');
+                        this.textShare.addFileMessage(item.meta.fileId, item.meta, url, item.senderId === this.conn.getSocketId(), { name: senderName, id: item.senderId, color: senderColor }, item.timestamp || Date.now());
+                    }
+                }
+            }
+        };
 
         this.fileTransfer.onProgress = (fid, prog, speed, dir, meta) => {
             let card = document.getElementById('transfer-' + fid);
@@ -40,15 +87,27 @@ class App {
         this.fileTransfer.onFileReceived = (fid, meta, blob, senderId) => {
             const tc = document.getElementById('transfer-' + fid);
             if (tc) tc.remove();
-            const card = UI.renderReceivedFile(fid, meta, blob);
-            document.getElementById('received-files').prepend(card);
+            const oldCard = document.getElementById('history-card-' + fid);
+            if (oldCard) {
+                const newCard = UI.renderReceivedFile(fid, meta, blob);
+                oldCard.replaceWith(newCard);
+            } else {
+                const card = UI.renderReceivedFile(fid, meta, blob);
+                document.getElementById('received-files').prepend(card);
+            }
 
             const peer = this.conn.getPeers().find(p => p.id === senderId);
             const senderName = peer ? peer.deviceName : 'Peer';
             const senderColor = this.textShare ? this.textShare._getPeerColor(senderId || 'unknown') : 'var(--text-secondary)';
             const url = URL.createObjectURL(blob);
             if (this.textShare) {
-                this.textShare.addFileMessage(fid, meta, url, false, { name: senderName, id: senderId, color: senderColor }, Date.now());
+                const existingMsg = (this.textShare.messages || []).find(m => (m.meta && m.meta.fileId === fid) || m.id === fid);
+                if (existingMsg) {
+                    existingMsg.url = url;
+                    this.textShare._renderAllMessages();
+                } else {
+                    this.textShare.addFileMessage(fid, meta, url, false, { name: senderName, id: senderId, color: senderColor }, meta.timestamp || Date.now());
+                }
             }
         };
 
@@ -350,6 +409,9 @@ class App {
     }
 
     toggleE2E(enabled) {
+        if (this.e2eEnabled !== enabled && this.conn && this.conn.isCreator && this.conn.addAuditLog && this.conn.roomCode) {
+            this.conn.addAuditLog(enabled ? 'Room E2E Encryption active' : 'Room is made Open', 'sec');
+        }
         this.e2eEnabled = enabled;
         if (!enabled && this.crypto) {
             this.crypto.importKey('');
@@ -649,6 +711,18 @@ class App {
         }
         if (btnGenKey) btnGenKey.style.display = (!isOpenRoom && isCreator) ? 'inline-flex' : 'none';
 
+        const removeNonAdminsBtn = document.getElementById('btn-host-remove-non-admins');
+        if (removeNonAdminsBtn) {
+            removeNonAdminsBtn.style.display = isCreator ? 'flex' : 'none';
+            removeNonAdminsBtn.dataset.confirming = 'false';
+            removeNonAdminsBtn.style.background = 'rgba(245, 158, 11, 0.12)';
+            removeNonAdminsBtn.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+            const mainTxt = document.getElementById('txt-remove-non-admins-main');
+            const subTxt = document.getElementById('txt-remove-non-admins-sub');
+            if (mainTxt) mainTxt.textContent = 'Remove Non-Admin Members';
+            if (subTxt) subTxt.textContent = 'Disconnect all regular members from room';
+        }
+
         const deleteBtn = document.getElementById('btn-host-delete-room');
         if (deleteBtn) {
             deleteBtn.style.display = isCreator ? 'flex' : 'none';
@@ -666,6 +740,10 @@ class App {
         const btnSaveManage = document.getElementById('btn-save-host-manage');
         if (btnSaveManage) btnSaveManage.style.display = isCreator ? 'inline-flex' : 'none';
 
+        const batchToolbar = document.getElementById('host-batch-actions-toolbar');
+        if (batchToolbar) batchToolbar.style.display = isCreator ? 'flex' : 'none';
+
+        this.renderAuditLogs();
         this.renderHostMembersList();
         document.getElementById('modal-host-manage').style.display = 'flex';
     }
@@ -674,7 +752,25 @@ class App {
         const listEl = document.getElementById('host-members-list');
         if (!listEl) return;
         listEl.innerHTML = '';
-        const peers = this.conn.getPeers() || [];
+        let peers = this.conn.getPeers() || [];
+        const countEl = document.getElementById('txt-member-count');
+        if (countEl) countEl.textContent = String(peers.length);
+
+        if (this._memberFilterQuery && this._memberFilterQuery.trim()) {
+            const q = this._memberFilterQuery.trim().toLowerCase();
+            peers = peers.filter(p => {
+                const name = (p.deviceName || '').toLowerCase();
+                const sys = (p.systemName || '').toLowerCase();
+                const id = (p.id || '').toLowerCase();
+                return name.includes(q) || sys.includes(q) || id.includes(q);
+            });
+        }
+
+        if (peers.length === 0) {
+            listEl.innerHTML = `<div style="padding:16px;text-align:center;font-size:0.8rem;color:var(--text-tertiary)">${this._memberFilterQuery ? 'No matching members found.' : 'No members found.'}</div>`;
+            return;
+        }
+
         const myId = this.conn.getSocketId();
         peers.forEach(p => {
             const card = document.createElement('div');
@@ -736,6 +832,7 @@ class App {
                         this.conn._broadcast({ type: 'demote-admin', payload: { targetId: myId } });
                         this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                         UI.toast('You stepped down from Admin', 'info');
+                        if (this.conn.addAuditLog) this.conn.addAuditLog('Stepped down from Admin', 'sec');
                         if (this.updatePrivilegeUI) this.updatePrivilegeUI();
                         this.refreshPeerLists();
                     };
@@ -763,6 +860,7 @@ class App {
                             this.conn._broadcast({ type: 'promote-admin', payload: { targetId: p.id } });
                             this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                             UI.toast(`Promoted ${p.deviceName} to Admin`, 'success');
+                            if (this.conn.addAuditLog) this.conn.addAuditLog(`Promoted ${p.deviceName} to Admin`, 'sec');
                             this.refreshPeerLists();
                         };
                         drawer.appendChild(btnPromote);
@@ -777,6 +875,7 @@ class App {
                             this.conn._broadcast({ type: 'demote-admin', payload: { targetId: p.id } });
                             this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                             UI.toast(`Demoted ${p.deviceName} to Member`, 'info');
+                            if (this.conn.addAuditLog) this.conn.addAuditLog(`Demoted ${p.deviceName} to Member`, 'sec');
                             this.refreshPeerLists();
                         };
                         drawer.appendChild(btnDemote);
@@ -788,6 +887,7 @@ class App {
                     btnKick.textContent = 'Remove';
                     btnKick.onclick = (e) => {
                         e.stopPropagation();
+                        if (this.conn && this.conn.markKicked) this.conn.markKicked(p.id);
                         this.conn._broadcast({ type: 'kick-peer', payload: { targetId: p.id } });
                         this.conn.peers = (this.conn.peers || []).filter(x => x.id !== p.id);
                         if (this.conn.connections && this.conn.connections.has(p.id)) {
@@ -796,6 +896,7 @@ class App {
                         }
                         this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
                         this.refreshPeerLists();
+                        if (this.conn.addAuditLog) this.conn.addAuditLog(`Removed ${p.deviceName}`, 'sec');
                         UI.toast(`Removed ${p.deviceName}`, 'success');
                     };
                     drawer.appendChild(btnKick);
@@ -821,6 +922,149 @@ class App {
 
             listEl.appendChild(card);
         });
+    }
+
+    renderAuditLogs() {
+        const auditListEl = document.getElementById('host-manage-audit-list');
+        if (!auditListEl || !this.conn) return;
+        const logs = this.conn.auditLogs || [];
+        if (logs.length === 0) {
+            auditListEl.innerHTML = '<div style="padding:16px;text-align:center;font-size:0.8rem;color:var(--text-tertiary)">No recent activity recorded yet.</div>';
+            return;
+        }
+        auditListEl.innerHTML = '';
+        logs.forEach(entry => {
+            const item = document.createElement('div');
+            item.className = 'audit-log-item';
+            const timeStr = this._formatTimeSeconds24(entry.time);
+            let badgeClass = 'audit-badge-info';
+            let iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+            
+            const txt = (entry.text || '').toLowerCase();
+            if (txt.includes('created') || txt.includes('open')) {
+                badgeClass = 'audit-badge-success';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            } else if (txt.includes('active') || txt.includes('passphrase') || txt.includes('key') || txt.includes('promoted') || txt.includes('demoted')) {
+                badgeClass = 'audit-badge-sec';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+            } else if (txt.includes('removed') || txt.includes('stepped down') || txt.includes('kicked')) {
+                badgeClass = 'audit-badge-warn';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
+            } else if (txt.includes('left the room')) {
+                badgeClass = 'audit-badge-warn';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+            } else if (txt.includes('joined')) {
+                badgeClass = 'audit-badge-info';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
+            } else if (txt.includes('exported')) {
+                badgeClass = 'audit-badge-info';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+            } else if (entry.category === 'sec') {
+                badgeClass = 'audit-badge-sec';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+            } else if (entry.category === 'warn') {
+                badgeClass = 'audit-badge-warn';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+            } else if (entry.category === 'success') {
+                badgeClass = 'audit-badge-success';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            }
+            item.innerHTML = `
+                <div class="audit-log-left ${badgeClass}">
+                    ${iconHtml}
+                </div>
+                <div class="audit-log-content">
+                    <span class="audit-log-text">${entry.text}</span>
+                    <span class="audit-log-time">${timeStr}</span>
+                </div>
+            `;
+            auditListEl.appendChild(item);
+        });
+    }
+
+    _formatTimeSeconds24(ts) {
+        const d = new Date(ts || Date.now());
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        const secs = String(d.getSeconds()).padStart(2, '0');
+        return `${hours}:${mins}:${secs}`;
+    }
+
+    _formatDate24(ts) {
+        const d = new Date(ts || Date.now());
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day} ${this._formatTimeSeconds24(ts)}`;
+    }
+
+    exportAuditLogsAsTxt() {
+        if (!this.conn || !this.conn.auditLogs || this.conn.auditLogs.length === 0) {
+            UI.toast('No audit logs to export.', 'info');
+            return;
+        }
+        let txt = `=======================================================\n`;
+        txt += `           WHYNOTSHARE ROOM AUDIT & SECURITY LOG       \n`;
+        txt += `=======================================================\n`;
+        txt += `Room Code : ${this.conn.getRoomCode() || 'Unknown'}\n`;
+        txt += `Exported  : ${this._formatDate24(Date.now())}\n`;
+        txt += `Total Logs: ${this.conn.auditLogs.length}\n`;
+        txt += `=======================================================\n\n`;
+
+        this.conn.auditLogs.forEach((entry) => {
+            const dateStr = this._formatDate24(entry.time || Date.now());
+            const catStr = (entry.category || 'INFO').toUpperCase();
+            txt += `[${dateStr}] [${catStr}] ${entry.text || ''}\n`;
+        });
+
+        txt += `\n=======================================================\n`;
+        txt += `                 END OF AUDIT LOG ENTRY                \n`;
+        txt += `=======================================================\n`;
+
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `whynotshare-audit-log-${this.conn.getRoomCode() || 'room'}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    exportRosterAsTxt() {
+        const peers = this.conn ? (this.conn.getPeers() || []) : [];
+        if (peers.length === 0) {
+            UI.toast('No members in room to export.', 'info');
+            return;
+        }
+        let txt = `=======================================================\n`;
+        txt += `               WHYNOTSHARE ROOM ROSTER                 \n`;
+        txt += `=======================================================\n`;
+        txt += `Room Code : ${this.conn.getRoomCode() || 'Unknown'}\n`;
+        txt += `Exported  : ${this._formatDate24(Date.now())}\n`;
+        txt += `Total     : ${peers.length} Member(s)\n`;
+        txt += `=======================================================\n\n`;
+
+        peers.forEach((p, idx) => {
+            const role = p.isCreator ? 'Host' : (p.isAdmin ? 'Admin' : 'Member');
+            txt += `${idx + 1}. ${p.deviceName || 'Member Device'} (${p.systemName || 'Web Client'}) [Role: ${role}] [ID: ${p.id}]\n`;
+        });
+
+        txt += `\n=======================================================\n`;
+        txt += `                 END OF ROSTER ENTRY                   \n`;
+        txt += `=======================================================\n`;
+
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `whynotshare-roster-${this.conn.getRoomCode() || 'room'}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        UI.toast('Room roster downloaded as TXT', 'success');
     }
 
     refreshPeerLists() {
@@ -856,6 +1100,10 @@ class App {
 
     async _onRoomKeyRotated(newKey) {
         const isEnc = Boolean(newKey && newKey.trim());
+        if (this.conn && this.conn.isCreator && this.conn.addAuditLog) {
+            if (isEnc) this.conn.addAuditLog('Room security passphrase rotated', 'sec');
+            else this.conn.addAuditLog('Room is made Open', 'sec');
+        }
         this.toggleE2E(isEnc);
         await this.crypto.importKey(newKey || '');
         this.updatePhraseUI(newKey, !isEnc);
@@ -951,6 +1199,9 @@ class App {
     }
 
     _onPeerJoined(peer) {
+        if (this.conn && peer && peer.deviceName) {
+            this.conn.addAuditLog(`${peer.deviceName} joined the room`, 'info');
+        }
         const rs = document.getElementById('screen-room');
         if (!rs || !rs.classList.contains('active')) {
             this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
@@ -959,7 +1210,11 @@ class App {
         this.refreshPeerLists();
     }
 
-    _onPeerLeft() {
+    _onPeerLeft(peer) {
+        if (this.conn) {
+            const devName = (peer && peer.deviceName) ? peer.deviceName : 'A device';
+            this.conn.addAuditLog(`${devName} left the room`, 'warn');
+        }
         this.refreshPeerLists();
     }
 
@@ -1225,6 +1480,17 @@ class App {
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
+        document.body.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.btn-fetch-history-file');
+            if (!btn) return;
+            const fileId = btn.dataset.fileId;
+            if (!fileId) return;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Fetching...';
+            if (this.conn) {
+                this.conn.sendFileEvent('request-history-file', { fileId, targetId: this.conn.myPeerId });
+            }
+        });
         window.addEventListener('popstate', (e) => {
             const state = e.state;
             const targetScreenId = state && state.screenId ? state.screenId : 'screen-landing';
@@ -1624,6 +1890,94 @@ class App {
                 }
             });
         }
+
+        const inputFilterMembers = document.getElementById('input-filter-members');
+        if (inputFilterMembers) {
+            inputFilterMembers.addEventListener('input', (e) => {
+                this._memberFilterQuery = (e.target.value || '').toLowerCase().trim();
+                this.renderHostMembersList();
+            });
+        }
+
+        const btnRemoveNonAdmins = document.getElementById('btn-host-remove-non-admins');
+        const btnBatchRemove = document.getElementById('btn-batch-remove-non-admins');
+        const handleRemoveNonAdmins = () => {
+            const btn = btnRemoveNonAdmins || btnBatchRemove;
+            if (btn && btn.dataset.confirming !== 'true') {
+                btn.dataset.confirming = 'true';
+                if (btnRemoveNonAdmins) {
+                    btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.28)';
+                    btnRemoveNonAdmins.style.borderColor = '#f59e0b';
+                }
+                const mainTxt = document.getElementById('txt-remove-non-admins-main');
+                const subTxt = document.getElementById('txt-remove-non-admins-sub');
+                if (mainTxt) mainTxt.textContent = 'Are you sure? Click again to Remove';
+                if (subTxt) subTxt.textContent = 'All regular members will be kicked';
+                clearTimeout(btn._confirmTimer);
+                btn._confirmTimer = setTimeout(() => {
+                    btn.dataset.confirming = 'false';
+                    if (btnRemoveNonAdmins) {
+                        btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.12)';
+                        btnRemoveNonAdmins.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                    }
+                    if (mainTxt) mainTxt.textContent = 'Remove Non-Admin Members';
+                    if (subTxt) subTxt.textContent = 'Disconnect all regular members from room';
+                }, 5000);
+            } else {
+                if (btn) {
+                    clearTimeout(btn._confirmTimer);
+                    btn.dataset.confirming = 'false';
+                    if (btnRemoveNonAdmins) {
+                        btnRemoveNonAdmins.style.background = 'rgba(245, 158, 11, 0.12)';
+                        btnRemoveNonAdmins.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                    }
+                    const mainTxt = document.getElementById('txt-remove-non-admins-main');
+                    const subTxt = document.getElementById('txt-remove-non-admins-sub');
+                    if (mainTxt) mainTxt.textContent = 'Remove Non-Admin Members';
+                    if (subTxt) subTxt.textContent = 'Disconnect all regular members from room';
+                }
+
+                const myId = this.conn.getSocketId();
+                const peersToRemove = (this.conn.getPeers() || []).filter(p => !p.isCreator && !p.isAdmin && p.id !== myId);
+                if (peersToRemove.length === 0) {
+                    UI.toast('No regular members to remove.', 'info');
+                    return;
+                }
+                peersToRemove.forEach(p => {
+                    if (this.conn && this.conn.markKicked) this.conn.markKicked(p.id);
+                    this.conn.peers = (this.conn.peers || []).filter(peer => peer.id !== p.id);
+                    if (this.conn.connections && this.conn.connections.has(p.id)) {
+                        try { this.conn.connections.get(p.id).send({ type: 'kicked' }); } catch { }
+                        try { this.conn.connections.get(p.id).close(); } catch { }
+                        this.conn.connections.delete(p.id);
+                    }
+                });
+                this.conn._broadcast({ type: 'peer-update', payload: this.conn.getPeers() });
+                this.refreshPeerLists();
+                if (this.conn.addAuditLog) this.conn.addAuditLog('Non-admin members removed', 'sec');
+                UI.toast('Non-admin members removed', 'success');
+            }
+        };
+
+        if (btnRemoveNonAdmins) btnRemoveNonAdmins.addEventListener('click', handleRemoveNonAdmins);
+        if (btnBatchRemove) btnBatchRemove.addEventListener('click', handleRemoveNonAdmins);
+
+        const btnExportRosterTxt = document.getElementById('btn-export-roster-txt');
+        const btnBatchExport = document.getElementById('btn-batch-export-roster');
+        if (btnExportRosterTxt) {
+            btnExportRosterTxt.addEventListener('click', () => this.exportRosterAsTxt());
+        }
+        if (btnBatchExport) {
+            btnBatchExport.addEventListener('click', () => this.exportRosterAsTxt());
+        }
+
+        const btnExportLogs = document.getElementById('btn-export-audit-logs');
+        if (btnExportLogs) {
+            btnExportLogs.addEventListener('click', () => {
+                this.exportAuditLogsAsTxt();
+            });
+        }
+
         const btnSelectAllRecipients = document.getElementById('btn-select-all-recipients');
         if (btnSelectAllRecipients) {
             btnSelectAllRecipients.addEventListener('click', async () => {

@@ -218,23 +218,7 @@ body.light-theme [style*="color: #f87171"] {
     color: #dc2626 !important;
 }
 
-body.light-theme #host-members-list,
-body.light-theme #modal-host-manage .modal-card {
-    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
-}
-body.light-theme #host-members-list::-webkit-scrollbar-track,
-body.light-theme #modal-host-manage .modal-card::-webkit-scrollbar-track {
-    background: transparent;
-}
-body.light-theme #host-members-list::-webkit-scrollbar-thumb,
-body.light-theme #modal-host-manage .modal-card::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 4px;
-}
-body.light-theme #host-members-list::-webkit-scrollbar-thumb:hover,
-body.light-theme #modal-host-manage .modal-card::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.4);
-}
+
 
 body.light-theme .badge-theme-accent {
     background: rgba(234, 88, 12, 0.15) !important;
@@ -259,4 +243,26 @@ body.light-theme .member-card-drawer.open {
 body.light-theme .member-card-item.drawer-open {
     border-color: rgba(249, 115, 22, 0.45) !important;
     background: rgba(255, 243, 234, 0.95) !important;
+}
+
+body.light-theme .audit-log-item {
+    background: rgba(255, 243, 234, 0.7) !important;
+    border-color: rgba(249, 115, 22, 0.2) !important;
+    color: var(--text-primary);
+}
+
+body.light-theme .audit-badge-info {
+    background: rgba(234, 88, 12, 0.15) !important;
+    color: #ea580c !important;
+}
+
+body.light-theme .batch-action-btn.batch-secondary {
+    background: rgba(255, 237, 213, 0.65);
+    border-color: rgba(249, 115, 22, 0.25);
+    color: var(--text-primary);
+}
+body.light-theme .batch-action-btn.batch-secondary:hover {
+    background: rgba(249, 115, 22, 0.18);
+    border-color: rgba(249, 115, 22, 0.45);
+    color: #ea580c;
 }
