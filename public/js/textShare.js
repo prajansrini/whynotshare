@@ -58,6 +58,9 @@ class TextShare {
         }
         try {
             const msgId = data.id || (Date.now() + '-' + Math.random().toString(36).substr(2, 5));
+            if (this.messages.some(m => m.id === msgId || (data.id && m.id === data.id) || (m.timestamp && Math.abs((m.timestamp || 0) - (data.timestamp || 0)) < 1000 && m.sender && m.sender.id === data.from && (m.text === data.raw || (data.encrypted && m._encrypted === data.encrypted))))) {
+                return;
+            }
             let text;
             if (data.personalEncrypted) {
                 try {
@@ -104,15 +107,46 @@ class TextShare {
         }
     }
 
+    _getGroupingInfo(index) {
+        const curr = this.messages[index];
+        if (!curr) return { isGroupFollowup: false, hasGroupFollowup: false };
+        const prev = index > 0 ? this.messages[index - 1] : null;
+        const next = index < this.messages.length - 1 ? this.messages[index + 1] : null;
+
+        const isSameSender = (m1, m2) => {
+            if (!m1 || !m2) return false;
+            if (m1.isSent !== m2.isSent) return false;
+            const s1 = typeof m1.sender === 'object' && m1.sender ? (m1.sender.id || m1.sender.name) : (m1.sender || 'Peer');
+            const s2 = typeof m2.sender === 'object' && m2.sender ? (m2.sender.id || m2.sender.name) : (m2.sender || 'Peer');
+            return s1 === s2 && Math.abs((m1.timestamp || 0) - (m2.timestamp || 0)) < 300000;
+        };
+
+        return {
+            isGroupFollowup: isSameSender(prev, curr),
+            hasGroupFollowup: isSameSender(curr, next)
+        };
+    }
+
     _renderMessage(msg) {
         const container = document.getElementById('messages');
         if (!container) return;
         const empty = container.querySelector('.messages-empty');
         if (empty) empty.remove();
+
+        const idx = this.messages.indexOf(msg);
+        const groupInfo = idx >= 0 ? this._getGroupingInfo(idx) : { isGroupFollowup: false, hasGroupFollowup: false };
+
+        if (groupInfo.isGroupFollowup && container.lastElementChild) {
+            const prevEl = container.lastElementChild;
+            prevEl.classList.add('message-group-lead');
+            const prevTime = prevEl.querySelector('.message-time-wrapper');
+            if (prevTime) prevTime.classList.add('message-time-grouped');
+        }
+
         if (msg.type === 'file') {
-            container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp));
+            container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo));
         } else {
-            container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent));
+            container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo));
         }
         container.scrollTop = container.scrollHeight;
     }
@@ -121,11 +155,13 @@ class TextShare {
         const container = document.getElementById('messages');
         if (!container) return;
         container.innerHTML = '<div class="messages-empty" style="display:none"></div>';
-        for (const msg of this.messages) {
+        for (let i = 0; i < this.messages.length; i++) {
+            const msg = this.messages[i];
+            const groupInfo = this._getGroupingInfo(i);
             if (msg.type === 'file') {
-                container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp));
+                container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo));
             } else {
-                container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent));
+                container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo));
             }
         }
         container.scrollTop = container.scrollHeight;
@@ -212,7 +248,7 @@ class TextShare {
                         if (blob) {
                             m.url = URL.createObjectURL(blob);
                             reRender = true;
-                        } else if (m.meta.fileSize < 2 * 1024 * 1024 && this.conn.connections && this.conn.connections.size > 0) {
+                        } else if (this.conn.connections && this.conn.connections.size > 0) {
                             this.conn.sendFileEvent('request-history-file', { fileId: m.meta.fileId, targetId: this.conn.myPeerId });
                         }
                     }

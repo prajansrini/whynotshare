@@ -532,6 +532,43 @@ button .waiting-dots span {
     border-bottom-left-radius: 4px;
 }
 
+/* --- Consecutive Message Grouping --- */
+.message-group-followup {
+    margin-top: -6px !important;
+}
+
+.message-group-lead .message-time-grouped {
+    display: none !important;
+}
+
+/* First message in a consecutive group (lead without followup above) */
+.message-received.message-group-lead:not(.message-group-followup) .message-bubble {
+    border-bottom-left-radius: 4px !important;
+}
+.message-sent.message-group-lead:not(.message-group-followup) .message-bubble {
+    border-bottom-right-radius: 4px !important;
+}
+
+/* Middle message in a consecutive group (followup above, lead below) */
+.message-received.message-group-lead.message-group-followup .message-bubble {
+    border-top-left-radius: 4px !important;
+    border-bottom-left-radius: 4px !important;
+}
+.message-sent.message-group-lead.message-group-followup .message-bubble {
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: 4px !important;
+}
+
+/* Last message in a consecutive group (followup above, no lead below) */
+.message-received.message-group-followup:not(.message-group-lead) .message-bubble {
+    border-top-left-radius: 4px !important;
+    border-bottom-left-radius: var(--radius-md) !important;
+}
+.message-sent.message-group-followup:not(.message-group-lead) .message-bubble {
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: var(--radius-md) !important;
+}
+
 .message-time {
     font-size: 0.65rem;
     color: var(--text-tertiary);
@@ -1161,6 +1198,8 @@ button .waiting-dots span {
     .text-input-area { padding-bottom: max(6px, env(safe-area-inset-bottom, 6px)); }
     .share-header { flex-wrap: wrap; gap: var(--space-sm); }
     .device-chip { font-size: 0.8rem; padding: 6px 10px; }
+    .message { max-width: 90% !important; }
+    .message-bubble { padding: 8px 12px !important; }
 }
 
 @media (max-width: 400px) {
@@ -1545,4 +1584,23 @@ body.light-theme .transfer-icon {
     color: var(--text-tertiary);
     flex-shrink: 0;
     font-weight: 500;
+}
+
+/* Media Preview Triggers and Lightbox */
+.media-preview-trigger {
+    transition: transform 0.2s ease, filter 0.2s ease;
+    cursor: zoom-in;
+}
+.media-preview-trigger:hover {
+    transform: scale(1.015);
+    filter: brightness(1.08);
+}
+#modal-media-preview .modal-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    transform: scale(0.96);
+    opacity: 0;
+}
+#modal-media-preview.visible .modal-card {
+    transform: scale(1);
+    opacity: 1;
 }

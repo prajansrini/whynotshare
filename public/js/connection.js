@@ -56,6 +56,30 @@ class ConnectionManager {
         return code.slice(0, 3) + '-' + code.slice(3);
     }
 
+    _getPeerOptions() {
+        return {
+            pingInterval: 5000,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            }
+        };
+    }
+
+    _onConnOpen(conn, callback) {
+        if (!conn) return;
+        if (conn.open || conn._open) {
+            callback();
+        } else {
+            conn.on('open', callback);
+        }
+    }
+
     connect() { if (this.onConnected) this.onConnected(); }
 
     createRoom(existingCode) {
@@ -64,13 +88,15 @@ class ConnectionManager {
         return new Promise((resolve, reject) => {
             const tryOpen = (attempt = 1) => {
                 if (this.peer) { try { this.peer.destroy(); } catch {} }
-                this.peer = new Peer(peerId, { pingInterval: 5000 });
+                this.peer = new Peer(peerId, this._getPeerOptions());
                 this.peer.on('open', (id) => {
                     this.myPeerId = id;
                     this.roomCode = code;
                     this.isCreator = true;
                     this.peers = [{ id, ...this.myInfo, isCreator: true }];
                     this.addAuditLog(`Room created (${code})`, 'success');
+                    const hostDevName = (this.myInfo && this.myInfo.deviceName) ? this.myInfo.deviceName : 'Host';
+                    this.addAuditLog(`${hostDevName} joined the room`, 'info');
                     resolve(code);
                 });
                 this.peer.on('connection', (conn) => this._handleIncoming(conn));
@@ -93,7 +119,7 @@ class ConnectionManager {
         const hostPeerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
             if (this.peer) { try { this.peer.destroy(); } catch {} }
-            this.peer = new Peer(undefined, { pingInterval: 5000 });
+            this.peer = new Peer(undefined, this._getPeerOptions());
             let settled = false;
             this._joinResolve = (peers) => { if (!settled) { settled = true; resolve(peers); } };
             this._joinReject = (err) => { if (!settled) { settled = true; reject(err); } };
@@ -102,7 +128,7 @@ class ConnectionManager {
                 this.roomCode = code;
                 this.isCreator = false;
                 const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
-                conn.on('open', () => {
+                this._onConnOpen(conn, () => {
                     this._register(conn, hostPeerId);
                     const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
                     conn.send({ type: 'peer-info', payload: { id, ...this.myInfo, authHash } });
@@ -125,16 +151,28 @@ class ConnectionManager {
     }
 
     _handleIncoming(conn) {
-        conn.on('open', () => {
+        this._onConnOpen(conn, () => {
             this._register(conn, conn.peer);
         });
     }
 
     _register(conn, peerId) {
+        if (!conn) return;
+        const oldConn = this.connections.get(peerId);
+        if (oldConn && oldConn !== conn) {
+            try { oldConn.close(); } catch {}
+        }
+        if (conn._isRegistered) return;
+        conn._isRegistered = true;
         this.connections.set(peerId, conn);
         conn.on('data', (data) => this._onMessage(data, peerId));
+        conn.on('error', (err) => {
+            try { conn.close(); } catch {}
+        });
         conn.on('close', () => {
-            this.connections.delete(peerId);
+            if (this.connections.get(peerId) === conn) {
+                this.connections.delete(peerId);
+            }
             const isKicked = this.kickedPeerIds.has(peerId);
             if (isKicked) this.kickedPeerIds.delete(peerId);
             const hostId = this._roomCodeToPeerId(this.roomCode);
@@ -150,7 +188,7 @@ class ConnectionManager {
         });
     }
 
-    _onMessage(data, fromId) {
+    async _onMessage(data, fromId) {
         switch (data.type) {
             case 'ping': {
                 const c = this.connections.get(fromId);
@@ -194,7 +232,9 @@ class ConnectionManager {
                         try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch {}
                         try { c.send({ type: 'peer-update', payload: [...this.peers] }); } catch {}
                         try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
-                        setTimeout(() => { if (c && c.open) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 800);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 1500);
                     }
                     this._broadcast({ type: 'peer-update', payload: [...this.peers] }, fromId);
                     if (this.onSyncRequest) {
@@ -265,11 +305,25 @@ class ConnectionManager {
             }
             case 'request-history-file': {
                 if (window.app && window.app.fileTransfer && data.payload && data.payload.fileId && data.payload.targetId) {
-                    if (this.isCreator || window.app.fileTransfer.fileCache.has(data.payload.fileId)) {
-                        window.app.fileTransfer.sendCachedFileToPeer(data.payload.fileId, data.payload.targetId);
+                    const hasBlob = window.app.fileTransfer.fileCache.has(data.payload.fileId) || await window.app.fileTransfer.loadFromIndexedDB(data.payload.fileId);
+                    if (hasBlob) {
+                        const sent = await window.app.fileTransfer.sendCachedFileToPeer(data.payload.fileId, data.payload.targetId);
+                        if (sent) break;
                     }
+                    if (this.isCreator) {
+                        this._broadcast(data, fromId);
+                    } else if (data.payload.targetId !== this.myPeerId) {
+                        this.sendDirect(data.payload.targetId, { type: 'file-history-missing', payload: { fileId: data.payload.fileId } });
+                    }
+                } else if (this.isCreator) {
+                    this._broadcast(data, fromId);
                 }
-                if (this.isCreator) this._broadcast(data, fromId);
+                break;
+            }
+            case 'file-history-missing': {
+                if (window.app && window.app.onFileHistoryMissing && data.payload) {
+                    window.app.onFileHistoryMissing(data.payload.fileId);
+                }
                 break;
             }
             case 'text': {
@@ -331,7 +385,11 @@ class ConnectionManager {
             case 'request-audit-log-sync': {
                 if (this.isCreator) {
                     const c = this.connections.get(fromId);
-                    if (c && c.open) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
+                    if (c && (c.open || c._open)) {
+                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 800);
+                    }
                 }
                 break;
             }
@@ -493,7 +551,7 @@ class ConnectionManager {
             const claimHost = (attempt = 1) => {
                 const oldPeer = this.peer;
                 if (oldPeer && !oldPeer.destroyed) { try { oldPeer.destroy(); } catch {} }
-                this.peer = new Peer(hostPeerId, { pingInterval: 5000 });
+                this.peer = new Peer(hostPeerId, this._getPeerOptions());
                 this.peer.on('open', (id) => {
                     this.myPeerId = id;
                     this.isCreator = true;
@@ -528,10 +586,11 @@ class ConnectionManager {
                 if (!this.roomCode || attempt > 15) return;
                 const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
                 let opened = false;
-                conn.on('open', () => {
+                this._onConnOpen(conn, () => {
                     opened = true;
                     this._register(conn, hostPeerId);
-                    conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo } });
+                    const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
+                    conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo, authHash } });
                     if (typeof UI !== 'undefined') UI.toast('Connected to new Host!', 'success');
                 });
                 setTimeout(() => {
@@ -569,10 +628,11 @@ class ConnectionManager {
         try {
             const hostPeerId = this._roomCodeToPeerId(this.roomCode);
             const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
-            conn.on('open', () => {
+            this._onConnOpen(conn, () => {
                 this.cancelHostSuccession();
                 this._register(conn, hostPeerId);
-                conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo } });
+                const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
+                conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo, authHash } });
             });
         } catch {}
     }

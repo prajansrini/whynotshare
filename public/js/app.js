@@ -20,6 +20,7 @@ class App {
         this.conn.onPeerLeft = (p) => this._onPeerLeft(p);
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (type, data) => this.fileTransfer.handleFileEvent(type, data);
+        this.conn.onAuditLogSync = () => { if (typeof this.renderAuditLogs === 'function') this.renderAuditLogs(); };
         this.conn.onSyncRequest = () => {
             if (!this.textShare || !Array.isArray(this.textShare.messages)) return [];
             return this.textShare.messages.map(m => {
@@ -48,23 +49,31 @@ class App {
             const container = document.getElementById('received-files');
             if (!container) return;
             for (const item of fileHistoryList) {
-                if (!item || !item.meta || !item.meta.fileId) continue;
+                if (!item || !item.meta || !item.meta.fileId || item.meta.cancelled) continue;
                 this.fileTransfer.sharedFilesHistory.set(item.meta.fileId, item);
+                const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
+                const url = blob ? URL.createObjectURL(blob) : null;
                 if (!document.getElementById('history-card-' + item.meta.fileId)) {
-                    const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
-                    const url = blob ? URL.createObjectURL(blob) : null;
                     const card = UI.renderHistoryFileCard(item.meta, url, item.senderId);
                     container.appendChild(card);
                 }
                 if (this.textShare && Array.isArray(this.textShare.messages)) {
-                    const exists = this.textShare.messages.some(m => (m.meta && m.meta.fileId === item.meta.fileId) || m.id === item.meta.fileId);
-                    if (!exists) {
-                        const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
-                        const url = blob ? URL.createObjectURL(blob) : null;
+                    const existingMsg = this.textShare.messages.find(m => (m.meta && m.meta.fileId === item.meta.fileId) || m.id === item.meta.fileId);
+                    if (!existingMsg) {
                         const peer = this.conn.getPeers().find(p => p.id === item.senderId);
                         const senderName = peer ? peer.deviceName : 'Peer';
                         const senderColor = this.textShare._getPeerColor(item.senderId || 'unknown');
                         this.textShare.addFileMessage(item.meta.fileId, item.meta, url, item.senderId === this.conn.getSocketId(), { name: senderName, id: item.senderId, color: senderColor }, item.timestamp || Date.now());
+                        if (!blob && this.conn.connections && this.conn.connections.size > 0) {
+                            this.conn.sendFileEvent('request-history-file', { fileId: item.meta.fileId, targetId: this.conn.myPeerId });
+                        }
+                    } else if (!existingMsg.url) {
+                        if (blob) {
+                            existingMsg.url = url;
+                            this.textShare._renderAllMessages();
+                        } else if (this.conn.connections && this.conn.connections.size > 0) {
+                            this.conn.sendFileEvent('request-history-file', { fileId: item.meta.fileId, targetId: this.conn.myPeerId });
+                        }
                     }
                 }
             }
@@ -85,6 +94,10 @@ class App {
         };
 
         this.fileTransfer.onFileReceived = (fid, meta, blob, senderId) => {
+            if (this._fetchTimeouts && this._fetchTimeouts.has(fid)) {
+                clearTimeout(this._fetchTimeouts.get(fid));
+                this._fetchTimeouts.delete(fid);
+            }
             const tc = document.getElementById('transfer-' + fid);
             if (tc) tc.remove();
             const oldCard = document.getElementById('history-card-' + fid);
@@ -109,6 +122,10 @@ class App {
                     this.textShare.addFileMessage(fid, meta, url, false, { name: senderName, id: senderId, color: senderColor }, meta.timestamp || Date.now());
                 }
             }
+        };
+
+        this.onFileHistoryMissing = (fileId) => {
+            this._resetFetchButton(fileId, 'File not available from connected peers');
         };
 
         this._bindEvents();
@@ -347,10 +364,12 @@ class App {
         const input = document.getElementById('text-input');
         const text = input ? input.value.trim() : '';
         if (text) {
-            await this.textShare.send(text);
             if (input) {
                 input.value = '';
                 UI.autoResize(input);
+            }
+            await this.textShare.send(text);
+            if (input) {
                 input.focus();
             }
         }
@@ -364,7 +383,8 @@ class App {
 
     async sendFiles(files) {
         for (const file of files) {
-            await this.fileTransfer.sendFile(file);
+            const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            const res = await this.fileTransfer.sendFile(file, fileId);
             const tc = document.querySelector('[id^="transfer-"]');
             setTimeout(() => {
                 document.querySelectorAll('.transfer-card').forEach(c => {
@@ -372,14 +392,15 @@ class App {
                     if (fill && fill.style.width === '100%') c.remove();
                 });
             }, 2000);
+            if (res && res.cancelled) continue;
             const card = UI.renderSentFile(file);
             const rcv = document.getElementById('received-files');
             if (rcv) rcv.prepend(card);
 
             const url = URL.createObjectURL(file);
-            const meta = { fileName: file.name, fileSize: file.size, fileType: file.type };
+            const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type };
             if (this.textShare) {
-                this.textShare.addFileMessage('sent-' + file.name + '-' + Date.now(), meta, url, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
+                this.textShare.addFileMessage(fileId, meta, url, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
             }
         }
     }
@@ -1077,6 +1098,7 @@ class App {
         UI.updateDevicesList(peers, myId);
         this.renderHostMembersList();
         this.renderPersonalRecipients();
+        if (typeof this.renderAuditLogs === 'function') this.renderAuditLogs();
     }
 
     _onRoomIdChanged(newCode) {
@@ -1480,18 +1502,70 @@ class App {
         }
     }
 
+    _resetFetchButton(fileId, errorMsg) {
+        if (this._fetchTimeouts && this._fetchTimeouts.has(fileId)) {
+            clearTimeout(this._fetchTimeouts.get(fileId));
+            this._fetchTimeouts.delete(fileId);
+        }
+        const btns = document.querySelectorAll(`.btn-fetch-history-file[data-file-id="${fileId}"]`);
+        btns.forEach(btn => {
+            btn.disabled = false;
+            if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+            else btn.innerHTML = '⬇ Fetch';
+        });
+        if (errorMsg && typeof UI !== 'undefined') UI.toast(errorMsg, 'error');
+    }
+
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
         document.body.addEventListener('click', async (e) => {
+            if (e.target.closest('a[download], button, input, select, textarea, audio, video')) {
+                // Let interactive elements inside cards function normally
+            } else {
+                const mediaTrigger = e.target.closest('.media-preview-trigger');
+                if (mediaTrigger) {
+                    const url = mediaTrigger.dataset.url || mediaTrigger.src;
+                    const type = mediaTrigger.dataset.type || '';
+                    const name = mediaTrigger.dataset.name || 'Media Preview';
+                    if (url && typeof UI !== 'undefined' && typeof UI.openMediaPreviewModal === 'function') {
+                        UI.openMediaPreviewModal(url, type, name);
+                    }
+                    return;
+                }
+            }
+            if (e.target.closest('#btn-preview-close') || e.target.id === 'modal-media-preview') {
+                if (typeof UI !== 'undefined' && typeof UI.closeMediaPreviewModal === 'function') {
+                    UI.closeMediaPreviewModal();
+                }
+                return;
+            }
+            if (e.target.closest('#btn-preview-fullscreen')) {
+                const content = document.getElementById('media-preview-content');
+                if (content && content.firstElementChild) {
+                    const el = content.firstElementChild;
+                    if (!document.fullscreenElement) {
+                        try { el.requestFullscreen(); } catch { try { content.requestFullscreen(); } catch {} }
+                    } else {
+                        try { document.exitFullscreen(); } catch {}
+                    }
+                }
+                return;
+            }
             const btn = e.target.closest('.btn-fetch-history-file');
             if (!btn) return;
             const fileId = btn.dataset.fileId;
             if (!fileId) return;
             btn.disabled = true;
+            btn.dataset.originalHtml = btn.innerHTML;
             btn.innerHTML = '⏳ Fetching...';
             if (this.conn) {
                 this.conn.sendFileEvent('request-history-file', { fileId, targetId: this.conn.myPeerId });
+                if (!this._fetchTimeouts) this._fetchTimeouts = new Map();
+                if (this._fetchTimeouts.has(fileId)) clearTimeout(this._fetchTimeouts.get(fileId));
+                this._fetchTimeouts.set(fileId, setTimeout(() => {
+                    this._resetFetchButton(fileId, 'Request timed out. Peer may not have this file.');
+                }, 15000));
             }
         });
         window.addEventListener('popstate', (e) => {
@@ -1547,6 +1621,13 @@ class App {
                 }
             }
             if (e.key === 'Escape') {
+                const mediaModal = document.getElementById('modal-media-preview');
+                if (mediaModal && mediaModal.style.display !== 'none') {
+                    if (typeof UI !== 'undefined' && typeof UI.closeMediaPreviewModal === 'function') {
+                        UI.closeMediaPreviewModal();
+                    }
+                    return;
+                }
                 const activeModals = document.querySelectorAll('.modal-overlay');
                 let closedAny = false;
                 activeModals.forEach(m => {

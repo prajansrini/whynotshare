@@ -43,6 +43,20 @@ class FileTransfer {
         } catch {}
     }
 
+    async deleteFromIndexedDB(fileId) {
+        if (!fileId) return;
+        this.fileCache.delete(fileId);
+        this.sharedFilesHistory.delete(fileId);
+        if (!this.db && window.indexedDB) {
+            await new Promise(r => setTimeout(r, 100));
+        }
+        if (!this.db) return;
+        try {
+            const tx = this.db.transaction(['files'], 'readwrite');
+            tx.objectStore('files').delete(fileId);
+        } catch {}
+    }
+
     async loadFromIndexedDB(fileId) {
         if (!fileId) return null;
         if (this.fileCache.has(fileId)) return this.fileCache.get(fileId);
@@ -92,19 +106,19 @@ class FileTransfer {
         });
     }
 
-    async sendFile(file) {
+    async sendFile(file, customFileId) {
         const isPersonal = Boolean(window.app && window.app.personalE2E);
         const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
         if (isPersonal && (!recipients || recipients.length === 0)) {
             if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
             if (window.app && window.app.textShare) {
-                const fileId = 'sent-' + file.name + '-' + Date.now();
+                const fileId = customFileId || ('sent-' + file.name + '-' + Date.now());
                 const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks: 1, encrypted: true, personalEncrypted: true };
                 window.app.textShare.addFileMessage(fileId, meta, null, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
             }
             return;
         }
-        const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        const fileId = customFileId || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         const totalChunks = Math.ceil(file.size / this.chunkSize);
         const encrypt = (this.encryptionEnabled && this.crypto.hasKey()) || isPersonal;
         const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks, encrypted: encrypt, personalEncrypted: isPersonal, recipients };
@@ -114,7 +128,8 @@ class FileTransfer {
         for (let i = 0; i < totalChunks; i++) {
             if (this.cancelledTransfers.has(fileId)) {
                 this.cancelledTransfers.delete(fileId);
-                return;
+                this.deleteFromIndexedDB(fileId);
+                return { cancelled: true };
             }
             const s = i * this.chunkSize, e = Math.min(s + this.chunkSize, file.size);
             const buf = await file.slice(s, e).arrayBuffer();
@@ -140,18 +155,33 @@ class FileTransfer {
         }
         if (!this.cancelledTransfers.has(fileId)) {
             this.conn.sendFileEvent('file-complete', { fileId });
+            return { success: true };
         } else {
             this.cancelledTransfers.delete(fileId);
+            this.deleteFromIndexedDB(fileId);
+            return { cancelled: true };
         }
     }
 
     cancelTransfer(fileId) {
         this.cancelledTransfers.add(fileId);
         this.incoming.delete(fileId);
+        this.deleteFromIndexedDB(fileId);
         this.conn.sendFileEvent('file-cancel', { fileId });
         const tc = document.getElementById('transfer-' + fileId);
         if (tc) tc.remove();
-        if (typeof UI !== 'undefined') UI.toast('Transfer cancelled', 'info');
+        if (window.app && window.app.textShare && Array.isArray(window.app.textShare.messages)) {
+            const msg = window.app.textShare.messages.find(m => (m.meta && m.meta.fileId === fileId) || m.id === fileId);
+            if (msg && msg.meta) {
+                msg.meta.cancelled = true;
+                if (typeof window.app.textShare._renderAllMessages === 'function') {
+                    window.app.textShare._renderAllMessages();
+                }
+                if (typeof window.app.textShare.saveHistory === 'function') {
+                    window.app.textShare.saveHistory();
+                }
+            }
+        }
     }
 
     handleFileEvent(type, data) {
@@ -221,9 +251,28 @@ class FileTransfer {
 
     _onCancel(data) {
         this.incoming.delete(data.fileId);
+        this.deleteFromIndexedDB(data.fileId);
         const tc = document.getElementById('transfer-' + data.fileId);
         if (tc) tc.remove();
-        if (typeof UI !== 'undefined') UI.toast('Peer cancelled file transfer', 'info');
+        const hc = document.getElementById('history-card-' + data.fileId);
+        if (hc) hc.remove();
+        if (window.app && window.app.textShare && Array.isArray(window.app.textShare.messages)) {
+            const idx = window.app.textShare.messages.findIndex(m => (m.meta && m.meta.fileId === data.fileId) || m.id === data.fileId);
+            if (idx !== -1) {
+                const msg = window.app.textShare.messages[idx];
+                if (!msg.isSent) {
+                    window.app.textShare.messages.splice(idx, 1);
+                } else {
+                    msg.meta.cancelled = true;
+                }
+                if (typeof window.app.textShare._renderAllMessages === 'function') {
+                    window.app.textShare._renderAllMessages();
+                }
+                if (typeof window.app.textShare.saveHistory === 'function') {
+                    window.app.textShare.saveHistory();
+                }
+            }
+        }
     }
 
     setEncryption(on) { this.encryptionEnabled = on; }
