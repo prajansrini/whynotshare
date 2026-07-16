@@ -979,6 +979,27 @@ button .waiting-dots span {
     transform: translateY(-1px);
 }
 
+/* --- QR Code Canvas & SVG Strict Sizing --- */
+#qr-container canvas,
+#qr-container svg {
+    width: 240px !important;
+    height: 240px !important;
+    max-width: 100% !important;
+    object-fit: contain;
+    display: block !important;
+    margin: 0 auto;
+}
+
+#inline-qr-container canvas,
+#inline-qr-container svg {
+    width: 200px !important;
+    height: 200px !important;
+    max-width: 100% !important;
+    object-fit: contain;
+    display: block !important;
+    margin: 0 auto;
+}
+
 /* --- File Transfer Drop Zone --- */
 .drop-zone {
     width: 100%;

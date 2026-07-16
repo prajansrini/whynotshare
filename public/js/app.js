@@ -1415,7 +1415,7 @@ class App {
         if (passBtn) passBtn.style.display = 'none';
     }
 
-    _createQrInstance(url, size = 240) {
+    _createQrInstance(url, size = 240, bgColor = "rgba(0, 0, 0, 0)") {
         if (!window.QRCodeStyling || !url) return null;
         const isLight = document.body.classList.contains('light-theme');
         const dotColor = isLight ? '#1e1b4b' : '#f8fafc';
@@ -1444,7 +1444,7 @@ class App {
             dotsOptions: { color: dotColor, type: "rounded" },
             cornersSquareOptions: { color: cornerColor, type: "extra-rounded" },
             cornersDotOptions: { color: centerDotColor, type: "dot" },
-            backgroundOptions: { color: "rgba(0, 0, 0, 0)" },
+            backgroundOptions: { color: bgColor },
             imageOptions: { margin: 10, imageSize: 0.28, hideBackgroundDots: true },
             image: logoUrl
         });
@@ -1463,7 +1463,7 @@ class App {
         this.qrCodeObj = this._createQrInstance(url, 240);
         if (this.qrCodeObj) {
             this.qrCodeObj.append(container);
-            const canvasEl = container.querySelector('canvas');
+            const canvasEl = container.querySelector('canvas, svg');
             if (canvasEl) {
                 canvasEl.style.width = '240px';
                 canvasEl.style.height = '240px';
@@ -1493,7 +1493,7 @@ class App {
         this.inlineQrObj = this._createQrInstance(url, 200);
         if (this.inlineQrObj) {
             this.inlineQrObj.append(container);
-            const canvasEl = container.querySelector('canvas');
+            const canvasEl = container.querySelector('canvas, svg');
             if (canvasEl) {
                 canvasEl.style.width = '200px';
                 canvasEl.style.height = '200px';
@@ -1748,14 +1748,23 @@ class App {
         const btnDlQr = document.getElementById('btn-download-qr');
         if (btnDlQr) {
             btnDlQr.addEventListener('click', () => {
-                if (this.qrCodeObj) {
+                if (this.qrCodeObj && this.qrCodeObj._options && this.qrCodeObj._options.data) {
+                    const url = this.qrCodeObj._options.data;
                     const isLight = document.body.classList.contains('light-theme');
                     const bgColor = isLight ? '#ffffff' : '#0c1022';
-                    this.qrCodeObj.update({ backgroundOptions: { color: bgColor } });
-                    this.qrCodeObj.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
-                    setTimeout(() => {
-                        if (this.qrCodeObj) this.qrCodeObj.update({ backgroundOptions: { color: 'rgba(0, 0, 0, 0)' } });
-                    }, 600);
+                    const dlQr = this._createQrInstance(url, 240, bgColor);
+                    if (dlQr) {
+                        dlQr.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
+                    }
+                } else if (this.qrCodeObj) {
+                    const urlEl = document.getElementById('share-url');
+                    const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+                    const isLight = document.body.classList.contains('light-theme');
+                    const bgColor = isLight ? '#ffffff' : '#0c1022';
+                    const dlQr = this._createQrInstance(url, 240, bgColor);
+                    if (dlQr) {
+                        dlQr.download({ name: 'whynotshare-room-' + (this.conn.getRoomCode() || 'link'), extension: 'png' });
+                    }
                 }
             });
         }
