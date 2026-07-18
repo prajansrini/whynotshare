@@ -333,21 +333,25 @@
 
     <!-- PASSPHRASE MODAL -->
     <div id="modal-passphrase" class="modal-overlay" style="display:none">
-        <div class="modal-card glass-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
-                <h3 id="passphrase-modal-title" style="font-size:1.15rem;font-weight:700;margin:0">Change Encryption Passphrase</h3>
+        <div class="modal-card glass-card" style="max-width:400px;padding:24px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:12px">
+                <div>
+                    <h3 id="passphrase-modal-title" style="font-size:1.1rem;font-weight:700;margin:0;line-height:1.3;color:var(--text-primary)">Encryption Passphrase</h3>
+                    <p id="passphrase-modal-desc" class="text-secondary" style="font-size:0.78rem;margin:4px 0 0;line-height:1.4">All peers in the room must use this exact passphrase to decrypt messages.</p>
+                </div>
                 <button id="btn-close-passphrase-top" class="btn-close-modal" title="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
-            <div class="input-group">
-                <label id="passphrase-modal-label" class="input-label">New Passphrase</label>
-                <input type="text" id="input-new-passphrase" class="input-field text-mono" placeholder="Enter passphrase..." autocomplete="off" spellcheck="false">
+            <div class="input-group" style="margin-bottom:20px">
+                <label id="passphrase-modal-label" class="input-label" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin-bottom:6px">Secret Passphrase</label>
+                <div style="display:flex;gap:8px;align-items:stretch">
+                    <input type="text" id="input-new-passphrase" class="input-field text-mono" placeholder="Enter passphrase..." autocomplete="off" spellcheck="false" style="flex:1;min-width:0;font-size:0.88rem;padding:10px 14px;border-radius:10px">
+                    <button id="btn-generate-passphrase" class="btn btn-secondary" title="Generate Random Passphrase" style="padding:0 14px;height:auto;display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;white-space:nowrap;flex-shrink:0;border-radius:10px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg><span>Generate</span></button>
+                </div>
             </div>
-            <button id="btn-generate-passphrase" class="btn btn-secondary btn-full mt-md"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>Generate Random</button>
-            <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-lg)">
-                <button id="btn-cancel-passphrase" class="btn btn-secondary" style="flex:1">Cancel</button>
-                <button id="btn-save-passphrase" class="btn btn-primary" style="flex:1">Save</button>
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+                <button id="btn-cancel-passphrase" class="btn btn-secondary" style="flex:1;max-width:120px;padding:9px 16px;border-radius:10px;font-size:0.88rem">Cancel</button>
+                <button id="btn-save-passphrase" class="btn btn-primary" style="flex:1;max-width:140px;padding:9px 16px;border-radius:10px;font-size:0.88rem">Save Key</button>
             </div>
-            <p id="passphrase-modal-desc" class="text-secondary mt-md" style="font-size:0.78rem;text-align:center">All devices must use the same passphrase to decrypt messages.</p>
         </div>
     </div>
 

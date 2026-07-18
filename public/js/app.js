@@ -372,12 +372,18 @@ class App {
             if (input) {
                 input.focus();
             }
+            if (this.resetViewportScroll) {
+                this.resetViewportScroll();
+            }
         }
         if (this.stagedFiles && this.stagedFiles.length > 0) {
             const filesToSend = [...this.stagedFiles];
             this.stagedFiles = [];
             this.updateStagedFilesUI();
             await this.sendFiles(filesToSend);
+            if (this.resetViewportScroll) {
+                this.resetViewportScroll();
+            }
         }
     }
 
@@ -1835,6 +1841,29 @@ class App {
         ti.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendText(); } });
         ti.addEventListener('input', () => UI.autoResize(ti));
 
+        const resetViewportScroll = () => {
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                const appEl = document.getElementById('app');
+                if (appEl) appEl.scrollTop = 0;
+                const activeScreen = document.querySelector('.screen.share-screen.active, .screen.active');
+                if (activeScreen) activeScreen.scrollTop = 0;
+            }, 60);
+        };
+        this.resetViewportScroll = resetViewportScroll;
+        ti.addEventListener('blur', resetViewportScroll);
+        if (window.visualViewport) {
+            let lastVpHeight = window.visualViewport.height;
+            window.visualViewport.addEventListener('resize', () => {
+                if (window.visualViewport.height > lastVpHeight) {
+                    resetViewportScroll();
+                }
+                lastVpHeight = window.visualViewport.height;
+            });
+        }
+
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -2144,15 +2173,18 @@ class App {
             inputEl.value = this.crypto.getPhrase() || '';
 
             if (isPrivileged) {
-                if (titleEl) titleEl.textContent = 'Change Encryption Passphrase';
-                if (labelEl) labelEl.textContent = 'New Passphrase';
-                if (descEl) descEl.textContent = 'All devices must use the same passphrase to decrypt messages.';
+                if (titleEl) titleEl.textContent = 'Encryption Passphrase';
+                if (labelEl) labelEl.textContent = 'Secret Passphrase';
+                if (descEl) descEl.textContent = 'All peers in the room must use this exact passphrase to decrypt messages.';
                 inputEl.readOnly = false;
                 inputEl.style.opacity = '1';
                 inputEl.style.cursor = 'text';
-                if (btnGen) btnGen.style.display = 'flex';
+                if (btnGen) btnGen.style.display = 'inline-flex';
                 if (btnSave) btnSave.style.display = '';
-                if (btnCancel) btnCancel.textContent = 'Cancel';
+                if (btnCancel) {
+                    btnCancel.textContent = 'Cancel';
+                    btnCancel.style.maxWidth = '120px';
+                }
             } else {
                 if (titleEl) titleEl.textContent = 'Room Encryption Key';
                 if (labelEl) labelEl.textContent = 'Current Room Key (View Only)';
@@ -2162,7 +2194,10 @@ class App {
                 inputEl.style.cursor = 'default';
                 if (btnGen) btnGen.style.display = 'none';
                 if (btnSave) btnSave.style.display = 'none';
-                if (btnCancel) btnCancel.textContent = 'Close';
+                if (btnCancel) {
+                    btnCancel.textContent = 'Close';
+                    btnCancel.style.maxWidth = '100%';
+                }
             }
             document.getElementById('modal-passphrase').style.display = 'flex';
         });

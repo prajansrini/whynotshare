@@ -233,7 +233,8 @@ input, textarea { font-family: inherit; }
         height: 100dvh;
         max-height: 100vh;
         max-height: 100dvh;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     .screen.share-screen.active {
         height: 100vh;
@@ -241,7 +242,8 @@ input, textarea { font-family: inherit; }
         max-height: 100vh;
         max-height: 100dvh;
         padding: 8px 10px 8px 10px;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 }
 
