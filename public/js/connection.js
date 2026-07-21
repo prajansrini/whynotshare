@@ -244,6 +244,16 @@ class ConnectionManager {
                     }
                     return;
                 }
+                const staleGhost = this.peers.find(p => !p.isCreator && p.id !== info.id && p.deviceName && info.deviceName && p.deviceName.trim().toLowerCase() === info.deviceName.trim().toLowerCase());
+                if (staleGhost) {
+                    const oldConn = this.connections.get(staleGhost.id);
+                    if (oldConn) {
+                        try { oldConn.close(); } catch {}
+                        this.connections.delete(staleGhost.id);
+                    }
+                    this.peers = this.peers.filter(p => p.id !== staleGhost.id);
+                    if (this.onPeerLeft) this.onPeerLeft(staleGhost);
+                }
                 if (!ex) this.peers.push(info); else Object.assign(ex, info);
                 if (this.onPeerJoined) this.onPeerJoined(info);
                 if (this.isCreator) {
@@ -308,6 +318,23 @@ class ConnectionManager {
                     this.peers.push({ id: this.myPeerId, ...this.myInfo, isCreator: false });
                 if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
                 else UI.updateDevicesList(this.peers, this.myPeerId);
+                break;
+            }
+            case 'peer-leaving': {
+                const leavingId = (data.payload && data.payload.id) || fromId;
+                const c = this.connections.get(leavingId);
+                if (c) {
+                    try { c.close(); } catch {}
+                    this.connections.delete(leavingId);
+                }
+                const peer = this.peers.find(p => p.id === leavingId);
+                this.peers = this.peers.filter(p => p.id !== leavingId);
+                if (this.onPeerLeft) this.onPeerLeft(peer || { id: leavingId, deviceName: (data.payload && data.payload.deviceName) || 'Member' });
+                if (this.isCreator) {
+                    this._broadcast({ type: 'peer-update', payload: [...this.peers] }, leavingId);
+                }
+                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
+                else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
                 break;
             }
             case 'host-leaving':
@@ -678,8 +705,11 @@ class ConnectionManager {
         } catch {}
     }
 
-    leaveRoom() {
+    leaveRoom(isUnload = false) {
         if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
+        try {
+            this._broadcast({ type: 'peer-leaving', payload: { id: this.myPeerId, deviceName: this.myInfo ? this.myInfo.deviceName : 'Member' } });
+        } catch {}
         if (this.isCreator) {
             try { this._broadcast({ type: 'host-leaving' }); } catch {}
         }
@@ -693,10 +723,10 @@ class ConnectionManager {
             this.roomCode = null; this.isCreator = false; this.peers = []; this.myPeerId = null;
             this.auditLogs = [];
         };
-        if (this.isCreator) {
-            setTimeout(cleanup, 150);
-        } else {
+        if (isUnload) {
             cleanup();
+        } else {
+            setTimeout(cleanup, 150);
         }
     }
 

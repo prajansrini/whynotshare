@@ -1061,8 +1061,7 @@ button .waiting-dots span {
 }
 
 .transfer-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(108, 92, 231, 0.18);
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.18);
     border-color: rgba(108, 92, 231, 0.35);
 }
 
@@ -1149,14 +1148,14 @@ button .waiting-dots span {
     align-items: center;
     gap: 14px;
     animation: cardPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .received-file-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(108, 92, 231, 0.35);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-color: rgba(108, 92, 231, 0.45);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .file-preview-img {

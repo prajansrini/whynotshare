@@ -52,6 +52,7 @@ class App {
             if (!container) return;
             for (const item of fileHistoryList) {
                 if (!item || !item.meta || !item.meta.fileId || item.meta.cancelled) continue;
+                if (item.meta.recipients && Array.isArray(item.meta.recipients) && item.meta.recipients.length > 0 && !item.meta.recipients.includes(this.conn.myPeerId)) continue;
                 this.fileTransfer.sharedFilesHistory.set(item.meta.fileId, item);
                 const blob = await this.fileTransfer.loadFromIndexedDB(item.meta.fileId);
                 const url = blob ? URL.createObjectURL(blob) : null;
@@ -82,17 +83,21 @@ class App {
         };
 
         this.fileTransfer.onProgress = (fid, prog, speed, dir, meta) => {
-            let card = document.getElementById('transfer-' + fid);
-            if (!card) {
-                card = UI.renderTransferCard(fid, meta, dir, (id) => this.fileTransfer.cancelTransfer(id));
-                document.getElementById('transfers-list').prepend(card);
-            }
+            if (meta && meta.historyTransfer) return;
             UI.updateTransferProgress(fid, prog, speed);
         };
 
         this.fileTransfer.onIncomingFile = (fid, meta) => {
-            const card = UI.renderTransferCard(fid, meta, 'download', (id) => this.fileTransfer.cancelTransfer(id));
-            document.getElementById('transfers-list').prepend(card);
+            if (meta && meta.historyTransfer) return;
+            const peer = this.conn.getPeers().find(p => p.id === meta.senderId);
+            const senderName = peer ? peer.deviceName : 'Peer';
+            const senderColor = this.textShare ? this.textShare._getPeerColor(meta.senderId || 'unknown') : 'var(--text-secondary)';
+            if (this.textShare && Array.isArray(this.textShare.messages)) {
+                const existingMsg = this.textShare.messages.find(m => (m.meta && m.meta.fileId === fid) || m.id === fid);
+                if (!existingMsg) {
+                    this.textShare.addFileMessage(fid, meta, null, false, { name: senderName, id: meta.senderId, color: senderColor }, meta.timestamp || Date.now());
+                }
+            }
         };
 
         this.fileTransfer.onFileReceived = (fid, meta, blob, senderId) => {
@@ -185,7 +190,12 @@ class App {
 
         window.addEventListener('beforeunload', () => {
             if (this.conn && this.conn.getRoomCode()) {
-                this.conn.leaveRoom();
+                this.conn.leaveRoom(true);
+            }
+        });
+        window.addEventListener('pagehide', () => {
+            if (this.conn && this.conn.getRoomCode()) {
+                this.conn.leaveRoom(true);
             }
         });
     }
@@ -301,6 +311,117 @@ class App {
         if (btnJ) { btnJ.disabled = false; btnJ.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connect'; }
         UI.showScreen('screen-landing', pushToHistory);
         this.init(); // re-init callbacks
+    }
+
+    async downloadAllFilesAsZip() {
+        if (!window.JSZip) {
+            UI.toast('ZIP library is still loading or not available.', 'error');
+            return;
+        }
+        const btn = document.getElementById('btn-download-all');
+        if (btn && btn.disabled) return;
+        
+        const origHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:rotateSpinner 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Preparing...</span></span>';
+        }
+
+        try {
+            const zip = new JSZip();
+            const addedNames = new Map();
+            let fileCount = 0;
+
+            const candidates = new Map();
+            
+            if (this.fileTransfer && this.fileTransfer.sharedFilesHistory) {
+                for (const [fid, item] of this.fileTransfer.sharedFilesHistory.entries()) {
+                    if (item && item.meta && item.meta.fileName && !item.meta.cancelled) {
+                        candidates.set(fid, {
+                            fileName: item.meta.fileName,
+                            getBlob: () => this.fileTransfer.loadFromIndexedDB(fid)
+                        });
+                    }
+                }
+            }
+
+            if (this.textShare && Array.isArray(this.textShare.messages)) {
+                for (const msg of this.textShare.messages) {
+                    if (msg && msg.meta && (msg.meta.fileName || msg.meta.fileId) && !msg.meta.cancelled) {
+                        const fid = msg.meta.fileId || msg.id;
+                        const fName = msg.meta.fileName || 'file_' + fid;
+                        if (!candidates.has(fid)) {
+                            candidates.set(fid, {
+                                fileName: fName,
+                                getBlob: async () => {
+                                    let b = await this.fileTransfer.loadFromIndexedDB(fid);
+                                    if (!b && msg.url && msg.url.startsWith('blob:')) {
+                                        try { b = await fetch(msg.url).then(r => r.blob()); } catch {}
+                                    }
+                                    return b;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            for (const [fid, cand] of candidates.entries()) {
+                const blob = await cand.getBlob();
+                if (blob && blob instanceof Blob) {
+                    let name = cand.fileName || `file_${fid}`;
+                    if (addedNames.has(name)) {
+                        const count = addedNames.get(name) + 1;
+                        addedNames.set(name, count);
+                        const dotIdx = name.lastIndexOf('.');
+                        if (dotIdx !== -1) {
+                            name = name.substring(0, dotIdx) + ` (${count})` + name.substring(dotIdx);
+                        } else {
+                            name = name + ` (${count})`;
+                        }
+                    } else {
+                        addedNames.set(name, 1);
+                    }
+                    zip.file(name, blob);
+                    fileCount++;
+                }
+            }
+
+            if (fileCount === 0) {
+                UI.toast('No downloadable files found in chat history to zip.', 'info');
+                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+                return;
+            }
+
+            if (btn) btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><span>Packaging (0%)...</span></span>';
+            const content = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 5 } }, (metadata) => {
+                if (btn) {
+                    btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:rotateSpinner 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Packaging (${Math.round(metadata.percent)}%)...</span></span>`;
+                }
+            });
+
+            const roomCode = this.conn ? this.conn.getRoomCode() : 'room';
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const zipName = `whynotshare_${roomCode || 'files'}_${dateStr}.zip`;
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(content);
+            a.href = url;
+            a.download = zipName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+            UI.toast(`Downloaded ${fileCount} file(s) as ${zipName}`, 'success');
+        } catch (err) {
+            console.error('ZIP creation failed:', err);
+            UI.toast('Failed to generate ZIP archive.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
     }
 
     stageFiles(fileList) {
@@ -1655,7 +1776,7 @@ class App {
             const targetScreenId = state && state.screenId ? state.screenId : 'screen-landing';
             const currentActive = document.querySelector('.screen.active');
             const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
-            if (currentScreenId === 'screen-share' && (targetScreenId === 'screen-landing' || targetScreenId === 'screen-room' || targetScreenId === 'screen-join')) {
+            if (currentScreenId === 'screen-share' && targetScreenId !== 'screen-share') {
                 this.leaveRoom(false);
             } else if (targetScreenId === 'screen-share' && !this.conn.getRoomCode()) {
                 const codeToRejoin = this.lastRoomCodeLeft || (window.location.hash ? window.location.hash.slice(1).split(':')[0] : null);
@@ -2314,6 +2435,11 @@ class App {
         document.getElementById('btn-pick-file').addEventListener('click', () => filePicker.click());
         const btnAttachChat = document.getElementById('btn-attach-chat');
         if (btnAttachChat) btnAttachChat.addEventListener('click', () => filePicker.click());
+        const btnDownloadAll = document.getElementById('btn-download-all');
+        if (btnDownloadAll && !btnDownloadAll._hasZipListener) {
+            btnDownloadAll._hasZipListener = true;
+            btnDownloadAll.addEventListener('click', () => this.downloadAllFilesAsZip());
+        }
         filePicker.addEventListener('change', (e) => { if (e.target.files.length) this.stageFiles(e.target.files); e.target.value = ''; });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));

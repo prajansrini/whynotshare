@@ -204,6 +204,13 @@
                     <input type="file" id="file-picker" multiple hidden>
                 </div>
                 <div id="staged-files-tab" style="display:none;padding:12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;margin-bottom:16px;flex-direction:column"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:4px 0">
+                    <span id="received-files-header" style="font-size:0.82rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px">Shared Files</span>
+                    <button id="btn-download-all" class="btn btn-secondary" style="padding:0 14px;height:32px;font-size:0.8rem;border-radius:10px;display:inline-flex;align-items:center;gap:6px;font-weight:600" title="Download all files as ZIP">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Download All (.zip)</span>
+                    </button>
+                </div>
                 <div id="received-files"></div>
             </div>
         </div>
@@ -432,6 +439,7 @@
     <script src="js/qr-code-styling.js"></script>
     <script src="js/deviceInfo.js"></script>
     <script src="js/crypto.js"></script>
+    <script src="js/jszip.min.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/connection.js"></script>
     <script src="js/fileTransfer.js"></script>

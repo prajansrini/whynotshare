@@ -140,13 +140,29 @@ class UI {
 
     static updateTransferProgress(fileId, progress, speed) {
         const card = document.getElementById('transfer-' + fileId);
-        if (!card) return;
-        const fill = card.querySelector('.transfer-bar-fill');
-        const pct = card.querySelector('.transfer-percent');
-        const spd = card.querySelector('.transfer-speed');
-        if (fill) fill.style.width = (progress * 100).toFixed(1) + '%';
-        if (pct) pct.textContent = (progress * 100).toFixed(0) + '%';
-        if (spd) spd.textContent = FileTransfer.formatSpeed(speed);
+        if (card) {
+            const fill = card.querySelector('.transfer-bar-fill');
+            const pct = card.querySelector('.transfer-percent');
+            const spd = card.querySelector('.transfer-speed');
+            if (fill) fill.style.width = (progress * 100).toFixed(1) + '%';
+            if (pct) pct.textContent = (progress * 100).toFixed(0) + '%';
+            if (spd) spd.textContent = FileTransfer.formatSpeed(speed);
+            if (progress >= 1) {
+                setTimeout(() => { if (card.parentNode) card.remove(); }, 300);
+            }
+        }
+        const chatBar = document.getElementById('chat-progress-bar-' + fileId);
+        const chatPct = document.getElementById('chat-progress-pct-' + fileId);
+        const chatSpd = document.getElementById('chat-progress-spd-' + fileId);
+        if (chatBar) chatBar.style.width = (progress * 100).toFixed(1) + '%';
+        if (chatPct) chatPct.textContent = (progress * 100).toFixed(0) + '%';
+        if (chatSpd) chatSpd.textContent = FileTransfer.formatSpeed(speed);
+        if (progress >= 1) {
+            setTimeout(() => {
+                const wrapper = document.getElementById('chat-progress-wrapper-' + fileId);
+                if (wrapper && wrapper.parentNode) wrapper.remove();
+            }, 300);
+        }
     }
 
     static renderReceivedFile(fileId, meta, blob) {
@@ -173,7 +189,7 @@ class UI {
         }
 
         card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + '</div>' +
+            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span></div>' +
             '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
             '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
@@ -208,7 +224,7 @@ class UI {
         const myId = window.app && window.app.conn ? window.app.conn.myPeerId : null;
         if (meta.cancelled) {
             actionBtn = '<span style="color:var(--status-offline);font-weight:600;font-size:0.8rem;display:inline-flex;align-items:center;gap:4px">🚫 Transfer Cancelled</span>';
-        } else if (meta.recipients && Array.isArray(meta.recipients) && myId && !meta.recipients.includes(myId)) {
+        } else if (meta.personalEncrypted && meta.recipients && Array.isArray(meta.recipients) && myId && !meta.recipients.includes(myId)) {
             actionBtn = '<span style="color:var(--status-offline);font-weight:600;font-size:0.8rem;display:inline-flex;align-items:center;gap:4px" title="You are not an authorized recipient for this encrypted file">🚫 File not sent to you</span>';
         } else if (url) {
             actionBtn = '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' +
@@ -216,8 +232,9 @@ class UI {
         } else {
             actionBtn = '<button class="btn btn-secondary btn-fetch-history-file" data-file-id="' + UI.escapeAttr(meta.fileId) + '" id="card-fetch-' + UI.escapeAttr(meta.fileId) + '" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">⬇ Fetch (' + FileTransfer.formatSize(meta.fileSize) + ')</button>';
         }
+        const statusBadge = url ? (senderId === myId ? ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span>' : ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span>') : '';
         card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + '</div>' +
+            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + statusBadge + '</div>' +
             '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
             actionBtn;
         return card;
@@ -246,9 +263,9 @@ class UI {
         }
 
         card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(file.name) + '">' + UI.escapeHtml(UI.formatFileName(file.name, 28)) + ' <span style="font-size:0.75rem;color:var(--status-online);margin-left:6px;font-weight:600">✓ Sent</span></div>' +
+            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(file.name) + '">' + UI.escapeHtml(UI.formatFileName(file.name, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span></div>' +
             '<div class="received-file-size">' + FileTransfer.formatSize(file.size) + '</div></div>' +
-            '<a href="' + url + '" download="' + UI.escapeAttr(file.name) + '" class="btn btn-secondary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600">Open</a>';
+            '<a href="' + url + '" download="' + UI.escapeAttr(file.name) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
         return card;
     }
 
@@ -277,7 +294,7 @@ class UI {
 
         if (meta.cancelled) {
             actionBtn = '<span style="color:var(--status-offline);font-weight:600;font-size:0.8rem;margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex-shrink:0">🚫 Transfer Cancelled</span>';
-        } else if (!isSent && meta.recipients && Array.isArray(meta.recipients) && myId && !meta.recipients.includes(myId)) {
+        } else if (!isSent && meta.personalEncrypted && meta.recipients && Array.isArray(meta.recipients) && myId && !meta.recipients.includes(myId)) {
             actionBtn = '<span style="color:var(--status-offline);font-weight:600;font-size:0.8rem;margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex-shrink:0" title="You are not an authorized recipient for this encrypted file">🚫 File not sent to you</span>';
         } else if (url) {
             actionBtn = badgeNotSentToAll + '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" style="margin-left:auto;background:var(--accent-primary);color:white;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:0.8rem;font-weight:600;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(0,0,0,0.15);flex-shrink:0;white-space:nowrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
@@ -291,11 +308,26 @@ class UI {
 
         const triggerAttrs = (url && (isImage || isVideo)) ? ' class="media-preview-trigger" data-url="' + url + '" data-type="' + UI.escapeAttr(meta.fileType || (isImage ? 'image/png' : 'video/mp4')) + '" data-name="' + UI.escapeAttr(meta.fileName || 'Media Preview') + '" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden"' : ' style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden"';
 
+        let inlineProgress = '';
+        if (!url && !meta.cancelled && (!meta.personalEncrypted || !meta.recipients || !Array.isArray(meta.recipients) || !myId || meta.recipients.includes(myId))) {
+            inlineProgress = '<div id="chat-progress-wrapper-' + UI.escapeAttr(meta.fileId) + '" style="width:100%;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:6px">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;font-weight:600;color:var(--accent-primary)">' +
+                '<span style="display:inline-flex;align-items:center;gap:5px">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:rotateSpinner 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>' +
+                '<span id="chat-progress-status-' + UI.escapeAttr(meta.fileId) + '">' + (isSent ? 'Sending...' : 'Receiving...') + '</span></span>' +
+                '<span id="chat-progress-pct-' + UI.escapeAttr(meta.fileId) + '">0%</span></div>' +
+                '<div style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">' +
+                '<div id="chat-progress-bar-' + UI.escapeAttr(meta.fileId) + '" style="width:0%;height:100%;background:var(--accent-gradient);transition:width 0.15s ease"></div></div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.7rem;color:var(--text-tertiary)">' +
+                '<span id="chat-progress-spd-' + UI.escapeAttr(meta.fileId) + '"></span>' +
+                '<button onclick="window.app && window.app.fileTransfer && window.app.fileTransfer.cancelTransfer(\'' + UI.escapeAttr(meta.fileId) + '\')" style="background:none;border:none;color:var(--status-offline);font-size:0.72rem;cursor:pointer;padding:0;font-weight:600">Cancel</button></div></div>';
+        }
+
         const fileBox = '<div' + triggerAttrs + '>' +
             '<div style="width:36px;height:36px;border-radius:8px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0">' + iconSvg + '</div>' +
             '<div style="overflow:hidden;text-align:left;flex:1;min-width:0"><div style="font-weight:600;font-size:0.85rem;color:inherit;word-break:break-all;line-height:1.3" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 22)) + '</div>' +
             '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
-            actionBtn + '</div>';
+            actionBtn + '</div>' + inlineProgress;
 
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';

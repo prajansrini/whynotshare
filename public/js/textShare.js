@@ -15,9 +15,6 @@ class TextShare {
         const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
         const otherPeers = peers.filter(p => p && p.id !== myId);
         let recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients && window.app.selectedPersonalRecipients.size > 0) ? Array.from(window.app.selectedPersonalRecipients) : null;
-        if (isPersonal && (!recipients || recipients.length === 0) && otherPeers.length > 0) {
-            recipients = otherPeers.map(p => p.id);
-        }
         try {
             const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
             let payload;
@@ -211,6 +208,8 @@ class TextShare {
         const myId = this.conn.getSocketId();
         for (const item of history) {
             if (!item || !item.id) continue;
+            if (item.type === 'file' && item.meta && item.meta.recipients && Array.isArray(item.meta.recipients) && item.meta.recipients.length > 0 && !item.meta.recipients.includes(myId)) continue;
+            if (item.type === 'text' && item.recipients && Array.isArray(item.recipients) && item.recipients.length > 0 && !item.recipients.includes(myId)) continue;
             const existingMsg = this.messages.find(m => m.id === item.id);
             if (existingMsg) {
                 const isMyMessage = item.sender && item.sender.id === myId;
