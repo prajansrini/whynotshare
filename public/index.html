@@ -257,6 +257,22 @@
                             </button>
                         </div>
                     </div>
+                    <!-- Room Entry Lock Mode -->
+                    <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
+                        <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+                            <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>ROOM ENTRY LOCK</span>
+                            <span id="badge-room-lock-status" style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:var(--glass-bg);color:var(--text-secondary);font-weight:700">UNLOCKED</span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.4">When locked, no new members can enter the room even if they enter the correct room code and passphrase.</div>
+                        <div class="security-switch-bar sec-bar-sm" id="bar-room-lock-mode" style="margin:0;width:100%;display:flex" title="Room Entry Lock Mode">
+                            <button id="btn-room-lock-off" class="sec-pill-btn active" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Unlocked (Allow Entry)</span>
+                            </button>
+                            <button id="btn-room-lock-on" class="sec-pill-btn" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Locked (Block Entry)</span>
+                            </button>
+                        </div>
+                    </div>
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>ROOM KEY (PASSPHRASE)
                     </div>
@@ -390,10 +406,9 @@
             </div>
             <div style="display:flex;flex-direction:column;gap:16px">
                 <div id="personal-recipients-container" style="display:flex;flex-direction:column;gap:12px;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
-                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:2px">Select authorized recipients who can decrypt your messages and files. By default, all connected members are selected.</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:2px">All connected members can decrypt your messages and files. Selective filtering is disabled.</div>
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between">
-                        <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>AUTHORIZED RECIPIENTS</span>
-                        <button id="btn-select-all-recipients" class="btn btn-secondary" style="padding:0 12px;height:28px;font-size:0.75rem;border-radius:10px">Select All</button>
+                        <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>AUTHORIZED RECIPIENTS (ALL)</span>
                     </div>
                     <div id="personal-recipients-list" style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto"></div>
                 </div>

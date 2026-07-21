@@ -108,22 +108,12 @@ class FileTransfer {
 
     async sendFile(file, customFileId) {
         const isPersonal = Boolean(window.app && window.app.personalE2E);
-        const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
         const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
         const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
         const otherPeers = peers.filter(p => p && p.id !== myId);
-        const hasOtherPeers = (otherPeers.length > 0);
-
-        if (isPersonal && (!recipients || recipients.length === 0)) {
-            if (hasOtherPeers) {
-                if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
-            }
-            if (window.app && window.app.textShare) {
-                const fileId = customFileId || ('sent-' + file.name + '-' + Date.now());
-                const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks: 1, encrypted: true, personalEncrypted: true };
-                window.app.textShare.addFileMessage(fileId, meta, null, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
-            }
-            return;
+        let recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients && window.app.selectedPersonalRecipients.size > 0) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        if (isPersonal && (!recipients || recipients.length === 0) && otherPeers.length > 0) {
+            recipients = otherPeers.map(p => p.id);
         }
         const fileId = customFileId || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         const totalChunks = Math.ceil(file.size / this.chunkSize);

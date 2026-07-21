@@ -11,29 +11,12 @@ class TextShare {
     async send(text) {
         if (!text.trim()) return;
         const isPersonal = Boolean(window.app && window.app.personalE2E);
-        const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
         const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
         const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
         const otherPeers = peers.filter(p => p && p.id !== myId);
-        const hasOtherPeers = (otherPeers.length > 0);
-
-        if (isPersonal && (!recipients || recipients.length === 0)) {
-            if (hasOtherPeers) {
-                if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
-            }
-            const msgId = Date.now() + '-no-rec';
-            const msg = {
-                id: msgId,
-                type: 'text',
-                text: text,
-                sender: { name: 'You', id: this.conn.getSocketId() },
-                timestamp: Date.now(),
-                isSent: true
-            };
-            this.messages.push(msg);
-            this._renderMessage(msg);
-            this.saveHistory();
-            return;
+        let recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients && window.app.selectedPersonalRecipients.size > 0) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        if (isPersonal && (!recipients || recipients.length === 0) && otherPeers.length > 0) {
+            recipients = otherPeers.map(p => p.id);
         }
         try {
             const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);

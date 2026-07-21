@@ -541,15 +541,12 @@ class App {
         const totalOtherPeers = otherPeers.length;
         const selectedCount = (this.selectedPersonalRecipients) ? Array.from(this.selectedPersonalRecipients).filter(id => otherPeers.some(p => p.id === id)).length : 0;
 
-        if (selectedCount === 0 && totalOtherPeers > 0) {
-            pe2ePill.textContent = 'NONE';
-            pe2ePill.style.color = 'var(--text-tertiary)';
-        } else if (totalOtherPeers === 0 || selectedCount >= totalOtherPeers) {
+        if (totalOtherPeers > 0) {
             pe2ePill.textContent = 'ALL';
             pe2ePill.style.color = 'var(--accent-primary)';
         } else {
-            pe2ePill.textContent = 'SOME';
-            pe2ePill.style.color = '#eab308';
+            pe2ePill.textContent = 'NONE';
+            pe2ePill.style.color = 'var(--text-tertiary)';
         }
     }
 
@@ -589,38 +586,24 @@ class App {
             count++;
             if (!this._knownPeersForPersonalE2E.has(p.id)) {
                 this._knownPeersForPersonalE2E.add(p.id);
-                this.selectedPersonalRecipients.add(p.id);
                 if (this.crypto.myPersonalKeyStr) {
                     this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
                 }
             }
-            const isSel = this.selectedPersonalRecipients.has(p.id);
+            this.selectedPersonalRecipients.add(p.id);
             const chip = document.createElement('div');
-            chip.className = 'recipient-chip ' + (isSel ? 'selected' : '');
+            chip.className = 'recipient-chip selected';
+            chip.style.cursor = 'default';
+            chip.title = 'All members can decrypt room messages (Selective filtering disabled)';
 
             const iconSpan = document.createElement('span');
             iconSpan.className = 'chip-icon';
-            iconSpan.innerHTML = isSel ?
-                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
-                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
+            iconSpan.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
             chip.appendChild(iconSpan);
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = p.deviceName || 'Unknown Device';
             chip.appendChild(nameSpan);
-
-            chip.addEventListener('click', async () => {
-                const nowSel = !this.selectedPersonalRecipients.has(p.id);
-                if (nowSel) {
-                    this.selectedPersonalRecipients.add(p.id);
-                    if (!this.crypto.myPersonalKey) await this.crypto.generatePersonalKey();
-                    this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: this.crypto.myPersonalKeyStr, targetId: p.id } });
-                } else {
-                    this.selectedPersonalRecipients.delete(p.id);
-                    this.conn.sendDirect(p.id, { type: 'share-personal-key', payload: { keyStr: null, targetId: p.id } });
-                }
-                this.renderPersonalRecipients();
-            });
 
             listEl.appendChild(chip);
         });
@@ -745,6 +728,13 @@ class App {
             btnKeyOpen.style.pointerEvents = isCreator ? 'auto' : 'none';
         }
 
+        this.updateRoomLockUI(Boolean(this.conn && this.conn.isRoomLocked));
+        const barLockMode = document.getElementById('bar-room-lock-mode');
+        if (barLockMode) {
+            barLockMode.style.opacity = isPrivileged ? '1' : '0.55';
+            barLockMode.style.pointerEvents = isPrivileged ? 'auto' : 'none';
+        }
+
         if (inputKey) {
             if (isOpenRoom) {
                 inputKey.value = '';
@@ -801,6 +791,29 @@ class App {
         this.renderAuditLogs();
         this.renderHostMembersList();
         document.getElementById('modal-host-manage').style.display = 'flex';
+    }
+
+    toggleRoomLock(isLocked) {
+        if (!this.conn || (!this.conn.isCreator && !this.conn.isAdmin)) {
+            UI.toast('Only the Host or Admin can lock/unlock the room entry.', 'warning');
+            return;
+        }
+        this.conn.isRoomLocked = Boolean(isLocked);
+        this.updateRoomLockUI(this.conn.isRoomLocked);
+        this.conn._broadcast({ type: 'room-lock-changed', payload: { isLocked: this.conn.isRoomLocked } });
+        UI.toast(this.conn.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+    }
+
+    updateRoomLockUI(isLocked) {
+        const badge = document.getElementById('badge-room-lock-status');
+        if (badge) {
+            badge.textContent = isLocked ? 'LOCKED' : 'UNLOCKED';
+            badge.style.color = isLocked ? 'var(--status-error)' : 'var(--text-secondary)';
+        }
+        const btnLockOff = document.getElementById('btn-room-lock-off');
+        const btnLockOn = document.getElementById('btn-room-lock-on');
+        if (btnLockOff) btnLockOff.classList.toggle('active', !isLocked);
+        if (btnLockOn) btnLockOn.classList.toggle('active', isLocked);
     }
 
     renderHostMembersList() {
@@ -1975,6 +1988,11 @@ class App {
         const btnKeyOpen = document.getElementById('btn-room-key-open');
         if (btnKeyReq) btnKeyReq.addEventListener('click', () => setRoomKeyMode(false));
         if (btnKeyOpen) btnKeyOpen.addEventListener('click', () => setRoomKeyMode(true));
+
+        const btnLockOff = document.getElementById('btn-room-lock-off');
+        const btnLockOn = document.getElementById('btn-room-lock-on');
+        if (btnLockOff) btnLockOff.addEventListener('click', () => this.toggleRoomLock(false));
+        if (btnLockOn) btnLockOn.addEventListener('click', () => this.toggleRoomLock(true));
 
         const toggleOpenRoom = document.getElementById('toggle-open-room');
         if (toggleOpenRoom) {

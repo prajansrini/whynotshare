@@ -4,6 +4,7 @@ class ConnectionManager {
         this.connections = new Map();
         this.roomCode = null;
         this.isCreator = false;
+        this.isRoomLocked = false;
         this.peers = [];
         this.myInfo = DeviceInfo.detect();
         this.myPeerId = null;
@@ -151,6 +152,13 @@ class ConnectionManager {
     }
 
     _handleIncoming(conn) {
+        if (this.isRoomLocked) {
+            this._onConnOpen(conn, () => {
+                try { conn.send({ type: 'room-locked-error' }); } catch {}
+                setTimeout(() => { try { conn.close(); } catch {} }, 300);
+            });
+            return;
+        }
         this._onConnOpen(conn, () => {
             this._register(conn, conn.peer);
         });
@@ -224,6 +232,14 @@ class ConnectionManager {
                 info.deviceName = info.deviceName || 'Member Device';
                 info.isCreator = (info.id === this._roomCodeToPeerId(this.roomCode));
                 const ex = this.peers.find(p => p.id === info.id);
+                if (this.isCreator && this.isRoomLocked && !ex) {
+                    const c = this.connections.get(fromId);
+                    if (c && (c.open || c._open)) {
+                        try { c.send({ type: 'room-locked-error' }); } catch {}
+                        setTimeout(() => { try { c.close(); } catch {} }, 300);
+                    }
+                    return;
+                }
                 if (!ex) this.peers.push(info); else Object.assign(ex, info);
                 if (this.onPeerJoined) this.onPeerJoined(info);
                 if (this.isCreator) {
@@ -450,6 +466,24 @@ class ConnectionManager {
                 }
                 if (this.isCreator && data.payload.targetId && data.payload.targetId !== this.myPeerId) {
                     this.sendDirect(data.payload.targetId, { ...data, payload: { ...data.payload, senderId: actualSender } });
+                }
+                break;
+            }
+            case 'room-locked-error': {
+                if (this._joinReject) {
+                    this._joinReject(new Error('Room is currently locked by the host.'));
+                }
+                if (typeof UI !== 'undefined') UI.toast('Room is currently locked by the host. New members cannot join.', 'error');
+                if (window.app && window.app.leaveRoom) window.app.leaveRoom();
+                break;
+            }
+            case 'room-lock-changed': {
+                this.isRoomLocked = Boolean(data.payload && data.payload.isLocked);
+                if (window.app && typeof window.app.updateRoomLockUI === 'function') {
+                    window.app.updateRoomLockUI(this.isRoomLocked);
+                }
+                if (this.isCreator && data.payload && data.payload.isLocked !== undefined) {
+                    this._broadcast(data, fromId);
                 }
                 break;
             }
