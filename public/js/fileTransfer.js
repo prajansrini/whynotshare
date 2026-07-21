@@ -109,8 +109,15 @@ class FileTransfer {
     async sendFile(file, customFileId) {
         const isPersonal = Boolean(window.app && window.app.personalE2E);
         const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
+        const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
+        const otherPeers = peers.filter(p => p && p.id !== myId);
+        const hasOtherPeers = (otherPeers.length > 0);
+
         if (isPersonal && (!recipients || recipients.length === 0)) {
-            if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            if (hasOtherPeers) {
+                if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            }
             if (window.app && window.app.textShare) {
                 const fileId = customFileId || ('sent-' + file.name + '-' + Date.now());
                 const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks: 1, encrypted: true, personalEncrypted: true };

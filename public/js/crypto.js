@@ -54,6 +54,9 @@ class CryptoManager {
         this.phrase = this.generateRandomPhrase();
         this.key = await this._deriveKey(this.phrase);
         this.authHash = this._computeAuthHash(this.phrase);
+        if (typeof window !== 'undefined' && window.app && window.app.textShare && typeof window.app.textShare.reTryDecryptMessages === 'function') {
+            window.app.textShare.reTryDecryptMessages();
+        }
         return this.phrase;
     }
 
@@ -67,6 +70,9 @@ class CryptoManager {
         this.phrase = phrase.trim();
         this.key = await this._deriveKey(this.phrase);
         this.authHash = this._computeAuthHash(this.phrase);
+        if (typeof window !== 'undefined' && window.app && window.app.textShare && typeof window.app.textShare.reTryDecryptMessages === 'function') {
+            window.app.textShare.reTryDecryptMessages();
+        }
     }
 
     async _deriveKey(passphrase) {
@@ -208,6 +214,9 @@ class CryptoManager {
         }
         const derived = await this._deriveKey(keyStr);
         this.peerPersonalKeys.set(peerId, derived);
+        if (typeof window !== 'undefined' && window.app && window.app.textShare && typeof window.app.textShare.reTryDecryptMessages === 'function') {
+            window.app.textShare.reTryDecryptMessages();
+        }
     }
 
     async encryptWithPersonalKey(text) {

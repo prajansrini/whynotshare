@@ -12,8 +12,15 @@ class TextShare {
         if (!text.trim()) return;
         const isPersonal = Boolean(window.app && window.app.personalE2E);
         const recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients) ? Array.from(window.app.selectedPersonalRecipients) : null;
+        const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
+        const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
+        const otherPeers = peers.filter(p => p && p.id !== myId);
+        const hasOtherPeers = (otherPeers.length > 0);
+
         if (isPersonal && (!recipients || recipients.length === 0)) {
-            if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            if (hasOtherPeers) {
+                if (typeof UI !== 'undefined') UI.toast('Please select at least one Authorized Recipient in Personal E2E settings first!', 'error');
+            }
             const msgId = Date.now() + '-no-rec';
             const msg = {
                 id: msgId,
@@ -41,7 +48,7 @@ class TextShare {
                 payload = { id: msgId, raw: text, timestamp: Date.now(), recipients };
             }
             this.conn.sendText(payload);
-            const msg = { id: msgId, type: 'text', text, sender: { name: 'You', id: this.conn.getSocketId() }, timestamp: Date.now(), isSent: true };
+            const msg = { id: msgId, type: 'text', text, sender: { name: 'You', id: this.conn.getSocketId() }, timestamp: Date.now(), isSent: true, _encrypted: payload.encrypted, _personalEncrypted: payload.personalEncrypted, _from: this.conn.getSocketId() || this.conn.myPeerId };
             this.messages.push(msg);
             this._renderMessage(msg);
             this.saveHistory();
@@ -78,12 +85,13 @@ class TextShare {
             const peer = this.conn.getPeers().find(p => p.id === data.from);
             const name = peer ? peer.deviceName : 'Unknown Device';
             const color = this._getPeerColor(data.from);
-            const msg = { id: msgId, type: 'text', text, sender: { name, id: data.from, color }, timestamp: data.timestamp, isSent: false };
+            const msg = { id: msgId, type: 'text', text, sender: { name, id: data.from, color }, timestamp: data.timestamp, isSent: false, _encrypted: data.encrypted, _personalEncrypted: data.personalEncrypted, _from: data.from };
             this.messages.push(msg);
             this._renderMessage(msg);
             this.saveHistory();
         } catch {
-            const msg = { id: Date.now() + '-err', type: 'text', text: '[Could Not Decrypt - Wrong Key?]', sender: { name: 'System', color: 'var(--status-error)' }, timestamp: Date.now(), isSent: false };
+            const msgId = data && data.id ? data.id : (Date.now() + '-err');
+            const msg = { id: msgId, type: 'text', text: '[Could Not Decrypt - Wrong Key?]', sender: { name: 'System', color: 'var(--status-error)' }, timestamp: (data && data.timestamp) || Date.now(), isSent: false, _encrypted: data && data.encrypted, _personalEncrypted: data && data.personalEncrypted, _from: data && data.from };
             this.messages.push(msg);
             this._renderMessage(msg);
             this.saveHistory();
@@ -216,11 +224,25 @@ class TextShare {
 
     async syncHistory(history) {
         if (!Array.isArray(history) || history.length === 0) return;
-        let added = false;
+        let addedOrUpdated = false;
         const myId = this.conn.getSocketId();
         for (const item of history) {
             if (!item || !item.id) continue;
-            if (!this.messages.some(m => m.id === item.id)) {
+            const existingMsg = this.messages.find(m => m.id === item.id);
+            if (existingMsg) {
+                const isMyMessage = item.sender && item.sender.id === myId;
+                if (!isMyMessage && existingMsg.sender && (existingMsg.sender.name === 'You' || existingMsg.isSent)) {
+                    const peer = this.conn.getPeers().find(p => p && p.id === existingMsg.sender.id);
+                    const peerName = peer ? peer.deviceName : (existingMsg.sender.name === 'You' ? 'Host' : (existingMsg.sender.name || 'Unknown Device'));
+                    existingMsg.sender.name = peerName;
+                    existingMsg.isSent = false;
+                    addedOrUpdated = true;
+                }
+                if (existingMsg.text && (existingMsg.text.startsWith('🔒 [Encrypted Message') || existingMsg.text.startsWith('[Could Not Decrypt') || existingMsg.text.startsWith('[Encrypted - No Key Set]')) && item.text && !item.text.startsWith('🔒 [Encrypted Message') && !item.text.startsWith('[Could Not Decrypt') && !item.text.startsWith('[Encrypted - No Key Set]')) {
+                    existingMsg.text = item.text;
+                    addedOrUpdated = true;
+                }
+            } else {
                 const isMyMessage = item.sender && item.sender.id === myId;
                 const msgCopy = { ...item, isSent: isMyMessage };
                 if (msgCopy.type === 'file' && msgCopy.url && msgCopy.url.startsWith('blob:')) {
@@ -229,14 +251,16 @@ class TextShare {
                 if (isMyMessage) {
                     msgCopy.sender = { ...item.sender, name: 'You' };
                 } else if (item.sender && item.sender.id) {
+                    const peer = this.conn.getPeers().find(p => p && p.id === item.sender.id);
+                    const peerName = peer ? peer.deviceName : (item.sender.name === 'You' ? 'Host' : (item.sender.name || 'Unknown Device'));
                     const color = this._getPeerColor(item.sender.id);
-                    msgCopy.sender = { ...item.sender, color: item.sender.color || color };
+                    msgCopy.sender = { ...item.sender, name: peerName, color: item.sender.color || color };
                 }
                 this.messages.push(msgCopy);
-                added = true;
+                addedOrUpdated = true;
             }
         }
-        if (added) {
+        if (addedOrUpdated) {
             this.messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             this._renderAllMessages();
             this.saveHistory();
@@ -248,13 +272,38 @@ class TextShare {
                         if (blob) {
                             m.url = URL.createObjectURL(blob);
                             reRender = true;
-                        } else if (this.conn.connections && this.conn.connections.size > 0) {
+                        } else if (m.meta && m.meta.fileSize < 2 * 1024 * 1024 && this.conn.connections && this.conn.connections.size > 0) {
                             this.conn.sendFileEvent('request-history-file', { fileId: m.meta.fileId, targetId: this.conn.myPeerId });
                         }
                     }
                 }
                 if (reRender) this._renderAllMessages();
             }
+        }
+        this.reTryDecryptMessages();
+    }
+
+    async reTryDecryptMessages() {
+        if (!this.messages || this.messages.length === 0) return;
+        let changed = false;
+        for (const m of this.messages) {
+            if (m.text && (m.text.startsWith('🔒 [Encrypted Message') || m.text.startsWith('[Could Not Decrypt') || m.text.startsWith('[Encrypted - No Key Set]'))) {
+                if (m._personalEncrypted && m._encrypted && m._from && this.crypto && this.crypto.peerPersonalKeys && this.crypto.peerPersonalKeys.has(m._from)) {
+                    try {
+                        m.text = await this.crypto.decryptWithPersonalKey(m._encrypted, m._from);
+                        changed = true;
+                    } catch {}
+                } else if (!m._personalEncrypted && m._encrypted && this.crypto && this.crypto.hasKey()) {
+                    try {
+                        m.text = await this.crypto.decrypt(m._encrypted);
+                        changed = true;
+                    } catch {}
+                }
+            }
+        }
+        if (changed) {
+            this._renderAllMessages();
+            this.saveHistory();
         }
     }
 

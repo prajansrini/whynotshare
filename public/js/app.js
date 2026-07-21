@@ -24,10 +24,12 @@ class App {
         this.conn.onSyncRequest = () => {
             if (!this.textShare || !Array.isArray(this.textShare.messages)) return [];
             return this.textShare.messages.map(m => {
-                if (m.type === 'file') {
-                    return { ...m, url: null };
+                const copy = { ...m };
+                if (copy.type === 'file') copy.url = null;
+                if (copy.sender && (copy.sender.name === 'You' || copy.isSent || copy.sender.id === this.conn.myPeerId)) {
+                    copy.sender = { ...copy.sender, id: copy.sender.id || this.conn.myPeerId, name: this.conn.deviceName || 'Host' };
                 }
-                return m;
+                return copy;
             });
         };
         this.conn.onHistoryReceived = (history) => { if (this.textShare) this.textShare.syncHistory(history); };
@@ -208,7 +210,7 @@ class App {
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
-            window.history.replaceState(null, '', '#create-room');
+            window.history.replaceState(null, '', window.location.pathname);
             try {
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                     roomCode: code,
@@ -513,7 +515,7 @@ class App {
             if (urlEl) {
                 urlEl.dataset.url = enabled && phrase ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
             }
-            if (window.location.hash.startsWith('#' + code)) {
+            if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
                 window.history.replaceState(null, '', enabled && phrase ? '#' + code + ':' + phrase : '#' + code);
             }
             const sr = document.getElementById('screen-room');
@@ -525,17 +527,39 @@ class App {
     }
 
     /* --- Personal E2E & Host Governance Methods --- */
+    updatePersonalE2EPill() {
+        const pe2ePill = document.getElementById('pe2e-status-pill');
+        if (!pe2ePill) return;
+        if (!this.personalE2E) {
+            pe2ePill.textContent = 'OFF';
+            pe2ePill.style.color = 'var(--text-tertiary)';
+            return;
+        }
+        const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
+        const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
+        const otherPeers = peers.filter(p => p && p.id !== myId);
+        const totalOtherPeers = otherPeers.length;
+        const selectedCount = (this.selectedPersonalRecipients) ? Array.from(this.selectedPersonalRecipients).filter(id => otherPeers.some(p => p.id === id)).length : 0;
+
+        if (selectedCount === 0 && totalOtherPeers > 0) {
+            pe2ePill.textContent = 'NONE';
+            pe2ePill.style.color = 'var(--text-tertiary)';
+        } else if (totalOtherPeers === 0 || selectedCount >= totalOtherPeers) {
+            pe2ePill.textContent = 'ALL';
+            pe2ePill.style.color = 'var(--accent-primary)';
+        } else {
+            pe2ePill.textContent = 'SOME';
+            pe2ePill.style.color = '#eab308';
+        }
+    }
+
     togglePersonalE2E(enabled = true) {
-        this.personalE2E = true;
+        this.personalE2E = enabled;
         const container = document.getElementById('personal-recipients-container');
         if (container) {
-            container.style.display = 'flex';
+            container.style.display = enabled ? 'flex' : 'none';
         }
-        const pe2ePill = document.getElementById('pe2e-status-pill');
-        if (pe2ePill) {
-            pe2ePill.textContent = 'ON';
-            pe2ePill.style.color = 'var(--accent-primary)';
-        }
+        this.updatePersonalE2EPill();
         if (!this.crypto.myPersonalKey) {
             this.crypto.generatePersonalKey().then(() => {
                 const peers = this.conn.getPeers() || [];
@@ -601,8 +625,9 @@ class App {
             listEl.appendChild(chip);
         });
         if (count === 0) {
-            listEl.innerHTML = '<span style="font-size:0.8rem;color:var(--text-tertiary)">No other devices in the room yet.</span>';
+            listEl.innerHTML = '<span style="font-size:0.8rem;color:var(--text-tertiary)">No other users in the room yet.</span>';
         }
+        this.updatePersonalE2EPill();
     }
 
     _triggerAutoSaveHostSettings(closeModal = false) {
@@ -1104,6 +1129,7 @@ class App {
         UI.updateDevicesList(peers, myId);
         this.renderHostMembersList();
         this.renderPersonalRecipients();
+        if (typeof this.updatePersonalE2EPill === 'function') this.updatePersonalE2EPill();
         if (typeof this.renderAuditLogs === 'function') this.renderAuditLogs();
     }
 
@@ -1116,7 +1142,9 @@ class App {
         const targetHash = this.e2eEnabled ? ('#' + newCode + ':' + phrase) : ('#' + newCode);
         const urlEl = document.getElementById('share-url');
         if (urlEl) urlEl.dataset.url = targetUrl;
-        window.history.replaceState(null, '', targetHash);
+        if (window.location.hash && window.location.hash.slice(1).startsWith(this.conn.getRoomCode() || '')) {
+            window.history.replaceState(null, '', targetHash);
+        }
         try {
             const saved = sessionStorage.getItem('whynotshare_active_session');
             if (saved) {
@@ -1144,7 +1172,9 @@ class App {
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + newKey) : ('#' + code);
             const urlEl = document.getElementById('share-url');
             if (urlEl) urlEl.dataset.url = targetUrl;
-            window.history.replaceState(null, '', targetHash);
+            if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
+                window.history.replaceState(null, '', targetHash);
+            }
             try {
                 const saved = sessionStorage.getItem('whynotshare_active_session');
                 if (saved) {
@@ -1172,7 +1202,9 @@ class App {
                 const targetHash = this.e2eEnabled ? ('#' + code + ':' + cleanKey) : ('#' + code);
                 const urlEl = document.getElementById('share-url');
                 if (urlEl) urlEl.dataset.url = targetUrl;
-                window.history.replaceState(null, '', targetHash);
+                if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
+                    window.history.replaceState(null, '', targetHash);
+                }
                 try {
                     const saved = sessionStorage.getItem('whynotshare_active_session');
                     if (saved) {
@@ -1256,13 +1288,16 @@ class App {
     _checkUrlHash() {
         const hash = window.location.hash.slice(1);
         if (!hash) return;
+        const lowerHash = hash.toLowerCase();
+        if (['create-room', 'landing', 'join', 'room', 'share', 'settings', 'about'].includes(lowerHash)) return;
+        if (this.conn && (this.conn.isConnected() || this.conn.getRoomCode())) return;
         let code = hash, phrase = '';
         if (hash.includes(':')) {
             const [c, ...rest] = hash.split(':');
             code = c;
             phrase = rest.join(':');
         }
-        if (code) {
+        if (code && !['create-room', 'landing', 'join', 'room', 'share', 'settings', 'about'].includes(code.toLowerCase())) {
             setTimeout(() => {
                 const codeInput = document.getElementById('input-room-code');
                 const phraseInput = document.getElementById('input-secret-phrase');
@@ -1699,7 +1734,9 @@ class App {
                 if (code && urlEl && code !== '---') {
                     const targetUrl = this._buildShareUrl(code, newPhrase);
                     urlEl.dataset.url = targetUrl;
-                    window.history.replaceState(null, '', '#' + code + ':' + newPhrase);
+                    if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
+                        window.history.replaceState(null, '', '#' + code + ':' + newPhrase);
+                    }
                     this.renderInlineQr(targetUrl);
                 }
                 if (this.conn && (this.conn.isCreator || this.conn.isAdmin)) {
@@ -1719,7 +1756,9 @@ class App {
                 if (code && urlEl && code !== '---') {
                     const targetUrl = val ? this._buildShareUrl(code, val) : (window.location.origin + window.location.pathname + '#' + code);
                     urlEl.dataset.url = targetUrl;
-                    if (val) window.history.replaceState(null, '', '#' + code + ':' + val);
+                    if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
+                        if (val) window.history.replaceState(null, '', '#' + code + ':' + val);
+                    }
                     this.renderInlineQr(targetUrl);
                 }
                 if (this.conn && (this.conn.isCreator || this.conn.isAdmin)) {
@@ -2114,6 +2153,7 @@ class App {
                     }
                 });
                 this.renderPersonalRecipients();
+                if (typeof this.updatePersonalE2EPill === 'function') this.updatePersonalE2EPill();
                 UI.toast('Shared personal encryption key with all recipients', 'success');
             });
         }
@@ -2173,7 +2213,10 @@ class App {
             inputEl.value = this.crypto.getPhrase() || '';
 
             if (isPrivileged) {
-                if (titleEl) titleEl.textContent = 'Encryption Passphrase';
+                if (titleEl) {
+                    const spanEl = titleEl.querySelector('span');
+                    if (spanEl) spanEl.textContent = 'Encryption Passphrase'; else titleEl.textContent = 'Encryption Passphrase';
+                }
                 if (labelEl) labelEl.textContent = 'Secret Passphrase';
                 if (descEl) descEl.textContent = 'All peers in the room must use this exact passphrase to decrypt messages.';
                 inputEl.readOnly = false;
@@ -2186,7 +2229,10 @@ class App {
                     btnCancel.style.maxWidth = '120px';
                 }
             } else {
-                if (titleEl) titleEl.textContent = 'Room Encryption Key';
+                if (titleEl) {
+                    const spanEl = titleEl.querySelector('span');
+                    if (spanEl) spanEl.textContent = 'Room Encryption Key'; else titleEl.textContent = 'Room Encryption Key';
+                }
                 if (labelEl) labelEl.textContent = 'Current Room Key (View Only)';
                 if (descEl) descEl.textContent = 'Only room hosts or admins can rotate the encryption key.';
                 inputEl.readOnly = true;

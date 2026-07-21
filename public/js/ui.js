@@ -96,9 +96,9 @@ class UI {
         if (!list) return;
         list.innerHTML = '';
         peers.forEach(p => list.appendChild(UI.renderDeviceChip(p, p.id === myId)));
-        if (count) count.textContent = peers.length + ' device' + (peers.length !== 1 ? 's' : '');
+        if (count) count.textContent = peers.length + ' user' + (peers.length !== 1 ? 's' : '');
         if (countModal) countModal.textContent = peers.length;
-        if (countPill) countPill.textContent = peers.length;
+        if (countPill) countPill.textContent = peers.length > 10 ? '10+' : peers.length;
     }
 
     static showEmptyMessages() {
@@ -319,7 +319,10 @@ class UI {
         const downloadBtn = document.getElementById('btn-preview-download');
         if (!modal || !content) return;
 
-        if (title) title.textContent = fileName || 'Media Preview';
+        if (title) {
+            const spanEl = title.querySelector('span');
+            if (spanEl) spanEl.textContent = fileName || 'Media Preview'; else title.textContent = fileName || 'Media Preview';
+        }
         if (downloadBtn) {
             downloadBtn.href = url || '#';
             downloadBtn.download = fileName || 'download';

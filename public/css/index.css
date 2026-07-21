@@ -233,8 +233,7 @@ input, textarea { font-family: inherit; }
         height: 100dvh;
         max-height: 100vh;
         max-height: 100dvh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden;
     }
     .screen.share-screen.active {
         height: 100vh;
@@ -244,6 +243,8 @@ input, textarea { font-family: inherit; }
         padding: 8px 10px 8px 10px;
         overflow-y: auto;
         overflow-x: hidden;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
@@ -510,4 +511,26 @@ body.light-theme .devices-panel {
 }
 body.light-theme .transfer-bar {
     background: rgba(15, 23, 42, 0.08);
+}
+
+/* --- Firefox Performance Optimization --- */
+@-moz-document url-prefix() {
+    .glass-card,
+    .btn-secondary,
+    .toast,
+    .transfer-card,
+    .devices-panel,
+    .share-header-card {
+        backdrop-filter: none !important;
+        background: rgba(255, 255, 255, 0.07) !important;
+    }
+    body.light-theme .glass-card,
+    body.light-theme .btn-secondary,
+    body.light-theme .toast,
+    body.light-theme .transfer-card,
+    body.light-theme .devices-panel,
+    body.light-theme .share-header-card {
+        backdrop-filter: none !important;
+        background: rgba(255, 255, 255, 0.88) !important;
+    }
 }
