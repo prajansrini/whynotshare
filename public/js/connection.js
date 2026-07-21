@@ -96,8 +96,6 @@ class ConnectionManager {
                     this.isCreator = true;
                     this.peers = [{ id, ...this.myInfo, isCreator: true }];
                     this.addAuditLog(`Room created (${code})`, 'success');
-                    const hostDevName = (this.myInfo && this.myInfo.deviceName) ? this.myInfo.deviceName : 'Host';
-                    this.addAuditLog(`${hostDevName} joined the room`, 'info');
                     resolve(code);
                 });
                 this.peer.on('connection', (conn) => this._handleIncoming(conn));
@@ -481,6 +479,9 @@ class ConnectionManager {
                 this.isRoomLocked = Boolean(data.payload && data.payload.isLocked);
                 if (window.app && typeof window.app.updateRoomLockUI === 'function') {
                     window.app.updateRoomLockUI(this.isRoomLocked);
+                }
+                if (fromId && fromId !== this.myId) {
+                    this.addAuditLog(this.isRoomLocked ? 'Room entry locked by Host' : 'Room entry unlocked by Host', 'sec', true);
                 }
                 if (this.isCreator && data.payload && data.payload.isLocked !== undefined) {
                     this._broadcast(data, fromId);

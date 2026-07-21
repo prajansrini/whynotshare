@@ -5,11 +5,20 @@
     <title>WhyNotShare</title>
     <script>
         // SPA redirect for GitHub Pages
-        var segment = window.location.pathname.split('/').pop() || '';
-        if (segment === 'create-room' || segment === 'join-room') {
-            window.location.replace(window.location.origin + window.location.pathname.replace(/\/[^\/]+$/, '/') + '?' + segment);
+        var pathname = window.location.pathname;
+        var hash = window.location.hash;
+        var origin = window.location.origin;
+        var repoRoot = pathname.indexOf('/whynotshare') !== -1 ? '/whynotshare/' : '/';
+        var segment = pathname.split('/').filter(Boolean).pop() || '';
+
+        if (segment === 'create-room') {
+            window.location.replace(origin + repoRoot + '?create-room' + hash);
+        } else if (segment === 'join-room') {
+            window.location.replace(origin + repoRoot + '?join-room' + hash);
+        } else if (hash && hash.length > 1) {
+            window.location.replace(origin + repoRoot + hash);
         } else {
-            window.location.replace(window.location.origin + window.location.pathname.replace(/\/[^\/]+$/, '/'));
+            window.location.replace(origin + repoRoot);
         }
     </script>
 </head>

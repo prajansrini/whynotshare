@@ -197,6 +197,7 @@ class App {
             btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative;width:100%"><span style="display:inline-flex;align-items:center;animation:slideInLeftSvg 0.35s cubic-bezier(0.16,1,0.3,1) forwards"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 13 32 6" fill="#ffffff" preserveAspectRatio="none" style="width:34px;height:16px;margin-right:8px;display:inline-block;vertical-align:middle"><path opacity="0.8" transform="translate(0 0)" d="M2 14 V18 H6 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.5" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.1s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path><path opacity="0.25" transform="translate(0 0)" d="M0 14 V18 H8 V14z"><animateTransform attributeName="transform" type="translate" values="0 0; 24 0; 0 0" dur="2s" begin="0.2s" repeatCount="indefinite" keySplines="0.2 0.2 0.4 0.8;0.2 0.2 0.4 0.8" calcMode="spline"/></path></svg></span><span style="display:inline-flex;align-items:center"><span style="animation:slideShiftLeftText 0.35s cubic-bezier(0.16,1,0.3,1) forwards">Creat</span><span style="display:inline-flex;position:relative;overflow:hidden"><span style="animation:morphIngIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards">ing</span></span><span>&nbsp;Room</span><span style="animation:slideInRightDots 0.35s cubic-bezier(0.16,1,0.3,1) forwards">...</span></span></span>';
         }
         try {
+            this._hasEnteredLiveRoom = false;
             let phrase = '';
             if (this.e2eEnabled) {
                 phrase = await this.crypto.generateKey();
@@ -207,7 +208,7 @@ class App {
             this.lastCreatedRoomCode = code;
             document.getElementById('display-room-code').textContent = code;
             this.updatePhraseUI(phrase, !this.e2eEnabled);
-            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
+            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + this._getBasePath() + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
             window.history.replaceState(null, '', 'create-room');
@@ -292,7 +293,7 @@ class App {
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (t, d) => this.fileTransfer.handleFileEvent(t, d);
         this.fileTransfer.onProgress = this.fileTransfer.onIncomingFile = this.fileTransfer.onFileReceived = null;
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', this._getBasePath());
         const btnC = document.getElementById('btn-create');
         if (btnC) { btnC.disabled = false; btnC.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Room'; }
         const btnJ = document.getElementById('btn-join-submit');
@@ -438,7 +439,7 @@ class App {
     }
 
     toggleE2E(enabled) {
-        if (this.e2eEnabled !== enabled && this.conn && this.conn.isCreator && this.conn.addAuditLog && this.conn.roomCode) {
+        if (this.e2eEnabled !== enabled && this.conn && this.conn.isCreator && this.conn.addAuditLog && this.conn.roomCode && this._hasEnteredLiveRoom) {
             this.conn.addAuditLog(enabled ? 'Room E2E Encryption active' : 'Room is made Open', 'sec');
         }
         this.e2eEnabled = enabled;
@@ -452,7 +453,7 @@ class App {
                 const urlEl = document.getElementById('share-url');
                 if (code && urlEl && code !== '---') {
                     urlEl.dataset.url = this._buildShareUrl(code, phrase);
-                    if (window.location.hash.startsWith('#' + code)) window.history.replaceState(null, '', '#' + code + ':' + phrase);
+                    if (window.location.hash.startsWith('#' + code)) window.history.replaceState(null, '', this._getBasePath() + '#' + code + ':' + phrase);
                     const sr = document.getElementById('screen-room');
                     if (sr && sr.classList.contains('active')) this.renderInlineQr(urlEl.dataset.url);
                 }
@@ -513,10 +514,10 @@ class App {
         if (code && code !== '---') {
             const urlEl = document.getElementById('share-url');
             if (urlEl) {
-                urlEl.dataset.url = enabled && phrase ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
+                urlEl.dataset.url = enabled && phrase ? this._buildShareUrl(code, phrase) : (window.location.origin + this._getBasePath() + '#' + code);
             }
             if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
-                window.history.replaceState(null, '', enabled && phrase ? '#' + code + ':' + phrase : '#' + code);
+                window.history.replaceState(null, '', this._getBasePath() + (enabled && phrase ? '#' + code + ':' + phrase : '#' + code));
             }
             const sr = document.getElementById('screen-room');
             if (sr && sr.classList.contains('active')) {
@@ -789,6 +790,9 @@ class App {
         }
         this.conn.isRoomLocked = Boolean(isLocked);
         this.updateRoomLockUI(this.conn.isRoomLocked);
+        if (this.conn.addAuditLog) {
+            this.conn.addAuditLog(this.conn.isRoomLocked ? 'Room entry locked by Host' : 'Room entry unlocked by Host', 'sec');
+        }
         this.conn._broadcast({ type: 'room-lock-changed', payload: { isLocked: this.conn.isRoomLocked } });
         UI.toast(this.conn.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
     }
@@ -1137,12 +1141,12 @@ class App {
         document.getElementById('share-room-code').textContent = newCode;
         document.getElementById('display-room-code').textContent = newCode;
         const phrase = this.crypto.getPhrase() || '';
-        const targetUrl = this.e2eEnabled ? this._buildShareUrl(newCode, phrase) : (window.location.origin + window.location.pathname + '#' + newCode);
+        const targetUrl = this.e2eEnabled ? this._buildShareUrl(newCode, phrase) : (window.location.origin + this._getBasePath() + '#' + newCode);
         const targetHash = this.e2eEnabled ? ('#' + newCode + ':' + phrase) : ('#' + newCode);
         const urlEl = document.getElementById('share-url');
         if (urlEl) urlEl.dataset.url = targetUrl;
         if (window.location.hash && window.location.hash.slice(1).startsWith(this.conn.getRoomCode() || '')) {
-            window.history.replaceState(null, '', targetHash);
+            window.history.replaceState(null, '', this._getBasePath() + targetHash);
         }
         try {
             const saved = sessionStorage.getItem('whynotshare_active_session');
@@ -1158,7 +1162,7 @@ class App {
 
     async _onRoomKeyRotated(newKey) {
         const isEnc = Boolean(newKey && newKey.trim());
-        if (this.conn && this.conn.isCreator && this.conn.addAuditLog) {
+        if (this.conn && this.conn.isCreator && this.conn.addAuditLog && this._hasEnteredLiveRoom) {
             if (isEnc) this.conn.addAuditLog('Room security passphrase rotated', 'sec');
             else this.conn.addAuditLog('Room is made Open', 'sec');
         }
@@ -1167,12 +1171,12 @@ class App {
         this.updatePhraseUI(newKey, !isEnc);
         const code = this.conn.getRoomCode();
         if (code) {
-            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, newKey) : (window.location.origin + window.location.pathname + '#' + code);
+            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, newKey) : (window.location.origin + this._getBasePath() + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + newKey) : ('#' + code);
             const urlEl = document.getElementById('share-url');
             if (urlEl) urlEl.dataset.url = targetUrl;
             if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
-                window.history.replaceState(null, '', targetHash);
+                window.history.replaceState(null, '', this._getBasePath() + targetHash);
             }
             try {
                 const saved = sessionStorage.getItem('whynotshare_active_session');
@@ -1197,12 +1201,12 @@ class App {
             this.updatePhraseUI(cleanKey, false);
             const code = this.conn.getRoomCode();
             if (code) {
-                const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, cleanKey) : (window.location.origin + window.location.pathname + '#' + code);
+                const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, cleanKey) : (window.location.origin + this._getBasePath() + '#' + code);
                 const targetHash = this.e2eEnabled ? ('#' + code + ':' + cleanKey) : ('#' + code);
                 const urlEl = document.getElementById('share-url');
                 if (urlEl) urlEl.dataset.url = targetUrl;
                 if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
-                    window.history.replaceState(null, '', targetHash);
+                    window.history.replaceState(null, '', this._getBasePath() + targetHash);
                 }
                 try {
                     const saved = sessionStorage.getItem('whynotshare_active_session');
@@ -1241,6 +1245,16 @@ class App {
         if (dChev) dChev.style.transform = 'rotate(0deg)';
         document.getElementById('transfers-list').innerHTML = '';
         document.getElementById('received-files').innerHTML = '';
+        if (this.conn && this.conn.isCreator && !this._hasEnteredLiveRoom) {
+            this._hasEnteredLiveRoom = true;
+            if (this.conn.addAuditLog) {
+                this.conn.addAuditLog(this.e2eEnabled ? 'Room E2E Encryption active' : 'Room is made Open', 'sec');
+                const hostDevName = (this.conn.myInfo && this.conn.myInfo.deviceName) ? this.conn.myInfo.deviceName : 'Host';
+                this.conn.addAuditLog(`${hostDevName} joined the room`, 'info');
+            }
+        } else {
+            this._hasEnteredLiveRoom = true;
+        }
         this.toggleE2E(this.e2eEnabled);
         this.togglePersonalE2E(true); // Personal E2E ON by default, all members selected by default
         this.updatePrivilegeUI();
@@ -1255,9 +1269,15 @@ class App {
         } catch { }
         const phrase = this.crypto.getPhrase() || '';
         const targetHash = this.e2eEnabled && phrase ? ('#' + code + ':' + phrase) : ('#' + code);
-        try { window.history.replaceState(null, '', targetHash); } catch { }
+        try { window.history.replaceState(null, '', this._getBasePath() + targetHash); } catch { }
         UI.showScreen('screen-share');
         setTimeout(() => { const i = document.getElementById('text-input'); if (i) i.focus(); }, 300);
+    }
+
+    _getBasePath() {
+        let p = window.location.pathname.replace(/\/(create-room|join-room)\/?$/, '');
+        if (!p.endsWith('/')) p += '/';
+        return p;
     }
 
     _onPeerJoined(peer) {
@@ -1281,7 +1301,7 @@ class App {
     }
 
     _buildShareUrl(code, phrase) {
-        return window.location.origin + window.location.pathname + '#' + code + ':' + phrase;
+        return window.location.origin + this._getBasePath() + '#' + code + (phrase ? ':' + phrase : '');
     }
 
     _checkUrlHash() {
@@ -1736,7 +1756,10 @@ class App {
         document.getElementById('btn-join-submit').addEventListener('click', () => {
             this.joinRoom(document.getElementById('input-room-code').value, document.getElementById('input-secret-phrase').value);
         });
-        document.getElementById('btn-back-landing').addEventListener('click', () => UI.showScreen('screen-landing'));
+        document.getElementById('btn-back-landing').addEventListener('click', () => {
+            UI.showScreen('screen-landing');
+            window.history.replaceState(null, '', this._getBasePath());
+        });
         document.getElementById('btn-copy-code').addEventListener('click', () => UI.copyToClipboard(document.getElementById('display-room-code').textContent));
         document.getElementById('btn-copy-phrase').addEventListener('click', () => {
             const el = document.getElementById('display-secret-phrase');
@@ -1755,7 +1778,7 @@ class App {
                     const targetUrl = this._buildShareUrl(code, newPhrase);
                     urlEl.dataset.url = targetUrl;
                     if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
-                        window.history.replaceState(null, '', '#' + code + ':' + newPhrase);
+                        window.history.replaceState(null, '', this._getBasePath() + '#' + code + ':' + newPhrase);
                     }
                     this.renderInlineQr(targetUrl);
                 }
@@ -1774,10 +1797,10 @@ class App {
                 const code = this.conn ? this.conn.getRoomCode() : null;
                 const urlEl = document.getElementById('share-url');
                 if (code && urlEl && code !== '---') {
-                    const targetUrl = val ? this._buildShareUrl(code, val) : (window.location.origin + window.location.pathname + '#' + code);
+                    const targetUrl = val ? this._buildShareUrl(code, val) : (window.location.origin + this._getBasePath() + '#' + code);
                     urlEl.dataset.url = targetUrl;
                     if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
-                        if (val) window.history.replaceState(null, '', '#' + code + ':' + val);
+                        if (val) window.history.replaceState(null, '', this._getBasePath() + '#' + code + ':' + val);
                     }
                     this.renderInlineQr(targetUrl);
                 }
