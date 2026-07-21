@@ -286,6 +286,7 @@ class App {
         const currentCode = this.conn ? this.conn.getRoomCode() : null;
         if (currentCode) this.lastRoomCodeLeft = currentCode;
         this.conn.leaveRoom();
+        this.renderAuditLogs();
         this.textShare.clear();
         this.crypto = new CryptoManager();
         this.textShare = new TextShare(this.conn, this.crypto);
@@ -1002,7 +1003,10 @@ class App {
             if (txt.includes('created') || txt.includes('open')) {
                 badgeClass = 'audit-badge-success';
                 iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-            } else if (txt.includes('active') || txt.includes('passphrase') || txt.includes('key') || txt.includes('promoted') || txt.includes('demoted')) {
+            } else if (txt.includes('passphrase') || txt.includes('key')) {
+                badgeClass = 'audit-badge-sec';
+                iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>';
+            } else if (txt.includes('active') || txt.includes('promoted') || txt.includes('demoted')) {
                 badgeClass = 'audit-badge-sec';
                 iconHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
             } else if (txt.includes('removed') || txt.includes('stepped down') || txt.includes('kicked')) {

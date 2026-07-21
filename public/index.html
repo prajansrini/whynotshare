@@ -88,7 +88,7 @@
                     </div>
                 </div>
                 <div id="secret-phrase-container" class="secret-phrase-section mt-md">
-                    <div class="secret-phrase-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</div>
+                    <div class="secret-phrase-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key (Passphrase)</div>
                     <div style="display:flex;gap:8px">
                         <input type="text" id="display-secret-phrase" class="input-field text-mono" placeholder="Room Key" style="margin:0;flex:1;transition:all 0.2s ease" autocomplete="off" autocapitalize="none" spellcheck="false">
                         <button id="btn-gen-room-key" class="btn btn-secondary" style="padding:0 16px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center" title="Generate Random Passphrase"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
@@ -129,7 +129,7 @@
                 </div>
                 <div class="join-form">
                     <div class="input-group"><label class="input-label" for="input-room-code"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Room Code</label><input type="text" id="input-room-code" class="input-field text-mono" placeholder="e.g. ABC-123" maxlength="7" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
-                    <div class="input-group"><label class="input-label" for="input-secret-phrase"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Room Key (Passphrase)</label><input type="text" id="input-secret-phrase" class="input-field text-mono" placeholder="e.g. tiger-ocean-lamp-rocket" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+                    <div class="input-group"><label class="input-label" for="input-secret-phrase"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Room Key (Passphrase)</label><input type="text" id="input-secret-phrase" class="input-field text-mono" placeholder="e.g. tiger-ocean-lamp-rocket" style="padding:8px 12px;font-size:0.9rem;height:42px" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
                     <div style="display:flex;gap:12px">
                         <button id="btn-back-landing" class="btn btn-secondary" style="flex:1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back</button>
                         <button id="btn-join-submit" class="btn btn-primary" style="flex:2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connect</button>
@@ -272,7 +272,7 @@
                         </div>
                     </div>
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>ROOM KEY (PASSPHRASE)
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>ROOM KEY (PASSPHRASE)
                     </div>
                     <div style="display:flex;gap:6px">
                         <input type="text" id="input-rotate-room-key" class="input-field text-mono" placeholder="Room Key" style="padding:8px 12px;font-size:0.85rem;height:38px;margin:0;flex:1;transition:all 0.2s ease">
@@ -350,7 +350,7 @@
         <div class="modal-card glass-card" style="max-width:400px;padding:24px">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:12px">
                 <div>
-                    <h3 id="passphrase-modal-title" style="font-size:1.1rem;font-weight:700;margin:0;line-height:1.3;color:var(--text-primary);display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" style="flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span>Encryption Passphrase</span></h3>
+                    <h3 id="passphrase-modal-title" style="font-size:1.1rem;font-weight:700;margin:0;line-height:1.3;color:var(--text-primary);display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg><span>Encryption Passphrase</span></h3>
                     <p id="passphrase-modal-desc" class="text-secondary" style="font-size:0.78rem;margin:4px 0 0;line-height:1.4">All peers in the room must use this exact passphrase to decrypt messages.</p>
                 </div>
                 <button id="btn-close-passphrase-top" class="btn-close-modal" title="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>

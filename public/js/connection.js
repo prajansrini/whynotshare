@@ -84,6 +84,9 @@ class ConnectionManager {
     connect() { if (this.onConnected) this.onConnected(); }
 
     createRoom(existingCode) {
+        this.auditLogs = [];
+        if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
+        if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const code = existingCode || this._generateRoomCode();
         const peerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
@@ -115,6 +118,9 @@ class ConnectionManager {
     }
 
     joinRoom(code) {
+        this.auditLogs = [];
+        if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
+        if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const hostPeerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
             if (this.peer) { try { this.peer.destroy(); } catch {} }
@@ -677,11 +683,15 @@ class ConnectionManager {
         if (this.isCreator) {
             try { this._broadcast({ type: 'host-leaving' }); } catch {}
         }
+        this.auditLogs = [];
+        if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
+        if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const cleanup = () => {
             for (const conn of this.connections.values()) { try { conn.close(); } catch {} }
             this.connections.clear();
             if (this.peer) { try { this.peer.destroy(); } catch {} this.peer = null; }
             this.roomCode = null; this.isCreator = false; this.peers = []; this.myPeerId = null;
+            this.auditLogs = [];
         };
         if (this.isCreator) {
             setTimeout(cleanup, 150);
