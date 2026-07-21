@@ -748,7 +748,8 @@ button .waiting-dots span {
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.security-switch-bar.plaintext-mode .sec-slider {
+.security-switch-bar.plaintext-mode .sec-slider,
+.security-switch-bar.locked-mode .sec-slider {
     transform: translate3d(calc(100% + 4px), 0, 0);
 }
 
@@ -954,6 +955,9 @@ button .waiting-dots span {
     width: 100%;
     box-shadow: var(--shadow-lg);
     border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(12, 16, 34, 0.95) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
 }
 
 .btn-close-modal {

@@ -61,10 +61,15 @@ body.light-theme .bg-grid {
 /* Cards & Containers in Light Theme */
 body.light-theme .glass-card,
 body.light-theme .transfer-card,
-body.light-theme .modal-card,
 body.light-theme .devices-panel,
 body.light-theme .message-received .message-bubble {
     background: var(--glass-bg) !important;
+    border-color: var(--glass-border) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+body.light-theme .modal-card {
+    background: rgba(255, 248, 245, 0.98) !important;
     border-color: var(--glass-border) !important;
     box-shadow: var(--shadow-md) !important;
 }
@@ -265,4 +270,18 @@ body.light-theme .batch-action-btn.batch-secondary:hover {
     background: rgba(249, 115, 22, 0.18);
     border-color: rgba(249, 115, 22, 0.45);
     color: #ea580c;
+}
+
+body.light-theme .device-chip {
+    background: var(--glass-bg) !important;
+    border-color: var(--glass-border) !important;
+}
+body.light-theme .device-chip.is-you {
+    border-color: rgba(234, 88, 12, 0.35) !important;
+    background: rgba(234, 88, 12, 0.1) !important;
+}
+body.light-theme .device-count-badge,
+body.light-theme .device-tag {
+    background: rgba(234, 88, 12, 0.15) !important;
+    color: #ea580c !important;
 }

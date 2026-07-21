@@ -210,7 +210,7 @@ class App {
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + window.location.pathname + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
-            window.history.replaceState(null, '', window.location.pathname);
+            window.history.replaceState(null, '', 'create-room');
             try {
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                     roomCode: code,
@@ -535,19 +535,8 @@ class App {
             pe2ePill.style.color = 'var(--text-tertiary)';
             return;
         }
-        const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
-        const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
-        const otherPeers = peers.filter(p => p && p.id !== myId);
-        const totalOtherPeers = otherPeers.length;
-        const selectedCount = (this.selectedPersonalRecipients) ? Array.from(this.selectedPersonalRecipients).filter(id => otherPeers.some(p => p.id === id)).length : 0;
-
-        if (totalOtherPeers > 0) {
-            pe2ePill.textContent = 'ALL';
-            pe2ePill.style.color = 'var(--accent-primary)';
-        } else {
-            pe2ePill.textContent = 'NONE';
-            pe2ePill.style.color = 'var(--text-tertiary)';
-        }
+        pe2ePill.textContent = 'ALL';
+        pe2ePill.style.color = 'var(--accent-primary)';
     }
 
     togglePersonalE2E(enabled = true) {
@@ -594,7 +583,7 @@ class App {
             const chip = document.createElement('div');
             chip.className = 'recipient-chip selected';
             chip.style.cursor = 'default';
-            chip.title = 'All members can decrypt room messages (Selective filtering disabled)';
+            chip.title = 'All room messages and files are End-to-End Encrypted';
 
             const iconSpan = document.createElement('span');
             iconSpan.className = 'chip-icon';
@@ -608,7 +597,7 @@ class App {
             listEl.appendChild(chip);
         });
         if (count === 0) {
-            listEl.innerHTML = '<span style="font-size:0.8rem;color:var(--text-tertiary)">No other users in the room yet.</span>';
+            listEl.innerHTML = '<div style="padding:16px;text-align:center;font-size:0.85rem;color:var(--text-secondary);background:rgba(255,255,255,0.03);border-radius:10px;border:1px dashed var(--glass-border)">No other members connected yet. When members join, they will automatically be included in Always-On E2E encryption.</div>';
         }
         this.updatePersonalE2EPill();
     }
@@ -805,15 +794,12 @@ class App {
     }
 
     updateRoomLockUI(isLocked) {
-        const badge = document.getElementById('badge-room-lock-status');
-        if (badge) {
-            badge.textContent = isLocked ? 'LOCKED' : 'UNLOCKED';
-            badge.style.color = isLocked ? 'var(--status-error)' : 'var(--text-secondary)';
-        }
         const btnLockOff = document.getElementById('btn-room-lock-off');
         const btnLockOn = document.getElementById('btn-room-lock-on');
         if (btnLockOff) btnLockOff.classList.toggle('active', !isLocked);
         if (btnLockOn) btnLockOn.classList.toggle('active', isLocked);
+        const barLockMode = document.getElementById('bar-room-lock-mode');
+        if (barLockMode) barLockMode.classList.toggle('locked-mode', isLocked);
     }
 
     renderHostMembersList() {
@@ -1302,7 +1288,25 @@ class App {
         const hash = window.location.hash.slice(1);
         if (!hash) return;
         const lowerHash = hash.toLowerCase();
-        if (['create-room', 'landing', 'join', 'room', 'share', 'settings', 'about'].includes(lowerHash)) return;
+        if (['landing', 'room', 'share', 'settings', 'about'].includes(lowerHash)) return;
+        if (lowerHash === 'create-room') {
+            setTimeout(() => {
+                const sr = document.getElementById('screen-room');
+                if (!this.conn.getRoomCode() && !this.lastCreatedRoomCode && (!sr || !sr.classList.contains('active'))) {
+                    this.createRoom();
+                } else if (sr && sr.classList.contains('active')) {
+                    window.history.replaceState(null, '', 'create-room');
+                }
+            }, 20);
+            return;
+        }
+        if (lowerHash === 'join' || lowerHash === 'join-room') {
+            setTimeout(() => {
+                UI.showScreen('screen-join');
+                window.history.replaceState(null, '', 'join-room');
+            }, 20);
+            return;
+        }
         if (this.conn && (this.conn.isConnected() || this.conn.getRoomCode())) return;
         let code = hash, phrase = '';
         if (hash.includes(':')) {
@@ -1725,7 +1729,10 @@ class App {
             });
         }
         document.getElementById('btn-create').addEventListener('click', () => this.createRoom());
-        document.getElementById('btn-join-screen').addEventListener('click', () => UI.showScreen('screen-join'));
+        document.getElementById('btn-join-screen').addEventListener('click', () => {
+            UI.showScreen('screen-join');
+            window.history.replaceState(null, '', 'join-room');
+        });
         document.getElementById('btn-join-submit').addEventListener('click', () => {
             this.joinRoom(document.getElementById('input-room-code').value, document.getElementById('input-secret-phrase').value);
         });

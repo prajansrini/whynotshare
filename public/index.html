@@ -80,10 +80,10 @@
                     <div class="security-switch-bar">
                         <div class="sec-slider"></div>
                         <button id="btn-room-encrypt-on" class="sec-pill-btn active">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Encrypted Room</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span>Encrypted Room</span>
                         </button>
                         <button id="btn-room-encrypt-off" class="sec-pill-btn">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Open Room</span>
+                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span><span>Open Room</span>
                         </button>
                     </div>
                 </div>
@@ -250,26 +250,24 @@
                         <div class="security-switch-bar sec-bar-sm" id="bar-room-key-mode" style="margin:0;width:100%;display:flex" title="Room Encryption Mode">
                             <div class="sec-slider"></div>
                             <button id="btn-room-key-required" class="sec-pill-btn active" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
-                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Encrypted Room</span>
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span>Encrypted Room</span>
                             </button>
                             <button id="btn-room-key-open" class="sec-pill-btn" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
-                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Open Room</span>
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span><span>Open Room</span>
                             </button>
                         </div>
                     </div>
-                    <!-- Room Entry Lock Mode -->
-                    <div style="padding:14px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
-                        <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>ROOM ENTRY LOCK</span>
-                            <span id="badge-room-lock-status" style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:var(--glass-bg);color:var(--text-secondary);font-weight:700">UNLOCKED</span>
-                        </div>
-                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.4">When locked, no new members can enter the room even if they enter the correct room code and passphrase.</div>
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;margin:16px 0 8px 0;display:flex;align-items:center;gap:6px">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>ROOM ENTRY LOCK
+                    </div>
+                    <div style="width:100%;margin-bottom:14px">
                         <div class="security-switch-bar sec-bar-sm" id="bar-room-lock-mode" style="margin:0;width:100%;display:flex" title="Room Entry Lock Mode">
+                            <div class="sec-slider"></div>
                             <button id="btn-room-lock-off" class="sec-pill-btn active" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
-                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span><span>Unlocked (Allow Entry)</span>
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/><path d="M12 14v4"/></svg></span><span>Room Unlocked</span>
                             </button>
                             <button id="btn-room-lock-on" class="sec-pill-btn" style="flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 6px">
-                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Locked (Block Entry)</span>
+                                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><path d="M12 14v4"/></svg></span><span>Room Locked</span>
                             </button>
                         </div>
                     </div>
@@ -390,7 +388,7 @@
     <div id="modal-connected-devices" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card" style="max-width:480px;width:90%">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-lg)">
-                <h3 style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Connected Users <span id="devices-count-modal" class="device-count-badge">0</span></h3>
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Connected Users <span id="devices-count-modal" class="device-count-badge">0</span></h3>
                 <button id="btn-close-devices-modal" class="btn-close-modal" title="Close"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <div id="devices-list" class="devices-list" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
@@ -406,7 +404,7 @@
             </div>
             <div style="display:flex;flex-direction:column;gap:16px">
                 <div id="personal-recipients-container" style="display:flex;flex-direction:column;gap:12px;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
-                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:2px">All connected members can decrypt your messages and files. Selective filtering is disabled.</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:2px">All messages are End-to-End Encrypted across all connected room members.</div>
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between">
                         <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>AUTHORIZED RECIPIENTS (ALL)</span>
                     </div>
