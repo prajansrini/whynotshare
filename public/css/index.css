@@ -319,7 +319,7 @@ body:not(.light-theme) .bg-orb-3 {
 
 .btn-primary:hover {
     box-shadow: 0 6px 28px rgba(37, 99, 235, 0.5);
-    transform: translateY(-1px);
+    transform: none !important;
 }
 
 .btn-secondary {
@@ -330,9 +330,9 @@ body:not(.light-theme) .bg-orb-3 {
 }
 
 .btn-secondary:hover {
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.5);
     background: rgba(255, 255, 255, 0.14);
-    transform: translateY(-1px);
+    transform: none !important;
 }
 
 .btn-danger {
@@ -343,7 +343,8 @@ body:not(.light-theme) .bg-orb-3 {
 
 .btn-danger:hover {
     background: rgba(255, 107, 107, 0.25);
-    border-color: rgba(255, 107, 107, 0.4);
+    border-color: rgba(255, 107, 107, 0.55);
+    transform: none !important;
 }
 
 .btn-icon {
@@ -356,7 +357,12 @@ body:not(.light-theme) .bg-orb-3 {
 
 .btn-icon:hover {
     color: var(--text-primary);
-    border-color: rgba(255,255,255,0.15);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: none !important;
+}
+
+.btn:hover, button:hover {
+    transform: none !important;
 }
 
 .btn-full { width: 100%; }

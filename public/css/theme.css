@@ -119,7 +119,7 @@ body.light-theme .btn-primary {
 body.light-theme .btn-primary:hover {
     background: linear-gradient(135deg, #fb923c, #f97316) !important;
     box-shadow: 0 6px 24px rgba(234, 88, 12, 0.45) !important;
-    transform: translateY(-1px);
+    transform: none !important;
 }
 
 body.light-theme .btn-secondary {
@@ -130,8 +130,8 @@ body.light-theme .btn-secondary {
 }
 body.light-theme .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.95) !important;
-    border-color: rgba(235, 130, 100, 0.55) !important;
-    transform: translateY(-1px);
+    border-color: rgba(235, 130, 100, 0.8) !important;
+    transform: none !important;
 }
 
 body.light-theme .sec-pill-btn:not(.active):not(.active-plaintext) {
@@ -160,6 +160,31 @@ body.light-theme .room-badge {
     background: rgba(234, 88, 12, 0.12) !important;
     color: #d9480f !important;
     border: 1px solid rgba(234, 88, 12, 0.25) !important;
+}
+
+body.light-theme .room-badge:hover,
+body.light-theme #btn-room-badge-copy:hover {
+    background: rgba(234, 88, 12, 0.22) !important;
+    border-color: #EA580C !important;
+    color: #C2410C !important;
+}
+
+body.light-theme .share-header-card button:hover,
+body.light-theme #btn-show-pe2e-popup:hover,
+body.light-theme .btn-secondary:hover {
+    background: rgba(234, 88, 12, 0.18) !important;
+    border-color: #EA580C !important;
+    color: #C2410C !important;
+}
+
+body.light-theme .btn-theme-toggle:hover,
+body.light-theme #btn-theme-toggle:hover,
+body.light-theme .btn-theme-toggle.static-theme-btn:hover {
+    border: 1px solid #EA580C !important;
+    background: rgba(234, 88, 12, 0.18) !important;
+    box-shadow: 0 0 16px rgba(234, 88, 12, 0.25) !important;
+    color: #EA580C !important;
+    transform: none !important;
 }
 
 body.light-theme .transfer-bar {

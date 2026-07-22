@@ -51,7 +51,7 @@ class UI {
         const leftSide = '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
             '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) + '</span>' +
             '<span class="device-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + peer.deviceName + '</span>' +
-            (peer.isCreator ? '<span style="font-size:0.7rem;color:var(--accent-primary);background:rgba(108,92,231,0.15);padding:2px 8px;border-radius:9999px;font-weight:600">Host</span>' : (peer.isAdmin ? '<span style="font-size:0.7rem;color:#ea580c;background:rgba(234,88,12,0.15);padding:2px 8px;border-radius:9999px;font-weight:600">Admin</span>' : '')) +
+            (peer.isCreator ? '<span class="badge-host">Host</span>' : (peer.isAdmin ? '<span class="badge-admin">Admin</span>' : '')) +
             '</div>';
         const rightSide = '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
             (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);white-space:nowrap">' + peer.systemName + '</span>' : '') +
@@ -165,6 +165,136 @@ class UI {
         }
     }
 
+    static renderAudioCardHtml(meta, url, actionBtn, statusBadge = '', inlineProgress = '') {
+        const fileName = meta.fileName || meta.name || 'Audio File';
+        const fileSize = typeof FileTransfer !== 'undefined' && FileTransfer.formatSize ? FileTransfer.formatSize(meta.fileSize || meta.size || 0) : '';
+        const escName = UI.escapeHtml(typeof UI.formatFileName === 'function' ? UI.formatFileName(fileName, 24) : fileName);
+        const fullEscName = UI.escapeAttr(fileName);
+
+        return '<div class="custom-audio-card">' +
+            '<div style="display:flex;align-items:center;gap:12px;width:100%">' +
+                '<button type="button" class="audio-play-btn" onclick="UI.toggleAudioPlayback(this, \'' + url + '\')" title="Play/Pause">' +
+                    '<svg class="play-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                    '<svg class="pause-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' +
+                '</button>' +
+                '<div style="flex:1;min-width:0;text-align:left;overflow:hidden">' +
+                    '<div style="font-weight:600;font-size:0.88rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + fullEscName + '">' + escName + statusBadge + '</div>' +
+                    '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px;display:flex;align-items:center;gap:6px">' +
+                        '<span>' + fileSize + '</span>' +
+                        '<span>•</span>' +
+                        '<span class="audio-time-display">0:00 / --:--</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="flex-shrink:0">' + actionBtn + '</div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:2px">' +
+                '<input type="range" class="audio-seek-slider" min="0" max="100" value="0" step="0.1" oninput="UI.seekAudio(this)" onmousedown="this.isDragging=true" onmouseup="this.isDragging=false" ontouchstart="this.isDragging=true" ontouchend="this.isDragging=false">' +
+                '<audio src="' + url + '" class="hidden-audio" preload="metadata" onloadedmetadata="UI.updateAudioDuration(this)" ontimeupdate="UI.updateAudioProgress(this)" onended="UI.onAudioEnded(this)" style="display:none"></audio>' +
+            '</div>' +
+            inlineProgress +
+        '</div>';
+    }
+
+    static toggleAudioPlayback(btn, url) {
+        const card = btn.closest('.custom-audio-card');
+        if (!card) return;
+        const audio = card.querySelector('audio');
+        if (!audio) return;
+
+        const playIcon = btn.querySelector('.play-icon');
+        const pauseIcon = btn.querySelector('.pause-icon');
+
+        if (audio.paused) {
+            document.querySelectorAll('.custom-audio-card audio').forEach(a => {
+                if (a !== audio && !a.paused) {
+                    a.pause();
+                    const b = a.closest('.custom-audio-card')?.querySelector('.audio-play-btn');
+                    if (b) {
+                        const pi = b.querySelector('.play-icon');
+                        const pai = b.querySelector('.pause-icon');
+                        if (pi && pai) { pi.style.display = ''; pai.style.display = 'none'; }
+                    }
+                }
+            });
+
+            audio.play().then(() => {
+                if (playIcon && pauseIcon) { playIcon.style.display = 'none'; pauseIcon.style.display = ''; }
+            }).catch(err => console.error('Audio play error:', err));
+        } else {
+            audio.pause();
+            if (playIcon && pauseIcon) { playIcon.style.display = ''; pauseIcon.style.display = 'none'; }
+        }
+    }
+
+    static formatAudioDuration(secs) {
+        if (!secs || isNaN(secs) || !isFinite(secs)) return '--:--';
+        const m = Math.floor(secs / 60);
+        const s = Math.floor(secs % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    static updateAudioDuration(audio) {
+        const card = audio.closest('.custom-audio-card');
+        if (!card) return;
+        const timeDisplay = card.querySelector('.audio-time-display');
+        const slider = card.querySelector('.audio-seek-slider');
+        if (timeDisplay && audio.duration && isFinite(audio.duration)) {
+            const cur = UI.formatAudioDuration(audio.currentTime || 0);
+            const dur = UI.formatAudioDuration(audio.duration);
+            timeDisplay.textContent = `${cur} / ${dur}`;
+        }
+        if (slider && audio.duration && isFinite(audio.duration)) {
+            slider.max = audio.duration;
+        }
+    }
+
+    static updateAudioProgress(audio) {
+        const card = audio.closest('.custom-audio-card');
+        if (!card) return;
+        const timeDisplay = card.querySelector('.audio-time-display');
+        const slider = card.querySelector('.audio-seek-slider');
+        if (slider && !slider.isDragging) {
+            slider.value = audio.currentTime || 0;
+        }
+        if (timeDisplay && audio.duration && isFinite(audio.duration)) {
+            const cur = UI.formatAudioDuration(audio.currentTime || 0);
+            const dur = UI.formatAudioDuration(audio.duration);
+            timeDisplay.textContent = `${cur} / ${dur}`;
+        }
+    }
+
+    static seekAudio(slider) {
+        const card = slider.closest('.custom-audio-card');
+        if (!card) return;
+        const audio = card.querySelector('audio');
+        if (audio && audio.duration && isFinite(audio.duration)) {
+            audio.currentTime = parseFloat(slider.value) || 0;
+            const timeDisplay = card.querySelector('.audio-time-display');
+            if (timeDisplay) {
+                const cur = UI.formatAudioDuration(audio.currentTime);
+                const dur = UI.formatAudioDuration(audio.duration);
+                timeDisplay.textContent = `${cur} / ${dur}`;
+            }
+        }
+    }
+
+    static onAudioEnded(audio) {
+        const card = audio.closest('.custom-audio-card');
+        if (!card) return;
+        const btn = card.querySelector('.audio-play-btn');
+        if (btn) {
+            const playIcon = btn.querySelector('.play-icon');
+            const pauseIcon = btn.querySelector('.pause-icon');
+            if (playIcon && pauseIcon) { playIcon.style.display = ''; pauseIcon.style.display = 'none'; }
+        }
+        const slider = card.querySelector('.audio-seek-slider');
+        if (slider) slider.value = 0;
+        const timeDisplay = card.querySelector('.audio-time-display');
+        if (timeDisplay && audio.duration && isFinite(audio.duration)) {
+            timeDisplay.textContent = `0:00 / ${UI.formatAudioDuration(audio.duration)}`;
+        }
+    }
+
     static renderReceivedFile(fileId, meta, blob) {
         const card = document.createElement('div');
         card.className = 'received-file-card';
@@ -173,12 +303,10 @@ class UI {
         const isImage = (meta.fileType && meta.fileType.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(meta.fileName || '');
         const isVideo = (meta.fileType && meta.fileType.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(meta.fileName || '');
         const isAudio = (meta.fileType && meta.fileType.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(meta.fileName || '');
-        let preview = '';
-        if (isAudio) preview = '<div style="width:100%;margin-bottom:8px"><audio src="' + url + '" class="file-preview-audio" style="width:100%;display:block" controls></audio></div>';
         
         let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -188,11 +316,17 @@ class UI {
             card.style.cursor = 'pointer';
         }
 
-        card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span></div>' +
-            '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
-            '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' +
+        const actionBtn = '<a href="' + url + '" download="' + UI.escapeAttr(meta.fileName) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
+
+        if (isAudio && url) {
+            card.innerHTML = UI.renderAudioCardHtml(meta, url, actionBtn, ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span>');
+        } else {
+            card.innerHTML = iconHtml +
+                '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span></div>' +
+                '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
+                actionBtn;
+        }
         return card;
     }
 
@@ -203,14 +337,10 @@ class UI {
         const isImage = (meta.fileType && meta.fileType.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(meta.fileName || '');
         const isVideo = (meta.fileType && meta.fileType.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(meta.fileName || '');
         const isAudio = (meta.fileType && meta.fileType.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(meta.fileName || '');
-        let preview = '';
-        if (url && isAudio) {
-            preview = '<div style="width:100%;margin-bottom:8px"><audio src="' + url + '" class="file-preview-audio" style="width:100%;display:block" controls></audio></div>';
-        }
         
         let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -233,10 +363,14 @@ class UI {
             actionBtn = '<button class="btn btn-secondary btn-fetch-history-file" data-file-id="' + UI.escapeAttr(meta.fileId) + '" id="card-fetch-' + UI.escapeAttr(meta.fileId) + '" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">⬇ Fetch (' + FileTransfer.formatSize(meta.fileSize) + ')</button>';
         }
         const statusBadge = url ? (senderId === myId ? ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span>' : ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Received</span>') : '';
-        card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + statusBadge + '</div>' +
-            '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
-            actionBtn;
+        if (isAudio && url) {
+            card.innerHTML = UI.renderAudioCardHtml(meta, url, actionBtn, statusBadge);
+        } else {
+            card.innerHTML = iconHtml +
+                '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 28)) + statusBadge + '</div>' +
+                '<div class="received-file-size">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
+                actionBtn;
+        }
         return card;
     }
 
@@ -247,12 +381,10 @@ class UI {
         const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(file.name || '');
         const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(file.name || '');
         const isAudio = (file.type && file.type.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file.name || '');
-        let preview = '';
-        if (isAudio) preview = '<div style="width:100%;margin-bottom:8px"><audio src="' + url + '" class="file-preview-audio" style="width:100%;display:block" controls></audio></div>';
         
         let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon" style="background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -262,10 +394,16 @@ class UI {
             card.style.cursor = 'pointer';
         }
 
-        card.innerHTML = preview + iconHtml +
-            '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(file.name) + '">' + UI.escapeHtml(UI.formatFileName(file.name, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span></div>' +
-            '<div class="received-file-size">' + FileTransfer.formatSize(file.size) + '</div></div>' +
-            '<a href="' + url + '" download="' + UI.escapeAttr(file.name) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
+        const actionBtn = '<a href="' + url + '" download="' + UI.escapeAttr(file.name) + '" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save</a>';
+
+        if (isAudio && url) {
+            card.innerHTML = UI.renderAudioCardHtml(file, url, actionBtn, ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span>');
+        } else {
+            card.innerHTML = iconHtml +
+                '<div class="received-file-info"><div class="received-file-name" title="' + UI.escapeAttr(file.name) + '">' + UI.escapeHtml(UI.formatFileName(file.name, 28)) + ' <span style="font-size:0.75rem;color:var(--accent-primary);margin-left:6px;font-weight:600">Sent</span></div>' +
+                '<div class="received-file-size">' + FileTransfer.formatSize(file.size) + '</div></div>' +
+                actionBtn;
+        }
         return card;
     }
 
@@ -280,10 +418,6 @@ class UI {
         const isImage = (meta.fileType && meta.fileType.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(meta.fileName || '');
         const isVideo = (meta.fileType && meta.fileType.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(meta.fileName || '');
         const isAudio = (meta.fileType && meta.fileType.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(meta.fileName || '');
-        let preview = '';
-        if (url && isAudio) {
-            preview = '<div style="margin-bottom:8px;width:100%"><audio src="' + url + '" class="file-preview-audio" style="width:100%;display:block" controls></audio></div>';
-        }
         
         let actionBtn;
         const myId = window.app && window.app.conn ? window.app.conn.myPeerId : null;
@@ -324,10 +458,14 @@ class UI {
         }
 
         const fileBox = '<div' + triggerAttrs + '>' +
-            '<div style="width:36px;height:36px;border-radius:8px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.25);color:var(--accent-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0">' + iconSvg + '</div>' +
+            '<div class="file-preview-icon" style="width:36px;height:36px">' + iconSvg + '</div>' +
             '<div style="overflow:hidden;text-align:left;flex:1;min-width:0"><div style="font-weight:600;font-size:0.85rem;color:inherit;word-break:break-all;line-height:1.3" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 22)) + '</div>' +
             '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
             actionBtn + '</div>' + inlineProgress;
+
+        const contentHtml = (isAudio && url)
+            ? UI.renderAudioCardHtml(meta, url, actionBtn, '', inlineProgress)
+            : fileBox;
 
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
@@ -338,7 +476,7 @@ class UI {
         const timeClass = 'message-time-wrapper' + (hasGroupFollowup ? ' message-time-grouped' : '');
 
         msg.innerHTML = senderHtml +
-            '<div class="message-bubble" style="padding:10px">' + preview + fileBox + '</div>' +
+            '<div class="message-bubble" style="padding:10px">' + contentHtml + '</div>' +
             '<div class="' + timeClass + '" style="display:flex;align-items:center;gap:6px;' + (isSent ? 'flex-direction:row-reverse' : '') + '">' +
             '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span></div>';
         return msg;

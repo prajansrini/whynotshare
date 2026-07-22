@@ -1410,12 +1410,13 @@ class App {
         if (this.conn && peer && peer.deviceName) {
             this.conn.addAuditLog(`${peer.deviceName} joined the room`, 'info');
         }
+        const ss = document.getElementById('screen-share');
         const rs = document.getElementById('screen-room');
-        if (!rs || !rs.classList.contains('active')) {
-            this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
+        if ((ss && ss.classList.contains('active')) || (rs && rs.classList.contains('active')) || this._hasEnteredLiveRoom) {
+            this.refreshPeerLists();
             return;
         }
-        this.refreshPeerLists();
+        this._enterShareScreen(this.conn.getRoomCode(), this.conn.getPeers());
     }
 
     _onPeerLeft(peer) {
@@ -1623,9 +1624,9 @@ class App {
         if (!window.QRCodeStyling || !url) return null;
         const isLight = document.body.classList.contains('light-theme');
         const dotColor = isLight ? '#1e1b4b' : '#f8fafc';
-        const cornerColor = isLight ? '#f97316' : '#818cf8';
-        const centerDotColor = isLight ? '#ea580c' : '#c084fc';
-        const logoColor = isLight ? '#f97316' : '#818cf8';
+        const cornerColor = isLight ? '#f97316' : '#3b82f6';
+        const centerDotColor = isLight ? '#ea580c' : '#60a5fa';
+        const logoColor = isLight ? '#f97316' : '#3b82f6';
 
         const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="12 10 76 80">
             <path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke="${logoColor}" stroke-width="6" stroke-linejoin="round"/>
