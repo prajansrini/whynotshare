@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="manifest" href="manifest.json">
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
 </head>
@@ -433,6 +434,23 @@
                 </div>
             </div>
             <div id="media-preview-content" style="display:flex;align-items:center;justify-content:center;flex:1;min-height:200px;overflow:auto;padding:8px"></div>
+        </div>
+    </div>
+
+    <!-- PORTRAIT LOCK OVERLAY FOR MOBILE LANDSCAPE -->
+    <div id="portrait-lock-overlay" class="portrait-lock-overlay">
+        <div class="glass-card portrait-lock-card">
+            <div class="rotate-phone-icon">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                    <path d="M12 18h.01"/>
+                </svg>
+            </div>
+            <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:8px">Please Rotate Your Device</h3>
+            <p style="font-size:0.9rem;color:var(--text-secondary);max-width:320px;line-height:1.5;margin-bottom:18px">WhyNotShare is optimized for portrait orientation on mobile devices. Rotate your phone upright to view messages and type easily.</p>
+            <button id="btn-dismiss-landscape-lock" class="btn btn-secondary" style="padding:10px 20px;font-size:0.85rem;border-radius:12px;font-weight:600">
+                <span>Use Landscape Anyway</span>
+            </button>
         </div>
     </div>
 

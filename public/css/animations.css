@@ -76,6 +76,6 @@
     50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(108, 92, 231, 0); }
 }
 @keyframes fileGlow {
-    0%, 100% { border-color: rgba(0, 206, 201, 0.3); box-shadow: 0 4px 20px rgba(0, 206, 201, 0.1); }
-    50% { border-color: rgba(0, 206, 201, 0.7); box-shadow: 0 4px 30px rgba(0, 206, 201, 0.25); }
+    0%, 100% { border-color: rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1); }
+    50% { border-color: rgba(59, 130, 246, 0.7); box-shadow: 0 4px 30px rgba(59, 130, 246, 0.25); }
 }

@@ -17,8 +17,8 @@
     box-shadow: none;
     animation: logoPulse 3s ease-in-out infinite;
     position: relative;
-    color: #38bdf8;
-    filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.4));
+    color: #3b82f6;
+    filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.45));
     transition: color 0.3s ease, filter 0.3s ease;
 }
 
@@ -34,8 +34,8 @@ body.light-theme .logo-icon {
 .chat-logo-icon {
     width: 38px; height: 38px;
     display: flex; align-items: center; justify-content: center;
-    color: #38bdf8;
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    color: #3b82f6;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.45));
     transition: color 0.3s ease, filter 0.3s ease;
     flex-shrink: 0;
 }
@@ -193,8 +193,8 @@ body.light-theme .chat-logo-icon {
     word-break: break-all;
     user-select: all;
     padding: 10px 14px;
-    background: rgba(0, 206, 201, 0.08);
-    border: 1px solid rgba(0, 206, 201, 0.15);
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.22);
     border-radius: var(--radius-sm);
 }
 
@@ -599,7 +599,7 @@ button .waiting-dots span {
 
 .message-action-btn:hover {
     color: var(--accent-secondary);
-    background: rgba(0, 206, 201, 0.1);
+    background: rgba(59, 130, 246, 0.15);
 }
 
 /* --- Text Input Area --- */
@@ -1123,7 +1123,7 @@ button .waiting-dots span {
 
 .transfer-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #2563eb, #0ea5e9, #0984e3, #2563eb);
+    background: linear-gradient(90deg, #1e40af, #2563eb, #3b82f6, #1e40af);
     background-size: 200% 100%;
     border-radius: var(--radius-full);
     transition: width 0.15s ease-out;
@@ -1460,9 +1460,9 @@ body.light-theme .transfer-icon {
 .badge-theme-accent {
     font-size: 0.72rem;
     padding: 2px 9px;
-    background: rgba(37, 99, 235, 0.22);
-    color: #38bdf8;
-    border: 1px solid rgba(37, 99, 235, 0.35);
+    background: rgba(30, 64, 175, 0.25);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
     border-radius: 12px;
     font-weight: 700;
 }
@@ -1628,3 +1628,125 @@ body.light-theme .transfer-icon {
     transform: scale(1);
     opacity: 1;
 }
+
+/* --- Mobile Landscape Portrait Lock Overlay & Layout Fixes --- */
+.portrait-lock-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    height: 100dvh;
+    background: rgba(6, 8, 15, 0.94);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+body.light-theme .portrait-lock-overlay {
+    background: rgba(240, 244, 248, 0.94);
+}
+
+.portrait-lock-card {
+    max-width: 400px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 20px !important;
+    border-radius: 20px !important;
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rotate-phone-icon {
+    margin-bottom: 16px;
+    color: var(--accent-primary);
+    animation: rotatePhoneAnim 2.5s infinite ease-in-out;
+}
+
+@keyframes rotatePhoneAnim {
+    0% { transform: rotate(0deg); }
+    30% { transform: rotate(-90deg); }
+    70% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}
+
+/* Show portrait lock on mobile devices when tilted to landscape, unless user opts out */
+@media screen and (max-height: 520px) and (orientation: landscape) and (max-width: 950px) {
+    body:not(.landscape-unlocked) .portrait-lock-overlay {
+        display: flex;
+    }
+}
+
+/* Ensure landscape mobile screen layout compacts header so type box is ALWAYS visible */
+@media screen and (max-height: 520px) and (orientation: landscape) {
+    html, body, #app {
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+    }
+    .screen.share-screen.active {
+        height: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        padding: 6px 14px !important;
+    }
+    .share-header-top {
+        margin-bottom: 4px !important;
+    }
+    .app-title { font-size: 1.15rem !important; }
+    .chat-logo-icon svg { width: 26px !important; height: 26px !important; }
+    #btn-disconnect { height: 28px !important; font-size: 0.75rem !important; padding: 0 10px !important; }
+    .btn-theme-toggle.static-theme-btn { width: 30px !important; height: 30px !important; }
+    
+    .share-header-card {
+        padding: 6px 10px !important;
+        margin-bottom: 4px !important;
+        gap: 4px !important;
+    }
+    .share-header-card > div {
+        gap: 6px !important;
+    }
+    .room-badge, .share-header-card .btn {
+        height: 26px !important;
+        font-size: 0.75rem !important;
+        padding: 0 8px !important;
+    }
+    .tab-nav {
+        margin: 4px 0 !important;
+        padding: 2px !important;
+    }
+    .tab-btn {
+        padding: 4px 10px !important;
+        font-size: 0.8rem !important;
+    }
+    .tab-content.active {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+    .messages-container {
+        flex: 1 1 0 !important;
+        min-height: 50px !important;
+        margin-bottom: 6px !important;
+        padding: 6px !important;
+    }
+    .text-input-area {
+        flex-shrink: 0 !important;
+        padding-bottom: max(4px, env(safe-area-inset-bottom, 4px)) !important;
+    }
+    .text-input-area textarea {
+        min-height: 38px !important;
+        max-height: 80px !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+    .btn-send {
+        width: 38px !important;
+        height: 38px !important;
+    }
+}
+

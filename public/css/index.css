@@ -19,10 +19,10 @@
     --surface-card: var(--glass-bg);
 
     /* Accent Colors */
-    --accent-primary: #2563eb;
-    --accent-secondary: #0ea5e9;
-    --accent-gradient: linear-gradient(135deg, #2563eb, #0ea5e9);
-    --accent-gradient-hover: linear-gradient(135deg, #3b82f6, #38bdf8);
+    --accent-primary: #1e40af;
+    --accent-secondary: #3b82f6;
+    --accent-gradient: linear-gradient(135deg, #1e40af, #2563eb);
+    --accent-gradient-hover: linear-gradient(135deg, #2563eb, #3b82f6);
     --accent-pink: #fd79a8;
     --accent-gold: #ffd93d;
     --accent-orange: #f39c12;
@@ -31,7 +31,7 @@
     --text-primary: #ffffff;
     --text-secondary: rgba(255, 255, 255, 0.65);
     --text-tertiary: rgba(255, 255, 255, 0.4);
-    --text-accent: #38bdf8;
+    --text-accent: #60a5fa;
 
     /* Status */
     --status-online: #00b894;
@@ -59,8 +59,8 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 30px rgba(37, 99, 235, 0.25);
-    --shadow-glow-accent: 0 0 20px rgba(0, 206, 201, 0.15);
+    --shadow-glow: 0 0 30px rgba(30, 64, 175, 0.35);
+    --shadow-glow-accent: 0 0 20px rgba(59, 130, 246, 0.22);
 
     /* Transition */
     --transition-fast: 150ms ease;

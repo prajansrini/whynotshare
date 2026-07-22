@@ -136,6 +136,7 @@ class App {
         };
 
         this._bindEvents();
+        this.lockPortraitIfPossible();
         this.updateMyNameDisplay();
         try { window.history.replaceState({ screenId: 'screen-landing' }, '', window.location.href); } catch { }
 
@@ -1719,6 +1720,14 @@ class App {
         if (errorMsg && typeof UI !== 'undefined') UI.toast(errorMsg, 'error');
     }
 
+    lockPortraitIfPossible() {
+        try {
+            if (window.screen && window.screen.orientation && typeof window.screen.orientation.lock === 'function') {
+                window.screen.orientation.lock('portrait').catch(() => {});
+            }
+        } catch {}
+    }
+
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
@@ -2018,6 +2027,13 @@ class App {
         if (modalPe2e) {
             modalPe2e.addEventListener('click', (e) => {
                 if (e.target.id === 'modal-personal-e2e') e.target.style.display = 'none';
+            });
+        }
+
+        const btnDismissLandscape = document.getElementById('btn-dismiss-landscape-lock');
+        if (btnDismissLandscape) {
+            btnDismissLandscape.addEventListener('click', () => {
+                document.body.classList.add('landscape-unlocked');
             });
         }
 
