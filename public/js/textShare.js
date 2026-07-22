@@ -88,11 +88,17 @@ class TextShare {
             timestamp: timestamp || Date.now(),
             isSent: isSent
         };
-        if (!this.messages.some(m => m.id === msg.id && m.type === 'file')) {
-            this.messages.push(msg);
-            this._renderMessage(msg);
-            this.saveHistory();
+        const existing = this.messages.find(m => (m.id === msg.id || (m.meta && msg.meta && m.meta.fileId === msg.meta.fileId)) && m.type === 'file');
+        if (existing) {
+            if (url && !existing.url) {
+                existing.url = url;
+                this.updateSingleMessageUI(existing);
+            }
+            return;
         }
+        this.messages.push(msg);
+        this._renderMessage(msg);
+        this.saveHistory();
     }
 
     _getGroupingInfo(index) {
@@ -115,6 +121,35 @@ class TextShare {
         };
     }
 
+    updateSingleMessageUI(msg) {
+        const container = document.getElementById('messages');
+        if (!container || !msg) return false;
+        const fid = (msg.meta && msg.meta.fileId) ? msg.meta.fileId : null;
+        let existingEl = null;
+        if (fid) existingEl = container.querySelector(`.message[data-file-id="${fid}"]`);
+        if (!existingEl && msg.id) existingEl = container.querySelector(`.message[data-msg-id="${msg.id}"]`);
+        if (existingEl) {
+            const idx = this.messages.indexOf(msg);
+            const groupInfo = idx >= 0 ? this._getGroupingInfo(idx) : { isGroupFollowup: false, hasGroupFollowup: false };
+            let newEl;
+            if (msg.type === 'file') {
+                newEl = UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo);
+            } else {
+                newEl = UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo);
+            }
+            if (newEl) {
+                if (fid) newEl.dataset.fileId = fid;
+                if (msg.id) newEl.dataset.msgId = msg.id;
+                if (groupInfo.isGroupFollowup && existingEl.classList.contains('message-group-followup')) {
+                    newEl.classList.add('message-group-followup');
+                }
+                existingEl.replaceWith(newEl);
+                return true;
+            }
+        }
+        return false;
+    }
+
     _renderMessage(msg) {
         const container = document.getElementById('messages');
         if (!container) return;
@@ -131,25 +166,53 @@ class TextShare {
             if (prevTime) prevTime.classList.add('message-time-grouped');
         }
 
+        let el;
         if (msg.type === 'file') {
-            container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo));
+            el = UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo);
         } else {
-            container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo));
+            el = UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo);
         }
-        container.scrollTop = container.scrollHeight;
+        if (el) {
+            if (msg.meta && msg.meta.fileId) el.dataset.fileId = msg.meta.fileId;
+            if (msg.id) el.dataset.msgId = msg.id;
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+        }
     }
 
-    _renderAllMessages() {
+    _renderAllMessages(immediate = false) {
+        if (!immediate) {
+            if (this._renderDebounceTimer) return;
+            this._renderDebounceTimer = setTimeout(() => {
+                this._renderDebounceTimer = null;
+                this._renderAllMessagesNow();
+            }, 50);
+            return;
+        }
+        if (this._renderDebounceTimer) {
+            clearTimeout(this._renderDebounceTimer);
+            this._renderDebounceTimer = null;
+        }
+        this._renderAllMessagesNow();
+    }
+
+    _renderAllMessagesNow() {
         const container = document.getElementById('messages');
         if (!container) return;
         container.innerHTML = '<div class="messages-empty" style="display:none"></div>';
         for (let i = 0; i < this.messages.length; i++) {
             const msg = this.messages[i];
             const groupInfo = this._getGroupingInfo(i);
+            let el;
             if (msg.type === 'file') {
-                container.appendChild(UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo));
+                el = UI.renderFileChatMessage(msg.meta, msg.url, msg.isSent, msg.sender, msg.timestamp, groupInfo);
             } else {
-                container.appendChild(UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo));
+                el = UI.renderMessage(msg.text || msg.raw || '', msg.sender, msg.timestamp, msg.isSent, groupInfo);
+            }
+            if (el) {
+                if (msg.meta && msg.meta.fileId) el.dataset.fileId = msg.meta.fileId;
+                if (msg.id) el.dataset.msgId = msg.id;
+                container.appendChild(el);
             }
         }
         container.scrollTop = container.scrollHeight;
@@ -247,19 +310,19 @@ class TextShare {
             this._renderAllMessages();
             this.saveHistory();
             if (window.app && window.app.fileTransfer) {
-                let reRender = false;
+                let anyNeedFullRender = false;
                 for (const m of this.messages) {
                     if (m.type === 'file' && m.meta && m.meta.fileId && !m.url) {
                         const blob = await window.app.fileTransfer.loadFromIndexedDB(m.meta.fileId);
                         if (blob) {
                             m.url = URL.createObjectURL(blob);
-                            reRender = true;
+                            if (!this.updateSingleMessageUI(m)) anyNeedFullRender = true;
                         } else if (m.meta && m.meta.fileSize < 2 * 1024 * 1024 && this.conn.connections && this.conn.connections.size > 0) {
                             this.conn.sendFileEvent('request-history-file', { fileId: m.meta.fileId, targetId: this.conn.myPeerId });
                         }
                     }
                 }
-                if (reRender) this._renderAllMessages();
+                if (anyNeedFullRender) this._renderAllMessages();
             }
         }
         this.reTryDecryptMessages();

@@ -73,7 +73,13 @@ class App {
                     } else if (!existingMsg.url) {
                         if (blob) {
                             existingMsg.url = url;
-                            this.textShare._renderAllMessages();
+                            if (typeof this.textShare.updateSingleMessageUI === 'function') {
+                                if (!this.textShare.updateSingleMessageUI(existingMsg)) {
+                                    this.textShare._renderAllMessages();
+                                }
+                            } else {
+                                this.textShare._renderAllMessages();
+                            }
                         } else if (this.conn.connections && this.conn.connections.size > 0) {
                             this.conn.sendFileEvent('request-history-file', { fileId: item.meta.fileId, targetId: this.conn.myPeerId });
                         }
@@ -124,7 +130,13 @@ class App {
                 const existingMsg = (this.textShare.messages || []).find(m => (m.meta && m.meta.fileId === fid) || m.id === fid);
                 if (existingMsg) {
                     existingMsg.url = url;
-                    this.textShare._renderAllMessages();
+                    if (typeof this.textShare.updateSingleMessageUI === 'function') {
+                        if (!this.textShare.updateSingleMessageUI(existingMsg)) {
+                            this.textShare._renderAllMessages();
+                        }
+                    } else {
+                        this.textShare._renderAllMessages();
+                    }
                 } else {
                     this.textShare.addFileMessage(fid, meta, url, false, { name: senderName, id: senderId, color: senderColor }, meta.timestamp || Date.now());
                 }
@@ -425,10 +437,38 @@ class App {
         }
     }
 
+    async handleDataTransferItems(dataTransfer) {
+        if (!dataTransfer) return;
+        const items = dataTransfer.items;
+        const fallbackFiles = dataTransfer.files;
+
+        if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === 'function') {
+            const files = [];
+            for (let i = 0; i < items.length; i++) {
+                const entry = items[i].webkitGetAsEntry();
+                if (entry && entry.isFile) {
+                    const f = await new Promise(res => entry.file(res, () => res(null)));
+                    if (f) files.push(f);
+                }
+            }
+            if (files.length > 0) {
+                this.stageFiles(files);
+            }
+            return;
+        }
+
+        if (fallbackFiles && fallbackFiles.length > 0) {
+            this.stageFiles(fallbackFiles);
+        }
+    }
+
     stageFiles(fileList) {
         if (!fileList || !fileList.length) return;
         if (!this.stagedFiles) this.stagedFiles = [];
         for (const file of fileList) {
+            if (file && file.size === 0 && (!file.type || file.type === '') && (!file.name || !file.name.includes('.'))) {
+                continue;
+            }
             if (!this.stagedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) {
                 this.stagedFiles.push(file);
             }
@@ -1771,7 +1811,7 @@ class App {
             if (!fileId) return;
             btn.disabled = true;
             btn.dataset.originalHtml = btn.innerHTML;
-            btn.innerHTML = '⏳ Fetching...';
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Fetching...</span>';
             if (this.conn) {
                 this.conn.sendFileEvent('request-history-file', { fileId, targetId: this.conn.myPeerId });
                 if (!this._fetchTimeouts) this._fetchTimeouts = new Map();
@@ -2351,9 +2391,10 @@ class App {
         const btnRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
         if (btnRoomBadgeCopy) {
             btnRoomBadgeCopy.addEventListener('click', () => {
-                if (this.roomCode) {
-                    navigator.clipboard.writeText(this.roomCode);
-                    UI.toast('Room ID copied to clipboard!', 'success');
+                const code = (this.conn && (typeof this.conn.getRoomCode === 'function' ? this.conn.getRoomCode() : this.conn.roomCode)) || (document.getElementById('share-room-code') && document.getElementById('share-room-code').textContent !== '---' ? document.getElementById('share-room-code').textContent : '') || this.roomCode;
+                if (code && code !== '---') {
+                    navigator.clipboard.writeText(code);
+                    UI.toast('Room ID (' + code + ') copied to clipboard!', 'success');
                 }
             });
         }
@@ -2460,32 +2501,37 @@ class App {
         filePicker.addEventListener('change', (e) => { if (e.target.files.length) this.stageFiles(e.target.files); e.target.value = ''; });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files.length) this.stageFiles(e.dataTransfer.files); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer) this.handleDataTransferItems(e.dataTransfer); });
 
         const handleChatDragOver = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const tia = document.querySelector('.text-input-area');
             if (tia && !e.target.closest('#drop-zone')) tia.classList.add('drag-highlight');
+            if (e.target.closest('#drop-zone')) dropZone.classList.add('drag-over');
         };
         const handleChatDragLeave = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const tia = document.querySelector('.text-input-area');
             if (tia) tia.classList.remove('drag-highlight');
+            if (dropZone) dropZone.classList.remove('drag-over');
         };
         const handleChatDrop = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const tia = document.querySelector('.text-input-area');
             if (tia) tia.classList.remove('drag-highlight');
-            if (e.target.closest('#drop-zone')) return;
-            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                this.stageFiles(e.dataTransfer.files);
+            if (dropZone) dropZone.classList.remove('drag-over');
+            if (e.dataTransfer) {
+                this.handleDataTransferItems(e.dataTransfer);
             }
         };
 
-        ['screen-room', 'tab-text', 'messages', 'text-input'].forEach(id => {
+        window.addEventListener('dragover', handleChatDragOver);
+        window.addEventListener('drop', handleChatDrop);
+
+        ['screen-room', 'tab-text', 'messages', 'text-input', 'tab-files', 'received-files', 'drop-zone'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('dragenter', handleChatDragOver);

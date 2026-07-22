@@ -390,6 +390,13 @@ button .waiting-dots span {
     background: rgba(255, 217, 61, 0.18) !important;
     border-color: rgba(255, 217, 61, 0.45) !important;
 }
+.room-badge:active,
+#btn-room-badge-copy:active,
+.share-header-card button:active {
+    transform: scale(0.95) !important;
+    background: rgba(234, 88, 12, 0.35) !important;
+    border-color: #EA580C !important;
+}
 .share-header-card button:hover,
 #btn-show-pe2e-popup:hover {
     background: rgba(255, 255, 255, 0.16) !important;
@@ -426,7 +433,7 @@ button .waiting-dots span {
     width: calc(50% - 5px);
     background: var(--accent-gradient);
     border-radius: calc(var(--radius-md) - 2px);
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s ease;
     will-change: transform;
     transform: translate3d(0, 0, 0);
     z-index: 1;
@@ -436,6 +443,7 @@ button .waiting-dots span {
 
 .tab-nav[data-active="files"] .tab-slider {
     transform: translate3d(calc(100% + 2px), 0, 0);
+    background: linear-gradient(135deg, #2563eb, #1e40af);
 }
 
 .tab-btn {
@@ -767,7 +775,7 @@ button .waiting-dots span {
     width: calc(50% - 6px);
     background: var(--accent-gradient);
     border-radius: calc(var(--radius-md) - 3px);
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s ease;
     will-change: transform;
     transform: translate3d(0, 0, 0);
     z-index: 1;
@@ -778,6 +786,7 @@ button .waiting-dots span {
 .security-switch-bar.plaintext-mode .sec-slider,
 .security-switch-bar.locked-mode .sec-slider {
     transform: translate3d(calc(100% + 4px), 0, 0);
+    background: linear-gradient(135deg, #2563eb, #1e40af);
 }
 
 .sec-pill-btn {
@@ -805,7 +814,7 @@ button .waiting-dots span {
 .sec-pill-btn.active,
 .sec-pill-btn.active-plaintext {
     background: transparent;
-    color: white;
+    color: white !important;
     box-shadow: none;
     border-color: transparent;
 }
@@ -1205,13 +1214,24 @@ button .waiting-dots span {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
+    width: 335px !important;
+    min-width: 335px !important;
+    max-width: 100% !important;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 8px 12px;
     border-radius: 10px;
     box-sizing: border-box;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.file-box-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 body.light-theme .custom-audio-card {
@@ -1238,27 +1258,51 @@ body.light-theme .custom-audio-card {
 .audio-play-btn {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
-    background: var(--accent-primary);
-    color: white;
-    border: none;
+    border-radius: var(--radius-md);
+    background: rgba(59, 130, 246, 0.22) !important;
+    border: 1px solid rgba(59, 130, 246, 0.45) !important;
+    color: #60a5fa !important;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 .audio-play-btn:hover {
-    background: var(--accent-secondary);
+    background: rgba(59, 130, 246, 0.32) !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
 }
 body.light-theme .audio-play-btn {
-    background: #ea580c;
-    color: white;
+    background: rgba(234, 88, 12, 0.16) !important;
+    border: 1px solid rgba(234, 88, 12, 0.35) !important;
+    color: #c2410c !important;
 }
 body.light-theme .audio-play-btn:hover {
-    background: #c2410c;
+    background: rgba(234, 88, 12, 0.25) !important;
+    border-color: rgba(234, 88, 12, 0.5) !important;
+    color: #9a3412 !important;
+}
+.message-sent .audio-play-btn,
+body.light-theme .message-sent .audio-play-btn {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+    color: #ffffff !important;
+}
+.message-sent .audio-play-btn:hover,
+body.light-theme .message-sent .audio-play-btn:hover {
+    background: rgba(255, 255, 255, 0.35) !important;
+    border-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.audio-time-display {
+    font-variant-numeric: tabular-nums !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    display: inline-block !important;
+    min-width: 86px !important;
+    text-align: left !important;
+    user-select: none !important;
 }
 
 .audio-seek-slider {
@@ -1306,14 +1350,40 @@ body.light-theme .audio-seek-slider::-moz-range-thumb {
     width: 48px;
     height: 48px;
     border-radius: var(--radius-md);
-    background: rgba(37, 99, 235, 0.15);
-    border: 1px solid rgba(37, 99, 235, 0.2);
-    color: var(--accent-primary);
+    background: rgba(59, 130, 246, 0.22) !important;
+    border: 1px solid rgba(59, 130, 246, 0.45) !important;
+    color: #60a5fa !important;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.file-preview-icon svg {
+    stroke-width: 2.3px !important;
+}
+.file-preview-icon.icon-image {
+    background: rgba(59, 130, 246, 0.25) !important;
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    color: #93c5fd !important;
+}
+.file-preview-icon.icon-video {
+    background: rgba(168, 85, 247, 0.25) !important;
+    border-color: rgba(168, 85, 247, 0.5) !important;
+    color: #d8b4fe !important;
+}
+
+/* Ensure icons inside sent message bubbles are high-contrast white and crystal clear */
+.message-sent .file-preview-icon,
+.message-sent .file-preview-icon.icon-image,
+.message-sent .file-preview-icon.icon-video,
+body.light-theme .message-sent .file-preview-icon,
+body.light-theme .message-sent .file-preview-icon.icon-image,
+body.light-theme .message-sent .file-preview-icon.icon-video {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
 }
 
 .received-file-info {
@@ -1329,6 +1399,8 @@ body.light-theme .audio-seek-slider::-moz-range-thumb {
     text-overflow: ellipsis;
     color: var(--text-primary);
     line-height: 1.3;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .received-file-size {
@@ -1573,9 +1645,41 @@ body.light-theme .transfer-bar-fill {
 
 body.light-theme .transfer-icon,
 body.light-theme .file-preview-icon {
-    background: rgba(249, 115, 22, 0.12) !important;
-    border: 1px solid rgba(249, 115, 22, 0.25) !important;
-    color: #EA580C !important;
+    background: rgba(234, 88, 12, 0.16) !important;
+    border: 1px solid rgba(234, 88, 12, 0.35) !important;
+    color: #c2410c !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.12) !important;
+}
+
+body.light-theme .file-preview-icon.icon-image {
+    background: rgba(234, 88, 12, 0.18) !important;
+    border-color: rgba(234, 88, 12, 0.4) !important;
+    color: #b45309 !important;
+}
+
+body.light-theme .file-preview-icon.icon-video {
+    background: rgba(147, 51, 234, 0.16) !important;
+    border-color: rgba(147, 51, 234, 0.4) !important;
+    color: #7e22ce !important;
+}
+
+body.light-theme .drop-zone {
+    border: 2px dashed rgba(234, 88, 12, 0.45) !important;
+    background: rgba(234, 88, 12, 0.08) !important;
+    box-shadow: 0 4px 20px rgba(234, 88, 12, 0.05) !important;
+}
+
+body.light-theme .drop-zone:hover,
+body.light-theme .drop-zone.drag-over {
+    border-color: #ea580c !important;
+    background: rgba(234, 88, 12, 0.14) !important;
+    box-shadow: 0 6px 24px rgba(234, 88, 12, 0.12) !important;
+}
+
+body.light-theme .text-input-area.drag-highlight {
+    border: 2px dashed #ea580c !important;
+    background: rgba(234, 88, 12, 0.18) !important;
+    box-shadow: 0 0 30px rgba(234, 88, 12, 0.5) !important;
 }
 
 body.light-theme .device-tag,
@@ -1584,31 +1688,100 @@ body.light-theme .badge-host {
     background: rgba(249, 115, 22, 0.15) !important;
 }
 
-/* Light theme button hover backgrounds & borders (Pic 4 & Pic 5) */
+/* Light theme normal state for all buttons matching Users button */
+body.light-theme .btn-secondary,
+body.light-theme #btn-download-all,
+body.light-theme .btn-fetch-history-file,
+body.light-theme .share-header-card button:not(#btn-host-manage):not(#btn-room-badge-copy),
+body.light-theme #btn-show-pe2e-popup,
+body.light-theme #btn-show-devices-popup,
+body.light-theme #btn-copy-room-link,
+body.light-theme #btn-show-qr-share {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: #1e293b !important;
+    box-shadow: none !important;
+}
+
+/* Light theme button hover backgrounds & borders matching Users button hover */
+body.light-theme .btn-secondary:hover,
+body.light-theme #btn-download-all:hover,
+body.light-theme .btn-fetch-history-file:hover,
 body.light-theme .btn-theme-toggle:hover,
 body.light-theme #btn-theme-toggle:hover,
-body.light-theme .btn-theme-toggle.static-theme-btn:hover {
-    border: 1px solid #EA580C !important;
-    background: rgba(234, 88, 12, 0.18) !important;
-    box-shadow: 0 0 16px rgba(234, 88, 12, 0.25) !important;
-    color: #EA580C !important;
-    transform: none !important;
-}
-
-body.light-theme .share-header-card button:hover,
+body.light-theme .btn-theme-toggle.static-theme-btn:hover,
+body.light-theme .share-header-card button:not(#btn-host-manage):not(#btn-room-badge-copy):hover,
 body.light-theme #btn-show-pe2e-popup:hover,
-body.light-theme .btn-secondary:hover {
-    background: rgba(234, 88, 12, 0.18) !important;
-    border-color: #EA580C !important;
-    color: #C2410C !important;
+body.light-theme #btn-show-devices-popup:hover,
+body.light-theme #btn-copy-room-link:hover,
+body.light-theme #btn-show-qr-share:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    border-color: rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    color: #111827 !important;
 }
 
+/* Ensure Host Manage button and Room Code badge remain orange in light theme */
+body.light-theme #btn-host-manage,
+body.light-theme .share-header-card #btn-host-manage {
+    background: linear-gradient(135deg, #f97316, #ea580c) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35) !important;
+}
+body.light-theme #btn-host-manage:hover,
+body.light-theme .share-header-card #btn-host-manage:hover {
+    background: linear-gradient(135deg, #fb923c, #f97316) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.45) !important;
+}
+
+body.light-theme .room-badge,
+body.light-theme .share-header-card .room-badge,
+body.light-theme #btn-room-badge-copy {
+    background: rgba(234, 88, 12, 0.15) !important;
+    border: 1px solid rgba(234, 88, 12, 0.35) !important;
+    color: #ea580c !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1) !important;
+}
 body.light-theme .room-badge:hover,
+body.light-theme .share-header-card .room-badge:hover,
 body.light-theme #btn-room-badge-copy:hover {
     background: rgba(234, 88, 12, 0.22) !important;
-    border-color: #EA580C !important;
-    color: #C2410C !important;
+    border-color: #ea580c !important;
+    color: #c2410c !important;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.18) !important;
 }
+
+/* Ensure inner Browse Files button (#btn-pick-file) matches main container in dark theme and turns crisp white in light theme */
+#btn-pick-file {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+#btn-pick-file:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.light-theme #btn-pick-file,
+body.light-theme .drop-zone #btn-pick-file {
+    background: rgba(234, 88, 12, 0.12) !important;
+    border: 1px solid rgba(234, 88, 12, 0.35) !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08) !important;
+}
+body.light-theme #btn-pick-file:hover,
+body.light-theme .drop-zone #btn-pick-file:hover {
+    background: rgba(234, 88, 12, 0.22) !important;
+    border-color: #ea580c !important;
+    color: #0f172a !important;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.18) !important;
+}
+
 
 /* --- Button Loading Transitions --- */
 @keyframes slideInLeftSvg {

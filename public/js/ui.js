@@ -171,23 +171,23 @@ class UI {
         const escName = UI.escapeHtml(typeof UI.formatFileName === 'function' ? UI.formatFileName(fileName, 24) : fileName);
         const fullEscName = UI.escapeAttr(fileName);
 
-        return '<div class="custom-audio-card">' +
+        return '<div class="custom-audio-card" style="user-select:none;-webkit-user-select:none">' +
             '<div style="display:flex;align-items:center;gap:12px;width:100%">' +
                 '<button type="button" class="audio-play-btn" onclick="UI.toggleAudioPlayback(this, \'' + url + '\')" title="Play/Pause">' +
                     '<svg class="play-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
                     '<svg class="pause-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' +
                 '</button>' +
-                '<div style="flex:1;min-width:0;text-align:left;overflow:hidden">' +
-                    '<div style="font-weight:600;font-size:0.88rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + fullEscName + '">' + escName + statusBadge + '</div>' +
-                    '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px;display:flex;align-items:center;gap:6px">' +
+                '<div style="flex:1;min-width:0;text-align:left;overflow:hidden;user-select:none">' +
+                    '<div style="font-weight:600;font-size:0.88rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none" title="' + fullEscName + '">' + escName + statusBadge + '</div>' +
+                    '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px;display:flex;align-items:center;gap:6px;user-select:none">' +
                         '<span>' + fileSize + '</span>' +
                         '<span>•</span>' +
-                        '<span class="audio-time-display">0:00 / --:--</span>' +
+                        '<span class="audio-time-display" style="font-variant-numeric:tabular-nums;font-family:\'JetBrains Mono\',monospace;display:inline-block;min-width:86px;text-align:left;user-select:none">0:00 / --:--</span>' +
                     '</div>' +
                 '</div>' +
                 '<div style="flex-shrink:0">' + actionBtn + '</div>' +
             '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:2px">' +
+            '<div style="display:flex;align-items:center;gap:8px;width:100%;margin-top:2px;padding-left:48px;box-sizing:border-box">' +
                 '<input type="range" class="audio-seek-slider" min="0" max="100" value="0" step="0.1" oninput="UI.seekAudio(this)" onmousedown="this.isDragging=true" onmouseup="this.isDragging=false" ontouchstart="this.isDragging=true" ontouchend="this.isDragging=false">' +
                 '<audio src="' + url + '" class="hidden-audio" preload="metadata" onloadedmetadata="UI.updateAudioDuration(this)" ontimeupdate="UI.updateAudioProgress(this)" onended="UI.onAudioEnded(this)" style="display:none"></audio>' +
             '</div>' +
@@ -304,9 +304,9 @@ class UI {
         const isVideo = (meta.fileType && meta.fileType.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(meta.fileName || '');
         const isAudio = (meta.fileType && meta.fileType.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(meta.fileName || '');
         
-        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon icon-image"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon icon-video"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -338,9 +338,9 @@ class UI {
         const isVideo = (meta.fileType && meta.fileType.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(meta.fileName || '');
         const isAudio = (meta.fileType && meta.fileType.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(meta.fileName || '');
         
-        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon icon-image"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon icon-video"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -382,9 +382,9 @@ class UI {
         const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|webm|mov|mkv|avi|m4v|3gp)$/i.test(file.name || '');
         const isAudio = (file.type && file.type.startsWith('audio/')) || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file.name || '');
         
-        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
-        if (isImage) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
-        else if (isVideo) iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
+        let iconHtml = '<div class="file-preview-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>';
+        if (isImage) iconHtml = '<div class="file-preview-icon icon-image"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+        else if (isVideo) iconHtml = '<div class="file-preview-icon icon-video"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>';
 
         if (url && (isImage || isVideo)) {
             card.className += ' media-preview-trigger';
@@ -410,6 +410,7 @@ class UI {
     static renderFileChatMessage(meta, url, isSent, sender, timestamp, groupInfo = {}) {
         const { isGroupFollowup, hasGroupFollowup } = groupInfo;
         const msg = document.createElement('div');
+        if (meta && meta.fileId) msg.dataset.fileId = meta.fileId;
         let classes = 'message ' + (isSent ? 'message-sent' : 'message-received');
         if (isGroupFollowup) classes += ' message-group-followup';
         if (hasGroupFollowup) classes += ' message-group-lead';
@@ -436,11 +437,17 @@ class UI {
             actionBtn = '<button class="btn btn-secondary btn-fetch-history-file" data-file-id="' + UI.escapeAttr(meta.fileId) + '" id="chat-fetch-' + UI.escapeAttr(meta.fileId) + '" style="margin-left:auto;padding:6px 12px;border-radius:8px;font-size:0.8rem;font-weight:600;display:inline-flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;white-space:nowrap">⬇ Fetch (' + FileTransfer.formatSize(meta.fileSize) + ')</button>';
         }
 
-        let iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>';
-        if (isImage) iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-        else if (isVideo) iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+        let iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>';
+        let iconClass = 'file-preview-icon';
+        if (isImage) {
+            iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+            iconClass = 'file-preview-icon icon-image';
+        } else if (isVideo) {
+            iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>';
+            iconClass = 'file-preview-icon icon-video';
+        }
 
-        const triggerAttrs = (url && (isImage || isVideo)) ? ' class="media-preview-trigger" data-url="' + url + '" data-type="' + UI.escapeAttr(meta.fileType || (isImage ? 'image/png' : 'video/mp4')) + '" data-name="' + UI.escapeAttr(meta.fileName || 'Media Preview') + '" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden"' : ' style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden"';
+        const triggerAttrs = (url && (isImage || isVideo)) ? ' class="file-box-card media-preview-trigger" data-url="' + url + '" data-type="' + UI.escapeAttr(meta.fileType || (isImage ? 'image/png' : 'video/mp4')) + '" data-name="' + UI.escapeAttr(meta.fileName || 'Media Preview') + '" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden;user-select:none;-webkit-user-select:none"' : ' class="file-box-card" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;box-sizing:border-box;overflow:hidden;user-select:none;-webkit-user-select:none"';
 
         let inlineProgress = '';
         if (!url && !meta.cancelled && (!meta.personalEncrypted || !meta.recipients || !Array.isArray(meta.recipients) || !myId || meta.recipients.includes(myId))) {
@@ -458,8 +465,8 @@ class UI {
         }
 
         const fileBox = '<div' + triggerAttrs + '>' +
-            '<div class="file-preview-icon" style="width:36px;height:36px">' + iconSvg + '</div>' +
-            '<div style="overflow:hidden;text-align:left;flex:1;min-width:0"><div style="font-weight:600;font-size:0.85rem;color:inherit;word-break:break-all;line-height:1.3" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 22)) + '</div>' +
+            '<div class="' + iconClass + '" style="width:36px;height:36px">' + iconSvg + '</div>' +
+            '<div style="overflow:hidden;text-align:left;flex:1;min-width:0;user-select:none"><div style="font-weight:600;font-size:0.85rem;color:inherit;word-break:break-all;line-height:1.3;user-select:none" title="' + UI.escapeAttr(meta.fileName) + '">' + UI.escapeHtml(UI.formatFileName(meta.fileName, 22)) + '</div>' +
             '<div style="font-size:0.72rem;opacity:0.75;margin-top:2px">' + FileTransfer.formatSize(meta.fileSize) + '</div></div>' +
             actionBtn + '</div>' + inlineProgress;
 
