@@ -12,6 +12,7 @@ body.light-theme {
     --glass-bg: rgba(255, 248, 245, 0.88);
     --glass-border: rgba(235, 150, 120, 0.28);
     --glass-hover: rgba(255, 255, 255, 0.96);
+    --surface-card: var(--glass-bg);
 
     --text-primary: #2d1810;
     --text-secondary: #5a3a2e;
