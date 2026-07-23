@@ -193,17 +193,26 @@ class CryptoManager {
 
     /* --- Personal E2E Encryption Methods --- */
     async generatePersonalKey() {
-        const indices = new Uint32Array(3);
-        if (window.crypto && window.crypto.getRandomValues) {
-            window.crypto.getRandomValues(indices);
-        } else {
-            for (let i = 0; i < 3; i++) indices[i] = Math.floor(Math.random() * WORDS.length);
+        if (this._generatingPersonalKey) return this._generatingPersonalKey;
+        this._generatingPersonalKey = (async () => {
+            const indices = new Uint32Array(3);
+            if (window.crypto && window.crypto.getRandomValues) {
+                window.crypto.getRandomValues(indices);
+            } else {
+                for (let i = 0; i < 3; i++) indices[i] = Math.floor(Math.random() * WORDS.length);
+            }
+            const words = Array.from(indices).map(i => WORDS[i % WORDS.length]);
+            this.myPersonalKeyStr = 'pk-' + words.join('-') + '-' + Math.random().toString(36).slice(2, 6);
+            this.myPersonalKey = await this._deriveKey(this.myPersonalKeyStr);
+            if (!this.peerPersonalKeys) this.peerPersonalKeys = new Map();
+            return this.myPersonalKeyStr;
+        })();
+        try {
+            const res = await this._generatingPersonalKey;
+            return res;
+        } finally {
+            this._generatingPersonalKey = null;
         }
-        const words = Array.from(indices).map(i => WORDS[i % WORDS.length]);
-        this.myPersonalKeyStr = 'pk-' + words.join('-') + '-' + Math.random().toString(36).slice(2, 6);
-        this.myPersonalKey = await this._deriveKey(this.myPersonalKeyStr);
-        if (!this.peerPersonalKeys) this.peerPersonalKeys = new Map();
-        return this.myPersonalKeyStr;
     }
 
     async importPeerPersonalKey(peerId, keyStr) {
