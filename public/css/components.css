@@ -390,12 +390,16 @@ button .waiting-dots span {
     background: rgba(255, 217, 61, 0.18) !important;
     border-color: rgba(255, 217, 61, 0.45) !important;
 }
-.room-badge:active,
-#btn-room-badge-copy:active,
 .share-header-card button:active {
     transform: scale(0.95) !important;
     background: rgba(234, 88, 12, 0.35) !important;
     border-color: #EA580C !important;
+}
+.room-badge:active,
+#btn-room-badge-copy:active {
+    transform: scale(0.95) !important;
+    background: rgba(255, 217, 61, 0.35) !important;
+    border-color: #FFD93D !important;
 }
 .share-header-card button:hover,
 #btn-show-pe2e-popup:hover {
@@ -992,6 +996,12 @@ button .waiting-dots span {
     box-shadow: var(--shadow-lg);
     border-color: rgba(255, 255, 255, 0.15);
     background: rgba(12, 16, 34, 0.95) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+}
+
+.modal-sticky-footer {
+    background: rgba(12, 16, 34, 0.98) !important;
     backdrop-filter: blur(28px) !important;
     -webkit-backdrop-filter: blur(28px) !important;
 }
@@ -1856,6 +1866,10 @@ body.light-theme .drop-zone #btn-pick-file:hover {
     border-radius: 12px;
     overflow: hidden;
     transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.member-card-item:hover {
+    border-color: var(--accent-primary);
 }
 
 

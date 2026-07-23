@@ -117,6 +117,29 @@ class ConnectionManager {
         });
     }
 
+    changeRoomCode(newCode) {
+        if (!this.isCreator) return;
+        this.roomCode = newCode;
+        const newPeerId = this._roomCodeToPeerId(newCode);
+        if (this.peer) {
+            const oldPeer = this.peer;
+            try { oldPeer.disconnect(); } catch {}
+            const p = new Peer(newPeerId, this._getPeerOptions());
+            this.peer = p;
+            p.on('open', (id) => {
+                this.myPeerId = id;
+                this.addAuditLog(`Room code changed to ${newCode}`, 'success', true);
+            });
+            p.on('connection', (conn) => this._handleIncoming(conn));
+            p.on('error', (err) => {
+                if (err && err.type === 'unavailable-id') {
+                    if (typeof UI !== 'undefined') UI.toast('Room code taken. Try another.', 'error');
+                }
+            });
+            p.on('disconnected', () => { if (!p.destroyed) p.reconnect(); });
+        }
+    }
+
     joinRoom(code) {
         this.auditLogs = [];
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
@@ -515,6 +538,10 @@ class ConnectionManager {
                 }
                 if (fromId && fromId !== this.myId) {
                     this.addAuditLog(this.isRoomLocked ? 'Room entry locked by Host' : 'Room entry unlocked by Host', 'sec', true);
+                    if (typeof UI !== 'undefined') UI.toast(this.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+                    if (window.textShare && typeof window.textShare.addSystemMessage === 'function') {
+                        window.textShare.addSystemMessage(this.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+                    }
                 }
                 if (this.isCreator && data.payload && data.payload.isLocked !== undefined) {
                     this._broadcast(data, fromId);

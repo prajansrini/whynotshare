@@ -234,7 +234,7 @@ class App {
             const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, phrase) : (window.location.origin + this._getBasePath() + '#' + code);
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + phrase) : ('#' + code);
             document.getElementById('share-url').dataset.url = targetUrl;
-            window.history.replaceState(null, '', 'create-room');
+            window.history.pushState({ screenId: 'screen-room' }, '', '#create-room');
             try {
                 sessionStorage.setItem('whynotshare_active_session', JSON.stringify({
                     roomCode: code,
@@ -317,12 +317,14 @@ class App {
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (t, d) => this.fileTransfer.handleFileEvent(t, d);
         this.fileTransfer.onProgress = this.fileTransfer.onIncomingFile = this.fileTransfer.onFileReceived = null;
-        window.history.replaceState(null, '', this._getBasePath());
+        UI.showScreen('screen-landing', pushToHistory);
+        if (pushToHistory) {
+            window.history.replaceState({ screenId: 'screen-landing' }, '', this._getBasePath());
+        }
         const btnC = document.getElementById('btn-create');
         if (btnC) { btnC.disabled = false; btnC.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Room'; }
         const btnJ = document.getElementById('btn-join-submit');
         if (btnJ) { btnJ.disabled = false; btnJ.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Connect'; }
-        UI.showScreen('screen-landing', pushToHistory);
         this.init(); // re-init callbacks
     }
 
@@ -659,6 +661,39 @@ class App {
             btnEditPass.classList.toggle('collapsed', !enabled);
         }
 
+        // Sync Host Governance Panel UI
+        const isOpenRoom = !enabled;
+        const toggle = document.getElementById('toggle-open-room');
+        if (toggle) toggle.checked = isOpenRoom;
+        const barKeyMode = document.getElementById('bar-room-key-mode');
+        if (barKeyMode) barKeyMode.classList.toggle('plaintext-mode', isOpenRoom);
+        const btnKeyReq = document.getElementById('btn-room-key-required');
+        if (btnKeyReq) btnKeyReq.classList.toggle('active', !isOpenRoom);
+        const btnKeyOpen = document.getElementById('btn-room-key-open');
+        if (btnKeyOpen) btnKeyOpen.classList.toggle('active-plaintext', isOpenRoom);
+
+        const inputKeyEl = document.getElementById('input-rotate-room-key');
+        if (inputKeyEl) {
+            if (isOpenRoom) {
+                inputKeyEl.value = '';
+                inputKeyEl.placeholder = 'Open Room (No Encryption)';
+                inputKeyEl.disabled = true;
+                inputKeyEl.style.opacity = '0.4';
+                inputKeyEl.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+            } else {
+                inputKeyEl.value = this.crypto ? (this.crypto.getPhrase() || '') : '';
+                inputKeyEl.placeholder = 'Room Key';
+                inputKeyEl.disabled = false;
+                inputKeyEl.readOnly = false;
+                inputKeyEl.style.opacity = '1';
+                inputKeyEl.style.backgroundColor = '';
+            }
+        }
+        const passModalInput = document.getElementById('input-new-passphrase');
+        if (passModalInput) passModalInput.value = this.crypto ? (this.crypto.getPhrase() || '') : '';
+        const btnGenKey = document.getElementById('btn-gen-rotate-room-key');
+        if (btnGenKey) btnGenKey.style.display = isOpenRoom ? 'none' : 'flex';
+
         // Toggle visibility of secret phrase container on Room screen with smooth slide animation
         const phraseContainer = document.getElementById('secret-phrase-container');
         if (phraseContainer) {
@@ -768,12 +803,7 @@ class App {
 
     _triggerAutoSaveHostSettings(closeModal = false) {
         if (!this.conn || !this.conn.isCreator) return;
-        const inputId = document.getElementById('input-new-room-id');
-        const newId = inputId ? inputId.value.trim() : null;
-        if (newId && newId !== this.conn.getRoomCode()) {
-            this.conn._broadcast({ type: 'room-id-changed', payload: { newCode: newId } });
-            this._onRoomIdChanged(newId);
-        }
+        // Room ID change feature has been disabled by user request
         const toggle = document.getElementById('toggle-open-room');
         const isOpen = toggle && toggle.checked;
         const inputKeyEl = document.getElementById('input-rotate-room-key');
@@ -800,11 +830,11 @@ class App {
                     this._saveResetTimeout = setTimeout(() => {
                         const modal = document.getElementById('modal-host-manage');
                         if (modal) modal.style.display = 'none';
-                        saveBtn.innerHTML = '<span>Save</span>';
+                        saveBtn.innerHTML = '<span id="txt-save-btn">Saved</span>';
                     }, 350);
                 } else {
                     this._saveResetTimeout = setTimeout(() => {
-                        saveBtn.innerHTML = '<span>Save</span>';
+                        saveBtn.innerHTML = '<span id="txt-save-btn">Saved</span>';
                     }, 1400);
                 }
             }, 450);
@@ -824,7 +854,6 @@ class App {
                 this._onRoomKeyRotated(init.phrase);
             }
         }
-        document.getElementById('modal-host-manage').style.display = 'none';
     }
 
     openHostManageModal() {
@@ -958,6 +987,9 @@ class App {
         }
         this.conn._broadcast({ type: 'room-lock-changed', payload: { isLocked: this.conn.isRoomLocked } });
         UI.toast(this.conn.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+        if (window.textShare && typeof window.textShare.addSystemMessage === 'function') {
+            window.textShare.addSystemMessage(this.conn.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+        }
     }
 
     updateRoomLockUI(isLocked) {
@@ -1310,7 +1342,14 @@ class App {
         const targetUrl = this.e2eEnabled ? this._buildShareUrl(newCode, phrase) : (window.location.origin + this._getBasePath() + '#' + newCode);
         const targetHash = this.e2eEnabled ? ('#' + newCode + ':' + phrase) : ('#' + newCode);
         const urlEl = document.getElementById('share-url');
-        if (urlEl) urlEl.dataset.url = targetUrl;
+        if (urlEl) {
+            urlEl.dataset.url = targetUrl;
+            if (urlEl.tagName === 'INPUT') urlEl.value = targetUrl;
+        }
+        const modalUrlEl = document.getElementById('input-modal-room-link');
+        if (modalUrlEl) {
+            modalUrlEl.value = targetUrl;
+        }
         if (window.location.hash && window.location.hash.slice(1).startsWith(this.conn.getRoomCode() || '')) {
             window.history.replaceState(null, '', this._getBasePath() + targetHash);
         }
@@ -1332,8 +1371,8 @@ class App {
             if (isEnc) this.conn.addAuditLog('Room security passphrase rotated', 'sec');
             else this.conn.addAuditLog('Room is made Open', 'sec');
         }
-        this.toggleE2E(isEnc);
         await this.crypto.importKey(newKey || '');
+        this.toggleE2E(isEnc);
         this.updatePhraseUI(newKey, !isEnc);
         const code = this.conn.getRoomCode();
         if (code) {
@@ -1341,7 +1380,7 @@ class App {
             const targetHash = this.e2eEnabled ? ('#' + code + ':' + newKey) : ('#' + code);
             const urlEl = document.getElementById('share-url');
             if (urlEl) urlEl.dataset.url = targetUrl;
-            if (window.location.hash && window.location.hash.slice(1).startsWith(code)) {
+            if (this._hasEnteredLiveRoom) {
                 window.history.replaceState(null, '', this._getBasePath() + targetHash);
             }
             try {
@@ -1482,7 +1521,7 @@ class App {
                 if (!this.conn.getRoomCode() && !this.lastCreatedRoomCode && (!sr || !sr.classList.contains('active'))) {
                     this.createRoom();
                 } else if (sr && sr.classList.contains('active')) {
-                    window.history.replaceState(null, '', 'create-room');
+                    window.history.replaceState({ screenId: 'screen-room' }, '', '#create-room');
                 }
             }, 20);
             return;
@@ -1490,7 +1529,7 @@ class App {
         if (lowerHash === 'join' || lowerHash === 'join-room') {
             setTimeout(() => {
                 UI.showScreen('screen-join');
-                window.history.replaceState(null, '', 'join-room');
+                window.history.replaceState({ screenId: 'screen-join' }, '', '#join-room');
             }, 20);
             return;
         }
@@ -1920,20 +1959,26 @@ class App {
                     UI.toast('No active room found. Please create a room.', 'error');
                     return;
                 }
+                if (this.e2eEnabled && (!this.crypto.getPhrase() || !this.crypto.getPhrase().trim())) {
+                    this.e2eEnabled = false;
+                    await this.crypto.importKey('');
+                    const toggleOpenRoom = document.getElementById('toggle-open-room');
+                    if (toggleOpenRoom) toggleOpenRoom.checked = true;
+                }
                 this._enterShareScreen(code, this.conn.getPeers());
             });
         }
         document.getElementById('btn-create').addEventListener('click', () => this.createRoom());
         document.getElementById('btn-join-screen').addEventListener('click', () => {
+            window.history.pushState({ screenId: 'screen-join' }, '', '#join-room');
             UI.showScreen('screen-join');
-            window.history.replaceState(null, '', 'join-room');
         });
         document.getElementById('btn-join-submit').addEventListener('click', () => {
             this.joinRoom(document.getElementById('input-room-code').value, document.getElementById('input-secret-phrase').value);
         });
         document.getElementById('btn-back-landing').addEventListener('click', () => {
             UI.showScreen('screen-landing');
-            window.history.replaceState(null, '', this._getBasePath());
+            window.history.replaceState({ screenId: 'screen-landing' }, '', this._getBasePath());
         });
         document.getElementById('btn-copy-code').addEventListener('click', () => UI.copyToClipboard(document.getElementById('display-room-code').textContent));
         document.getElementById('btn-copy-phrase').addEventListener('click', () => {
@@ -2080,7 +2125,35 @@ class App {
 
         document.getElementById('btn-back-from-room').addEventListener('click', () => this.leaveRoom());
         document.getElementById('btn-send-text').addEventListener('click', () => this.sendText());
-        document.getElementById('btn-disconnect').addEventListener('click', () => this.leaveRoom());
+        const modalLeave = document.getElementById('modal-leave-confirm');
+        const btnConfirmLeave = document.getElementById('btn-confirm-leave');
+        const btnCancelLeave = document.getElementById('btn-cancel-leave');
+        
+        const closeLeaveModal = () => {
+            if (modalLeave) modalLeave.style.display = 'none';
+            document.removeEventListener('keydown', handleEscapeLeave);
+        };
+        const handleEscapeLeave = (e) => {
+            if (e.key === 'Escape' && modalLeave && modalLeave.style.display === 'flex') {
+                closeLeaveModal();
+            }
+        };
+        if (modalLeave) modalLeave.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-leave-confirm') closeLeaveModal();
+        });
+
+        document.getElementById('btn-disconnect').addEventListener('click', () => {
+            if (modalLeave) {
+                modalLeave.style.display = 'flex';
+                document.addEventListener('keydown', handleEscapeLeave);
+                if (btnCancelLeave) btnCancelLeave.focus();
+            } else {
+                this.leaveRoom();
+            }
+        });
+
+        if (btnConfirmLeave) btnConfirmLeave.addEventListener('click', () => { closeLeaveModal(); this.leaveRoom(); });
+        if (btnCancelLeave) btnCancelLeave.addEventListener('click', closeLeaveModal);
 
         document.querySelectorAll('.btn-theme-toggle').forEach(themeBtn => {
             themeBtn.addEventListener('click', () => {
@@ -2403,8 +2476,7 @@ class App {
             btnCopyModalRoomId.addEventListener('click', () => {
                 const val = document.getElementById('input-new-room-id').value;
                 if (val) {
-                    navigator.clipboard.writeText(val);
-                    UI.toast('Room ID copied!', 'success');
+                    UI.copyToClipboard(val);
                 }
             });
         }
@@ -2413,8 +2485,7 @@ class App {
             btnCopyModalRoomLink.addEventListener('click', () => {
                 const val = document.getElementById('input-modal-room-link').value;
                 if (val) {
-                    navigator.clipboard.writeText(val);
-                    UI.toast('Room Link copied!', 'success');
+                    UI.copyToClipboard(val);
                 }
             });
         }
@@ -2423,8 +2494,7 @@ class App {
             btnCopyModalRoomKey.addEventListener('click', () => {
                 const val = document.getElementById('input-rotate-room-key').value;
                 if (val) {
-                    navigator.clipboard.writeText(val);
-                    UI.toast('Room Key copied!', 'success');
+                    UI.copyToClipboard(val);
                 }
             });
         }
@@ -2453,6 +2523,7 @@ class App {
                 inputEl.readOnly = false;
                 inputEl.style.opacity = '1';
                 inputEl.style.cursor = 'text';
+                inputEl.style.pointerEvents = 'auto';
                 if (btnGen) btnGen.style.display = 'inline-flex';
                 if (btnSave) btnSave.style.display = '';
                 if (btnCancel) {
@@ -2469,6 +2540,7 @@ class App {
                 inputEl.readOnly = true;
                 inputEl.style.opacity = '0.85';
                 inputEl.style.cursor = 'default';
+                inputEl.style.pointerEvents = 'none';
                 if (btnGen) btnGen.style.display = 'none';
                 if (btnSave) btnSave.style.display = 'none';
                 if (btnCancel) {
@@ -2483,6 +2555,11 @@ class App {
         if (btnClosePassTop) btnClosePassTop.addEventListener('click', () => document.getElementById('modal-passphrase').style.display = 'none');
         document.getElementById('btn-save-passphrase').addEventListener('click', () => this.changePassphrase(document.getElementById('input-new-passphrase').value));
         document.getElementById('btn-generate-passphrase').addEventListener('click', () => this.generateNewPassphrase());
+        const btnCopyPassphraseModal = document.getElementById('btn-copy-passphrase-modal');
+        if (btnCopyPassphraseModal) btnCopyPassphraseModal.addEventListener('click', () => {
+            const val = document.getElementById('input-new-passphrase').value;
+            if (val) UI.copyToClipboard(val);
+        });
         document.getElementById('modal-passphrase').addEventListener('click', (e) => { if (e.target.id === 'modal-passphrase') e.target.style.display = 'none'; });
 
 

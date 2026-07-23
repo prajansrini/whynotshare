@@ -78,6 +78,21 @@ class TextShare {
         }
     }
 
+    addSystemMessage(text, type = 'info') {
+        const color = type === 'error' ? 'var(--status-error)' : (type === 'success' ? 'var(--status-success)' : 'var(--accent-primary)');
+        const msg = {
+            id: 'sys_' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+            type: 'text',
+            text: text,
+            sender: { name: 'System', color: color },
+            timestamp: Date.now(),
+            isSent: false
+        };
+        this.messages.push(msg);
+        this._renderMessage(msg);
+        this.saveHistory();
+    }
+
     addFileMessage(id, meta, url, isSent, sender, timestamp) {
         const msg = {
             id: id || (Date.now() + '-' + Math.random().toString(36).substr(2, 5)),

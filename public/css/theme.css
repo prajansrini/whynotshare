@@ -82,6 +82,10 @@ body.light-theme .modal-card > div[style*="background: var(--glass-bg)"] {
     box-shadow: 0 2px 10px rgba(220, 130, 100, 0.05) !important;
 }
 
+body.light-theme .modal-sticky-footer {
+    background: rgba(255, 248, 245, 0.98) !important;
+}
+
 body.light-theme .device-id-badge,
 body.light-theme .security-switch-bar,
 body.light-theme .input-field,
@@ -177,6 +181,12 @@ body.light-theme #btn-room-badge-copy:hover {
     color: #c2410c !important;
     box-shadow: 0 4px 12px rgba(234, 88, 12, 0.18) !important;
 }
+body.light-theme .room-badge:active,
+body.light-theme .share-header-card .room-badge:active,
+body.light-theme #btn-room-badge-copy:active {
+    background: rgba(234, 88, 12, 0.35) !important;
+    border-color: #ea580c !important;
+}
 
 body.light-theme .transfer-bar {
     background: rgba(235, 150, 120, 0.2);
@@ -197,7 +207,7 @@ body.light-theme .tab-btn:not(.active) {
 }
 body.light-theme .tab-btn:not(.active):hover {
     color: var(--text-primary) !important;
-    background: rgba(255, 255, 255, 0.6) !important;
+    background: transparent !important;
 }
 body.light-theme .tab-slider,
 body.light-theme .sec-slider {

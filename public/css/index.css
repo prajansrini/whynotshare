@@ -518,7 +518,7 @@ body.light-theme .sec-pill-btn:not(.active):not(.active-plaintext) {
     color: var(--text-secondary);
 }
 body.light-theme .sec-pill-btn:not(.active):not(.active-plaintext):hover {
-    background: rgba(15, 23, 42, 0.08);
+    background: transparent;
     color: var(--text-primary);
 }
 body.light-theme .transfer-card,
