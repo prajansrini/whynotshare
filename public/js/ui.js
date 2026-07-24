@@ -31,6 +31,32 @@ class UI {
         setTimeout(() => { if (t.parentNode) t.remove(); }, duration);
     }
 
+    static confirm(message, title = 'Confirm') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('modal-confirm-action');
+            if (!modal) return resolve(window.confirm(message));
+            
+            const titleEl = document.getElementById('confirm-action-title');
+            if (titleEl) titleEl.textContent = title;
+            const msgEl = document.getElementById('confirm-action-message');
+            if (msgEl) msgEl.textContent = message;
+            
+            modal.style.display = 'flex';
+            
+            const btnYes = document.getElementById('btn-confirm-action-yes');
+            const btnNo = document.getElementById('btn-confirm-action-no');
+            
+            const cleanup = () => {
+                modal.style.display = 'none';
+                if (btnYes) btnYes.onclick = null;
+                if (btnNo) btnNo.onclick = null;
+            };
+            
+            if (btnYes) btnYes.onclick = () => { cleanup(); resolve(true); };
+            if (btnNo) btnNo.onclick = () => { cleanup(); resolve(false); };
+        });
+    }
+
     static formatTime(ts) {
         const d = new Date(ts || Date.now());
         return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -51,7 +77,7 @@ class UI {
         const leftSide = '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
             '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) + '</span>' +
             '<span class="device-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + peer.deviceName + '</span>' +
-            (peer.isCreator ? '<span class="badge-host">Host</span>' : (peer.isAdmin ? '<span class="badge-admin">Admin</span>' : '')) +
+            (peer.isCreator ? '<span class="badge-host">Host</span>' : '') +
             '</div>';
         const rightSide = '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
             (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);white-space:nowrap">' + peer.systemName + '</span>' : '') +

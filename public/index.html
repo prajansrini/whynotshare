@@ -33,25 +33,34 @@
     <div id="app">
         <!-- LANDING -->
         <div id="screen-landing" class="screen active" style="position:relative">
-            <button id="btn-theme-toggle" class="btn-theme-toggle" style="position:absolute;top:16px;right:16px"
-                title="Toggle Light/Dark Theme">
-                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" style="display:none">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-            </button>
+            <div class="landing-header-actions" style="position:absolute;top:16px;right:16px;display:flex;gap:8px;align-items:center">
+                <button id="btn-landing-info" class="btn-theme-toggle" title="WhyNotShare Info & Guide">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                </button>
+                <button id="btn-theme-toggle" class="btn-theme-toggle" title="Toggle Light/Dark Theme">
+                    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <circle cx="12" cy="12" r="5" />
+                        <line x1="12" y1="1" x2="12" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="23" />
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                        <line x1="1" y1="12" x2="3" y2="12" />
+                        <line x1="21" y1="12" x2="23" y2="12" />
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                    <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" style="display:none">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                </button>
+            </div>
             <div class="logo-section">
                 <div class="logo-icon"><svg width="80" height="80" viewBox="0 0 100 100" fill="none"
                         stroke="currentColor">
@@ -760,18 +769,6 @@
                         </svg>HOST MANAGEMENT & ACTIONS
                     </div>
 
-                    <!-- Remove Non-Admin Members Interactive Button -->
-                    <button id="btn-host-remove-non-admins" type="button"
-                        style="width:100%;padding:12px 14px;background:rgba(239, 68, 68, 0.12);border:1px solid rgba(239, 68, 68, 0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.25s ease;text-align:center">
-                        <div style="display:flex;flex-direction:column;align-items:center">
-                            <span id="txt-remove-non-admins-main"
-                                style="font-size:0.86rem;font-weight:700;color:#f87171">Remove Non-Admin Members</span>
-                            <span id="txt-remove-non-admins-sub"
-                                style="font-size:0.72rem;color:rgba(248, 113, 113, 0.8)">Disconnect all regular members
-                                from room</span>
-                        </div>
-                    </button>
-
                     <!-- Delete Room Interactive Button -->
                     <button id="btn-host-delete-room" type="button"
                         style="width:100%;padding:12px 14px;background:rgba(239, 68, 68, 0.12);border:1px solid rgba(239, 68, 68, 0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.25s ease;text-align:center">
@@ -806,7 +803,19 @@
         </div>
     </div>
 
-    <!-- LEAVE CONFIRM MODAL -->
+    <!-- GENERIC CONFIRM MODAL -->
+    <div id="modal-confirm-action" class="modal-overlay" style="display:none;z-index:9999">
+        <div class="modal-card glass-card" style="max-width:320px;padding:24px;text-align:center">
+            <h3 id="confirm-action-title" style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Confirm</h3>
+            <p id="confirm-action-message" style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 24px;line-height:1.4">Are you sure?</p>
+            <div style="display:flex;gap:10px;width:100%">
+                <button id="btn-confirm-action-yes" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:700;padding:10px">Yes</button>
+                <button id="btn-confirm-action-no" class="btn btn-secondary" style="flex:1;border-radius:10px;font-weight:600;padding:10px">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEAVE CONFIRM MODAL (Standard) -->
     <div id="modal-leave-confirm" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card" style="max-width:320px;padding:24px;text-align:center">
             <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Leave Room?</h3>
@@ -814,6 +823,52 @@
             <div style="display:flex;gap:12px;width:100%">
                 <button id="btn-confirm-leave" class="btn" style="flex:1;background:rgba(239, 68, 68, 0.12);color:#f87171;border:1px solid rgba(239, 68, 68, 0.35);border-radius:10px;font-weight:600;padding:10px;transition:all 0.2s">Leave</button>
                 <button id="btn-cancel-leave" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:700;padding:10px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Stay</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOST LEAVE MODAL -->
+    <div id="modal-host-leave" class="modal-overlay" style="display:none">
+        <div class="modal-card glass-card" style="max-width:340px;padding:24px;text-align:center;display:flex;flex-direction:column">
+            
+            <div id="host-leave-state-initial">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(108,92,231,0.1);color:var(--accent-primary);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </div>
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Leave Room</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 24px;line-height:1.4">You're the Host. Please choose how to proceed before leaving.</p>
+                <div style="display:flex;flex-direction:column;gap:12px;width:100%">
+                    <button id="btn-host-assign-leave" class="btn btn-primary" style="width:100%;border-radius:10px;font-weight:700;padding:12px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Assign Host & Leave</button>
+                    <button id="btn-host-delete-leave" class="btn" style="width:100%;background:rgba(239, 68, 68, 0.1);color:#ef4444;border:1px solid rgba(239, 68, 68, 0.2);border-radius:10px;font-weight:600;padding:12px;transition:all 0.2s">Delete Room & Leave</button>
+                    <button id="btn-host-cancel-leave" class="btn btn-secondary" style="width:100%;border-radius:10px;font-weight:600;padding:12px">Cancel</button>
+                </div>
+            </div>
+
+            <div id="host-leave-state-confirm-delete" style="display:none">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(239, 68, 68, 0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Delete Room?</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 24px;line-height:1.4">This will permanently destroy the room and disconnect all members. Proceed?</p>
+                <div style="display:flex;gap:10px;width:100%">
+                    <button id="btn-host-confirm-delete" class="btn" style="flex:1;background:#ef4444;color:#fff;border-radius:10px;font-weight:700;padding:10px;border:none">Delete</button>
+                    <button id="btn-host-back-delete" class="btn btn-secondary" style="flex:1;border-radius:10px;font-weight:600;padding:10px">Back</button>
+                </div>
+            </div>
+
+            <div id="host-leave-state-assign" style="display:none;text-align:left">
+                <h3 style="font-size:1.1rem;font-weight:700;margin:0 0 12px;color:var(--text-primary);text-align:center">Transfer Host</h3>
+                <div style="position:relative;margin-bottom:12px">
+                    <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-tertiary)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="host-leave-search-member" class="input-field" placeholder="Search members..." style="width:100%;padding:10px 12px 10px 36px;font-size:0.85rem">
+                </div>
+                <div id="host-leave-members-list" class="custom-scrollbar" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;margin-bottom:20px;padding-right:6px">
+                    <!-- Populated dynamically -->
+                </div>
+                <div style="display:flex;gap:10px;width:100%">
+                    <button id="btn-host-confirm-assign" class="btn btn-primary" style="flex:1;border-radius:10px;font-weight:700;padding:10px" disabled>Assign & Leave</button>
+                    <button id="btn-host-back-assign" class="btn btn-secondary" style="flex:1;border-radius:10px;font-weight:600;padding:10px">Back</button>
+                </div>
             </div>
         </div>
     </div>
@@ -935,17 +990,18 @@
     <!-- INFO & GUIDE / PERSONAL E2E MODAL -->
     <div id="modal-personal-e2e" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card"
-            style="max-width:640px;width:94%;max-height:86vh;overflow-y:auto;padding:24px">
+            style="max-width:640px;width:94%;max-height:86vh;overflow-y:auto;padding:24px;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.4)">
             <div
                 style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:14px">
                 <h3
-                    style="font-size:1.25rem;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;color:var(--text-primary)">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)"
-                        stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    style="font-size:1.2rem;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;color:var(--text-primary)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10" />
                         <path d="M12 16v-4" />
                         <path d="M12 8h.01" />
-                    </svg>WhyNotShare Info</h3>
+                    </svg>
+                    <span>WhyNotShare Info</span>
+                </h3>
                 <button id="btn-close-pe2e-modal" class="btn-close-modal" title="Close"><svg width="16" height="16"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -953,121 +1009,191 @@
                         <line x1="6" y1="6" x2="18" y2="18" />
                     </svg></button>
             </div>
+
             <div style="display:flex;flex-direction:column;gap:16px;text-align:left">
-                <!-- What is WhyNotShare Card -->
-                <div
-                    style="padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;display:flex;flex-direction:column;gap:8px">
+                <!-- Section 1: What is WhyNotShare? -->
+                <div class="modal-info-card"
+                    style="padding:18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px;display:flex;flex-direction:column;gap:10px">
                     <div
                         style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.2">
-                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-                            <polyline points="13 2 13 9 20 9" />
-                        </svg>What is WhyNotShare &amp; Why is it Useful?</div>
-                    <div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5">
-                        <span
-                            style="background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;font-size:1.08em;letter-spacing:-0.3px">WhyNotShare</span>
-                        is a lightning-fast, zero-installation Direct Device Share tool. Share unlimited files, photos,
-                        videos, voice clips, and code across any devices (Phones, Laptops, Tablets) instantly over local
-                        WiFi or Peer-to-Peer networks without signups or cloud storage limits.
+                        <svg width="26" height="26" viewBox="0 0 100 100" fill="none" stroke="var(--accent-primary)" style="flex-shrink:0">
+                            <path d="M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z" fill="none" stroke-width="7" stroke-linejoin="round" />
+                            <g transform="translate(34, 34) scale(1.3)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                                <line x1="22" y1="2" x2="11" y2="13" />
+                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </g>
+                        </svg>What is WhyNotShare?</div>
+                    <div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.6">
+                        <span style="background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;font-size:1.05em">WhyNotShare</span>
+                        is a zero-installation, browser-native P2P sharing suite. Connect phones, laptops, or tablets over local Wi-Fi or the open internet with no cloud storage, tracking, or user accounts — data flows directly device-to-device over WebRTC.
                     </div>
-                </div>
-
-                <!-- Always-On E2E Security Card -->
-                <div
-                    style="padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;display:flex;flex-direction:column;gap:8px">
-                    <div
-                        style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>Always-On End-to-End Encryption</div>
-                    <div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5">
-                        Your data never sits on centralized cloud servers. Every text message, image, audio recording,
-                        and file transfer is protected using Web Crypto API (`AES-GCM 256-bit`). Only authorized room
-                        members hold the decryption keys.
-                    </div>
-                </div>
-
-                <!-- Guide to App Controls & Popups Card -->
-                <div
-                    style="padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;display:flex;flex-direction:column;gap:8px">
-                    <div
-                        style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.2">
-                            <path d="M12 2l3 6 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1z" />
-                        </svg>Guide to Controls &amp; Popups</div>
-                    <div
-                        style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5;display:flex;flex-direction:column;gap:8px">
-                        <div style="display:flex;align-items:flex-start;gap:8px">
-                            <span
-                                style="color:var(--text-primary);font-weight:700;line-height:1.5;flex-shrink:0">•</span>
-                            <div><b style="color:var(--text-primary)">Host Manage Panel:</b> The room creator has full
-                                security governance! Click `Host Manage` to lock room entry, set mandatory passphrases,
-                                rotate keys, or export logs.</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));gap:8px;margin-top:4px">
+                        <div class="feature-card-item" style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:flex-start;gap:8px">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <div><b style="color:var(--text-primary)">P2P File Transfer:</b> Chunked streaming (64KB segments) handles multi-gigabyte files without freezing the browser or exhausting memory.</div>
                         </div>
-                        <div style="display:flex;align-items:flex-start;gap:8px">
-                            <span
-                                style="color:var(--text-primary);font-weight:700;line-height:1.5;flex-shrink:0">•</span>
-                            <div><b style="color:var(--text-primary)">QR Code &amp; Copy Link:</b> Instantly invite
-                                peers right from the header without typing long URLs.</div>
+                        <div class="feature-card-item" style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:flex-start;gap:8px">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <div><b style="color:var(--text-primary)">AES-256 E2E:</b> End-to-end encrypted chat and file transfer, powered by the native Web Crypto API.</div>
                         </div>
-                        <div style="display:flex;align-items:flex-start;gap:8px">
-                            <span
-                                style="color:var(--text-primary);font-weight:700;line-height:1.5;flex-shrink:0">•</span>
-                            <div><b style="color:var(--text-primary)">Interactive Media &amp; Voice:</b> Preview
-                                pictures and videos in full-screen lightboxes, play voice notes with custom waveform
-                                seek bars, and download entire batches as `.zip`.</div>
+                        <div class="feature-card-item" style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:flex-start;gap:8px">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <div><b style="color:var(--text-primary)">Host Governance:</b> Room creator gets privileged control: rotate encryption keys and toggle E2E / Plaintext mode live.</div>
+                        </div>
+                        <div class="feature-card-item" style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:flex-start;gap:8px">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            <div><b style="color:var(--text-primary)">Hash-Routed Rooms:</b> Room codes and secret phrases live only in the URL hash fragment — never sent to any server.</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- GitHub & Open Source Project Card -->
-                <div
-                    style="padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;display:flex;flex-direction:column;gap:12px">
-                    <div
-                        style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                        </svg>
-                        Open Source &amp; GitHub
-                    </div>
-                    <div style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5">
-                        <span
-                            style="background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;font-size:1.05em;letter-spacing:-0.2px">WhyNotShare</span>
-                        is 100% open source! Built for secure, private, local network sharing with zero tracking or
-                        telemetry.
-                    </div>
-                    <div
-                        style="display:flex;justify-content:flex-end;align-items:center;padding-top:4px;border-top:1px solid var(--glass-border)">
+                <!-- Open Source / GitHub Card (Shifted right below What is WhyNotShare?) -->
+                <div class="modal-info-card"
+                    style="padding:14px 18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px;display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                        <div style="font-size:0.82rem;color:var(--text-secondary)">
+                            <b style="color:var(--text-primary)">100% Open Source</b> • Built with zero tracking or telemetry.
+                        </div>
                         <a href="https://github.com/prajansrini/whynotshare" target="_blank" rel="noopener noreferrer"
-                            style="background:var(--accent-primary);color:white;padding:8px 18px;border-radius:10px;text-decoration:none;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                <path
-                                    d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                            style="background:var(--accent-primary);color:white;padding:7px 16px;border-radius:10px;text-decoration:none;font-size:0.8rem;font-weight:700;display:inline-flex;align-items:center;gap:6px">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                             </svg>
-                            <span>View on GitHub</span>
+                            <span>GitHub</span>
                         </a>
                     </div>
+                    <div class="feature-card-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:0.78rem">
+                        <span style="color:var(--text-secondary);font-family:monospace;word-break:break-all">https://github.com/prajansrini/whynotshare</span>
+                        <button id="btn-copy-github-repo-link" type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:0.74rem;border-radius:6px;display:inline-flex;align-items:center;gap:4px;flex-shrink:0" title="Copy repository link">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copy</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Recipient Checklist Container -->
-                <div id="personal-recipients-container"
-                    style="display:flex;flex-direction:column;gap:12px;padding:16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px">
-                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:2px">Active connected peers
-                        currently participating in Always-On E2E encryption:</div>
+                <!-- Section 2: Signaling & Relay -->
+                <div class="modal-info-card"
+                    style="padding:18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                        <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                                <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                                <line x1="6" y1="6" x2="6.01" y2="6" />
+                                <line x1="6" y1="18" x2="6.01" y2="18" />
+                            </svg>Signaling &amp; Relay</div>
+                        <span style="font-size:0.75rem;font-weight:700;color:var(--accent-primary);text-transform:uppercase;letter-spacing:0.5px">WEBRTC HANDSHAKE</span>
+                    </div>
+
+                    <div style="font-size:0.83rem;color:var(--text-secondary);line-height:1.55;display:flex;flex-direction:column;gap:8px">
+                        <div>WebRTC needs a brief handshake to exchange connection info (ICE candidates) before peers can talk directly. WhyNotShare supports two signaling paths:</div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;padding-left:4px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Public relay (default):</b> A PeerJS-based signaling broker (<code>0.peerjs.com</code>) is used only for the initial 1–2 second handshake. No file, chat, or media data ever passes through it — once peers are paired, everything moves directly over the encrypted WebRTC data channel.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;padding-left:4px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Local fallback (<code>npm start</code>):</b> For offline LANs or environments where external signaling isn't allowed, run the bundled Node.js server (<code>server.js</code>). It reads your machine's local network interfaces just to print your LAN address (e.g. <code>http://192.168.1.X:7890</code>) to your terminal — this address is never logged to disk, sent externally, or committed anywhere.</div>
+                        </div>
+                    </div>
+
+                    <!-- Server Diagnostics Panel -->
+                    <div class="diagnostic-panel" style="border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                            <div style="display:flex;flex-direction:column;gap:2px">
+                                <span style="font-size:0.78rem;font-weight:700;color:var(--text-primary);text-transform:uppercase;letter-spacing:0.5px">Server Health Diagnostic</span>
+                                <span style="font-size:0.72rem;color:var(--text-tertiary);font-weight:500">Test signaling broker connectivity to 0.peerjs.com</span>
+                            </div>
+                            <button id="btn-test-peerjs-server" class="btn btn-secondary" style="padding:5px 12px;font-size:0.75rem;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                <span>Run Server Diagnostic</span>
+                            </button>
+                        </div>
+                        <div id="peerjs-server-status-pill" class="server-status-pill">
+                            Status: Ready to test connection
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Zero-Knowledge Encryption (AES-GCM 256-bit) -->
+                <div class="modal-info-card"
+                    style="padding:18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px;display:flex;flex-direction:column;gap:10px">
+                    <div
+                        style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>Zero-Knowledge Encryption (AES-GCM 256-bit)</div>
+                    <div style="font-size:0.83rem;color:var(--text-secondary);line-height:1.55;display:flex;flex-direction:column;gap:8px">
+                        <div>All payloads — chat messages and file chunks alike — are encrypted client-side before they ever touch the network, using the browser's native <code>crypto.subtle</code> API:</div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;padding-left:4px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Key derivation:</b> Your passphrase is run through PBKDF2 (SHA-256, 100,000 iterations) with a cryptographic salt to produce a 256-bit symmetric key.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;padding-left:4px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Encryption:</b> Every message and every 64KB file chunk gets its own random 12-byte IV and is sealed with AES-GCM, producing a 16-byte authentication tag.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px;padding-left:4px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Tamper detection:</b> If a chunk is altered or corrupted in transit, GCM authentication fails and the packet is silently discarded before it ever reaches reassembly.</div>
+                        </div>
+                        <div style="margin-top:2px;font-size:0.8rem;color:var(--text-tertiary);font-style:italic">
+                            Keys are derived and held only in browser memory — they are never transmitted, logged, or stored server-side.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Room Control Guide -->
+                <div class="modal-info-card"
+                    style="padding:18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px;display:flex;flex-direction:column;gap:10px">
+                    <div
+                        style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>Room Control Guide</div>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.55;display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Host Governance:</b> The room creator can rotate the encryption passphrase at any time (auto-generated or custom) and switch the whole room between End-to-End Encrypted and Plaintext mode — all peers update instantly without dropping their connection.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Lock Room &amp; Kick Peers:</b> Lock room access from new members or kick unwanted peers anytime from the host governance drawer.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Media &amp; Batch ZIP:</b> Preview shared images/videos full-screen with click-to-zoom and one-key Esc navigation, or download shared files as a `.zip` archive.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">Device Awareness:</b> Peers are shown with icons identifying their OS (Android/iOS/macOS/Windows/Linux) and browser, so you always know who's in the room.</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:8px">
+                            <span style="color:var(--accent-primary);font-weight:700">•</span>
+                            <div><b style="color:var(--text-primary)">QR Code &amp; Copy Link:</b> Share the room instantly via a vector SVG QR code or a copyable hash-routed link.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Connected Peers -->
+                <div id="personal-recipients-container" class="modal-info-card"
+                    style="display:flex;flex-direction:column;gap:12px;padding:18px;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:16px">
+                    <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>Connected Peers
+                    </div>
+                    <div style="font-size:0.83rem;color:var(--text-secondary);line-height:1.55">
+                        Active connected peers currently participating in E2E encryption in this room.
+                    </div>
                     <div
                         style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between">
-                        <span style="display:flex;align-items:center;gap:6px"><svg width="13" height="13"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                                <path d="M16 3.13a4 4 0 010 7.75" />
-                            </svg>AUTHORIZED RECIPIENTS (ALL)</span>
+                        <span>Active Peer Selection</span>
+                        <span id="pe2e-recipient-count" style="color:var(--accent-primary)">0 selected</span>
                     </div>
                     <div id="personal-recipients-list"
                         style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto"></div>

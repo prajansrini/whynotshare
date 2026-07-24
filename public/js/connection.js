@@ -4,6 +4,7 @@ class ConnectionManager {
         this.connections = new Map();
         this.roomCode = null;
         this.isCreator = false;
+        this.isRoomAdmin = false; // Admin privileges (kick, transfer, lock, delete) — can differ from isCreator after host-handoff
         this.isRoomLocked = false;
         this.peers = [];
         this.myInfo = DeviceInfo.detect();
@@ -22,6 +23,47 @@ class ConnectionManager {
         this.onAuditLogSync = null;
         this.kickedPeerIds = new Set();
         this._startHeartbeat();
+    }
+
+    // Returns true if this peer has admin privileges (for UI purposes)
+    isPrivileged() {
+        return Boolean(this.isRoomAdmin);
+    }
+
+    _ensureActiveAdmin() {
+        if (!this.peers || this.peers.length === 0) return;
+        if (!this.isCreator && !this.isRoomAdmin && window.app && !window.app._hasEnteredLiveRoom) {
+            return;
+        }
+        const hasAdmin = this.peers.some(p => p.isAdmin || p.isCreator);
+        if (!hasAdmin) {
+            const hostPeerId = this._roomCodeToPeerId(this.roomCode);
+            const creatorPeer = this.peers.find(p => p.id === hostPeerId);
+            const newAdmin = creatorPeer || this.peers[0];
+            if (newAdmin) {
+                for (const p of this.peers) {
+                    p.isAdmin = (p.id === newAdmin.id);
+                    p.isCreator = (p.id === newAdmin.id);
+                }
+                if (newAdmin.id === this.myPeerId) {
+                    this.isRoomAdmin = true;
+                    if (typeof UI !== 'undefined') UI.toast('You are now the Room Host!', 'success');
+                } else {
+                    this.isRoomAdmin = false;
+                    if (typeof UI !== 'undefined') UI.toast(`${newAdmin.deviceName || 'Member'} is now the Room Host!`, 'info');
+                }
+                if (this.isCreator) {
+                    this._broadcast({ type: 'host-handoff', payload: { targetId: newAdmin.id, adminPeerId: newAdmin.id } });
+                }
+                if (window.app) {
+                    if (window.app.refreshPeerLists) window.app.refreshPeerLists();
+                    if (window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
+                    if (window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
+                } else if (typeof UI !== 'undefined') {
+                    UI.updateDevicesList(this.peers, this.myPeerId);
+                }
+            }
+        }
     }
 
     markKicked(peerId) {
@@ -61,12 +103,15 @@ class ConnectionManager {
         return {
             pingInterval: 5000,
             config: {
+                iceCandidatePoolSize: 10,
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:stun.services.mozilla.com' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
                 ]
             }
         };
@@ -91,12 +136,13 @@ class ConnectionManager {
         const peerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
             const tryOpen = (attempt = 1) => {
-                if (this.peer) { try { this.peer.destroy(); } catch {} }
+                if (this.peer) { try { this.peer.destroy(); } catch { } }
                 this.peer = new Peer(peerId, this._getPeerOptions());
                 this.peer.on('open', (id) => {
                     this.myPeerId = id;
                     this.roomCode = code;
                     this.isCreator = true;
+                    this.isRoomAdmin = true;
                     this.peers = [{ id, ...this.myInfo, isCreator: true }];
                     this.addAuditLog(`Room created (${code})`, 'success');
                     resolve(code);
@@ -123,7 +169,7 @@ class ConnectionManager {
         const newPeerId = this._roomCodeToPeerId(newCode);
         if (this.peer) {
             const oldPeer = this.peer;
-            try { oldPeer.disconnect(); } catch {}
+            try { oldPeer.disconnect(); } catch { }
             const p = new Peer(newPeerId, this._getPeerOptions());
             this.peer = p;
             p.on('open', (id) => {
@@ -146,31 +192,46 @@ class ConnectionManager {
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const hostPeerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
-            if (this.peer) { try { this.peer.destroy(); } catch {} }
+            if (this.peer) { try { this.peer.destroy(); } catch { } }
             this.peer = new Peer(undefined, this._getPeerOptions());
             let settled = false;
             this._joinResolve = (peers) => { if (!settled) { settled = true; resolve(peers); } };
             this._joinReject = (err) => { if (!settled) { settled = true; reject(err); } };
+
+            let attempt = 1;
+            let connected = false;
+            let tryConnect = null;
+
             this.peer.on('open', (id) => {
                 this.myPeerId = id;
                 this.roomCode = code;
                 this.isCreator = false;
-                const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
-                this._onConnOpen(conn, () => {
-                    this._register(conn, hostPeerId);
-                    const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
-                    conn.send({ type: 'peer-info', payload: { id, ...this.myInfo, authHash } });
-                    conn.send({ type: 'request-audit-log-sync' });
-                    this.peers = [
-                        { id: hostPeerId, deviceName: 'Room Host', deviceType: 'laptop', isCreator: true },
-                        { id, ...this.myInfo, isCreator: false }
-                    ];
-                });
-                conn.on('error', () => { if (this._joinReject) this._joinReject(new Error('Connection failed')); });
-                setTimeout(() => { if (this._joinReject) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
+
+                tryConnect = () => {
+                    if (connected || this.peer.destroyed) return;
+                    const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
+                    this._onConnOpen(conn, () => {
+                        connected = true;
+                        this._register(conn, hostPeerId);
+                        const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
+                        conn.send({ type: 'peer-info', payload: { id, ...this.myInfo, authHash } });
+                        conn.send({ type: 'request-audit-log-sync' });
+                        this.peers = [
+                            { id: hostPeerId, deviceName: 'Room Host', deviceType: 'laptop', isCreator: true },
+                            { id, ...this.myInfo, isCreator: false }
+                        ];
+                    });
+                    conn.on('error', () => { if (this._joinReject && !connected) this._joinReject(new Error('Connection failed')); });
+                };
+
+                tryConnect();
+                setTimeout(() => { if (this._joinReject && !connected) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
             });
             this.peer.on('error', (err) => {
-                if (this._joinReject) {
+                if (err && err.type === 'peer-unavailable' && !connected && attempt < 12) {
+                    attempt++;
+                    if (tryConnect) setTimeout(tryConnect, 1000);
+                } else if (this._joinReject && !connected) {
                     this._joinReject(new Error(err && err.type === 'peer-unavailable' ? 'Room not found.' : ((err && err.message) || 'Failed')));
                 }
             });
@@ -181,8 +242,8 @@ class ConnectionManager {
     _handleIncoming(conn) {
         if (this.isRoomLocked) {
             this._onConnOpen(conn, () => {
-                try { conn.send({ type: 'room-locked-error' }); } catch {}
-                setTimeout(() => { try { conn.close(); } catch {} }, 300);
+                try { conn.send({ type: 'room-locked-error' }); } catch { }
+                setTimeout(() => { try { conn.close(); } catch { } }, 300);
             });
             return;
         }
@@ -195,14 +256,14 @@ class ConnectionManager {
         if (!conn) return;
         const oldConn = this.connections.get(peerId);
         if (oldConn && oldConn !== conn) {
-            try { oldConn.close(); } catch {}
+            try { oldConn.close(); } catch { }
         }
         if (conn._isRegistered) return;
         conn._isRegistered = true;
         this.connections.set(peerId, conn);
         conn.on('data', (data) => this._onMessage(data, peerId));
         conn.on('error', (err) => {
-            try { conn.close(); } catch {}
+            try { conn.close(); } catch { }
         });
         conn.on('close', () => {
             if (this.connections.get(peerId) === conn) {
@@ -215,19 +276,56 @@ class ConnectionManager {
             const peer = this.peers.find(p => p.id === peerId);
             this.peers = this.peers.filter(p => p.id !== peerId);
             if (!isKicked && this.onPeerLeft) this.onPeerLeft(peer || { id: peerId, deviceName: 'Member' });
+            this._ensureActiveAdmin();
             if (this.isCreator) {
                 this._broadcast({ type: 'peer-update', payload: [...this.peers] }, peerId);
             }
             if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
             else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
+
+            // Do NOT trigger host migration if a handoff is already in progress
+            if (this._handoffInProgress) return;
+
+            const activeHostConn = this.connections.get(hostId);
+            if (wasHost && !this.isCreator && !isKicked && (!activeHostConn || !activeHostConn.open)) {
+                this._handleHostMigration();
+            }
         });
+    }
+
+    _handleHostMigration() {
+        if (this._handoffInProgress) return;
+        if (!this.peers || this.peers.length === 0) return;
+
+        // Find the Backup Host (the first peer in the list that is not the old host)
+        const hostId = this._roomCodeToPeerId(this.roomCode);
+        const nextHost = this.peers.find(p => p.id !== hostId);
+
+        if (nextHost && nextHost.id === this.myPeerId) {
+            // I am the new Backup Host! Promoted.
+            if (typeof UI !== 'undefined') UI.toast('Host disconnected. You are the new Host!', 'info');
+            this.isCreator = true;
+
+            // Re-register as the Host ID
+            if (this.peer) this.peer.destroy();
+            setTimeout(() => {
+                this._claimHostId(hostId);
+            }, 1500); // Wait for the old host's ID to be fully released by the PeerJS server
+        } else if (nextHost) {
+            // I am a regular peer. Wait and reconnect to the new Host.
+            if (typeof UI !== 'undefined') UI.toast('Host disconnected. Reconnecting to new Host...', 'info');
+            if (this.peer) this.peer.destroy();
+            setTimeout(() => {
+                this.joinRoom(this.roomCode);
+            }, 3000); // Give the new Host time to claim the ID
+        }
     }
 
     async _onMessage(data, fromId) {
         switch (data.type) {
             case 'ping': {
                 const c = this.connections.get(fromId);
-                if (c && c.open) { try { c.send({ type: 'pong', payload: { time: Date.now() } }); } catch {} }
+                if (c && c.open) { try { c.send({ type: 'pong', payload: { time: Date.now() } }); } catch { } }
                 break;
             }
             case 'pong': {
@@ -241,8 +339,8 @@ class ConnectionManager {
                         const reason = !payload.authHash ? 'Room Key required! This room is encrypted.' : 'Incorrect Room Key! Access denied.';
                         const c = this.connections.get(fromId);
                         if (c && c.open) {
-                            try { c.send({ type: 'join-rejected', payload: { reason } }); } catch {}
-                            setTimeout(() => { try { c.close(); } catch {} }, 300);
+                            try { c.send({ type: 'join-rejected', payload: { reason } }); } catch { }
+                            setTimeout(() => { try { c.close(); } catch { } }, 300);
                         }
                         this.connections.delete(fromId);
                         break;
@@ -262,8 +360,8 @@ class ConnectionManager {
                 if (this.isCreator && this.isRoomLocked && !ex) {
                     const c = this.connections.get(fromId);
                     if (c && (c.open || c._open)) {
-                        try { c.send({ type: 'room-locked-error' }); } catch {}
-                        setTimeout(() => { try { c.close(); } catch {} }, 300);
+                        try { c.send({ type: 'room-locked-error' }); } catch { }
+                        setTimeout(() => { try { c.close(); } catch { } }, 300);
                     }
                     return;
                 }
@@ -271,7 +369,7 @@ class ConnectionManager {
                 if (staleGhost) {
                     const oldConn = this.connections.get(staleGhost.id);
                     if (oldConn) {
-                        try { oldConn.close(); } catch {}
+                        try { oldConn.close(); } catch { }
                         this.connections.delete(staleGhost.id);
                     }
                     this.peers = this.peers.filter(p => p.id !== staleGhost.id);
@@ -282,12 +380,12 @@ class ConnectionManager {
                 if (this.isCreator) {
                     const c = this.connections.get(fromId);
                     if (c && (c.open || c._open)) {
-                        try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch {}
-                        try { c.send({ type: 'peer-update', payload: [...this.peers] }); } catch {}
-                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
-                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
-                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 800);
-                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 1500);
+                        try { c.send({ type: 'host-info', payload: { id: this.myPeerId, ...this.myInfo, isCreator: true } }); } catch { }
+                        try { c.send({ type: 'peer-update', payload: [...this.peers] }); } catch { }
+                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { }
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 300);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 800);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 1500);
                     }
                     this._broadcast({ type: 'peer-update', payload: [...this.peers] }, fromId);
                     if (this.onSyncRequest) {
@@ -323,22 +421,24 @@ class ConnectionManager {
                     this._joinReject = null;
                     this._joinResolve = null;
                 }
-                if (this.peer) { try { this.peer.destroy(); } catch {} }
+                if (this.peer) { try { this.peer.destroy(); } catch { } }
                 break;
             }
             case 'peer-update': {
-                const oldHost = (this.peers || []).find(p => p.isCreator);
+                const oldHost = (this.peers || []).find(p => p.isCreator || p.isAdmin);
                 this.peers = (Array.isArray(data.payload) ? data.payload : []).map(p => ({
                     deviceName: 'Member Device',
                     deviceType: 'laptop',
                     ...p
                 }));
-                const newHost = (this.peers || []).find(p => p.isCreator);
+                const newHost = (this.peers || []).find(p => p.isCreator || p.isAdmin);
                 if (oldHost && newHost && oldHost.id !== newHost.id && typeof UI !== 'undefined') {
                     UI.toast(`${newHost.deviceName || 'Admin'} is now the Room Host!`, 'info');
                 }
-                if (!this.peers.find(p => p.id === this.myPeerId))
-                    this.peers.push({ id: this.myPeerId, ...this.myInfo, isCreator: false });
+                if (!this.peers.find(p => p.id === this.myPeerId)) {
+                    this.peers.push({ id: this.myPeerId, ...this.myInfo, isCreator: false, isAdmin: false });
+                }
+                this._ensureActiveAdmin();
                 if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
                 else UI.updateDevicesList(this.peers, this.myPeerId);
                 break;
@@ -347,12 +447,13 @@ class ConnectionManager {
                 const leavingId = (data.payload && data.payload.id) || fromId;
                 const c = this.connections.get(leavingId);
                 if (c) {
-                    try { c.close(); } catch {}
+                    try { c.close(); } catch { }
                     this.connections.delete(leavingId);
                 }
                 const peer = this.peers.find(p => p.id === leavingId);
                 this.peers = this.peers.filter(p => p.id !== leavingId);
                 if (this.onPeerLeft) this.onPeerLeft(peer || { id: leavingId, deviceName: (data.payload && data.payload.deviceName) || 'Member' });
+                this._ensureActiveAdmin();
                 if (this.isCreator) {
                     this._broadcast({ type: 'peer-update', payload: [...this.peers] }, leavingId);
                 }
@@ -399,8 +500,8 @@ class ConnectionManager {
             case 'text': {
                 const sid = data.payload.senderId || fromId;
                 if (sid === this.myPeerId) break;
-                if (this.onTextReceived) this.onTextReceived({ ...data.payload, id: data.payload.id, from: sid, encrypted: data.payload.encrypted, timestamp: data.payload.timestamp, raw: data.payload.raw });
-                if (this.isCreator) this._broadcast({ type: 'text', payload: data.payload }, fromId);
+                if (this.onTextReceived) this.onTextReceived({ ...data.payload, from: sid });
+                if (this.isCreator) this._broadcast({ type: 'text', payload: { ...data.payload, senderId: sid } }, fromId);
                 break;
             }
             case 'file-meta': case 'file-chunk': case 'file-complete': case 'file-cancel':
@@ -456,9 +557,9 @@ class ConnectionManager {
                 if (this.isCreator) {
                     const c = this.connections.get(fromId);
                     if (c && (c.open || c._open)) {
-                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {}
-                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 300);
-                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch {} }, 800);
+                        try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { }
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 300);
+                        setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 800);
                     }
                 }
                 break;
@@ -466,49 +567,52 @@ class ConnectionManager {
             case 'kick-peer': {
                 if (data.payload.targetId === this.myPeerId) {
                     if (typeof UI !== 'undefined') UI.toast('You were removed by the host.', 'error');
-                    if (window.app && window.app.leaveRoom) window.app.leaveRoom();
+                    if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
                 } else if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
                 break;
             }
-            case 'promote-admin': {
-                const target = this.peers.find(p => p.id === data.payload.targetId);
-                if (target) target.isAdmin = true;
-                if (data.payload.targetId === this.myPeerId) {
-                    this.isAdmin = true;
-                    if (typeof UI !== 'undefined') UI.toast('You have been promoted to Admin!', 'success');
-                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
-                } else if (this.isCreator) {
+            case 'host-handoff': {
+                const targetId = data.payload.targetId;
+                const adminPeerId = data.payload.adminPeerId || targetId;
+
+                // Purely logical transfer — NO peer destruction, NO reconnection.
+                // The network creator continues relaying packets. Admin privileges shift.
+
+                for (const p of this.peers) {
+                    p.isAdmin = (p.id === adminPeerId);
+                    p.isCreator = (p.id === adminPeerId); // For display badge compatibility
+                }
+
+                if (this.myPeerId === adminPeerId) {
+                    this.isRoomAdmin = true;
+                    if (typeof UI !== 'undefined') UI.toast('You have been promoted to Room Admin!', 'success');
+                } else {
+                    this.isRoomAdmin = false;
+                }
+
+                if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
-                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
-                else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
-                if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
-                break;
-            }
-            case 'demote-admin': {
-                const target = this.peers.find(p => p.id === data.payload.targetId);
-                if (target) target.isAdmin = false;
-                if (data.payload.targetId === this.myPeerId) {
-                    this.isAdmin = false;
-                    if (typeof UI !== 'undefined') UI.toast('Your Admin privileges were removed by the Host.', 'info');
-                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
-                } else if (this.isCreator) {
-                    if (data.payload.targetId === fromId) {
-                        const senderName = (target && target.deviceName) ? target.deviceName : 'An Admin';
-                        this.addAuditLog(`${senderName} stepped down from Admin`, 'sec');
-                    }
-                    this._broadcast(data, fromId);
+
+                if (window.app) {
+                    window.app._hasEnteredLiveRoom = true;
+                    if (window.app.refreshPeerLists) window.app.refreshPeerLists();
+                    if (window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
+                    if (window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
+                } else if (typeof UI !== 'undefined') {
+                    UI.updateDevicesList(this.peers, this.myPeerId);
                 }
-                if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
-                else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
-                if (window.app && window.app.renderHostMembersList) window.app.renderHostMembersList();
+
                 break;
             }
             case 'room-deleted': {
+                if (this.isCreator) {
+                    this._broadcast(data, fromId);
+                }
                 if (typeof UI !== 'undefined') UI.toast('The room was deleted by the host.', 'error');
-                if (window.app && window.app.leaveRoom) window.app.leaveRoom();
+                if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
                 break;
             }
             case 'share-personal-key': {
@@ -518,8 +622,12 @@ class ConnectionManager {
                         window.app.crypto.importPeerPersonalKey(actualSender, data.payload.keyStr);
                     }
                 }
-                if (this.isCreator && data.payload.targetId && data.payload.targetId !== this.myPeerId) {
-                    this.sendDirect(data.payload.targetId, { ...data, payload: { ...data.payload, senderId: actualSender } });
+                if (this.isCreator) {
+                    if (!data.payload.targetId) {
+                        this._broadcast({ ...data, payload: { ...data.payload, senderId: actualSender } }, fromId);
+                    } else if (data.payload.targetId !== this.myPeerId) {
+                        this.sendDirect(data.payload.targetId, { ...data, payload: { ...data.payload, senderId: actualSender } });
+                    }
                 }
                 break;
             }
@@ -528,7 +636,7 @@ class ConnectionManager {
                     this._joinReject(new Error('Room is currently locked by the host.'));
                 }
                 if (typeof UI !== 'undefined') UI.toast('Room is currently locked by the host. New members cannot join.', 'error');
-                if (window.app && window.app.leaveRoom) window.app.leaveRoom();
+                if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
                 break;
             }
             case 'room-lock-changed': {
@@ -599,7 +707,7 @@ class ConnectionManager {
                         continue;
                     }
                 }
-                try { conn.send(message); } catch (e) {}
+                try { conn.send(message); } catch (e) { }
             }
         }
     }
@@ -616,13 +724,16 @@ class ConnectionManager {
     }
 
     scheduleHostSuccession(delayMs = 5000) {
-        if (this._successionTimer) return;
+        if (this._handoffInProgress) return;
+        if (this._successionTimer || this.isCreator) return;
         if (typeof UI !== 'undefined') {
             UI.toast('Host left. Waiting 5s for host to rejoin...', 'warning');
         }
         this._successionTimer = setTimeout(() => {
             this._successionTimer = null;
-            this._handleHostSuccession();
+            if (!this.isCreator) {
+                this._handleHostSuccession();
+            }
         }, delayMs);
     }
 
@@ -634,49 +745,18 @@ class ConnectionManager {
     }
 
     _handleHostSuccession() {
-        if (!this.peers || this.peers.length === 0 || !this.roomCode) return;
+        if (this.isCreator || !this.peers || this.peers.length === 0 || !this.roomCode) return;
         const hostPeerId = this._roomCodeToPeerId(this.roomCode);
         const remainingPeers = this.peers.filter(p => p.id !== hostPeerId);
         if (remainingPeers.length === 0) return;
-        const admins = remainingPeers.filter(p => p.isAdmin);
+        const admins = [];
         const heir = admins.length > 0 ? admins[0] : remainingPeers[0];
 
         const isMeHeir = (heir && (heir.id === this.myPeerId || heir.deviceName === this.myInfo.deviceName));
         if (isMeHeir) {
-            const claimHost = (attempt = 1) => {
-                const oldPeer = this.peer;
-                if (oldPeer && !oldPeer.destroyed) { try { oldPeer.destroy(); } catch {} }
-                this.peer = new Peer(hostPeerId, this._getPeerOptions());
-                this.peer.on('open', (id) => {
-                    this.myPeerId = id;
-                    this.isCreator = true;
-                    this.isAdmin = true;
-                    this.peers = this.peers.filter(p => p.id !== hostPeerId);
-                    const me = this.peers.find(p => p.deviceName === this.myInfo.deviceName || p.id === heir.id);
-                    if (me) {
-                        me.id = id; me.isCreator = true; me.isAdmin = true;
-                    } else {
-                        this.peers.unshift({ id: id, ...this.myInfo, isCreator: true, isAdmin: true });
-                    }
-                    this._broadcast({ type: 'peer-update', payload: this.peers });
-                    if (typeof UI !== 'undefined') {
-                        UI.toast('You are now the Room Host!', 'success');
-                    }
-                    if (window.app && window.app.refreshPeerLists) window.app.refreshPeerLists();
-                    else if (typeof UI !== 'undefined') UI.updateDevicesList(this.peers, this.myPeerId);
-                    if (window.app && window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
-                    if (window.app && window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
-                });
-                this.peer.on('connection', (conn) => this._handleIncoming(conn));
-                this.peer.on('error', (err) => {
-                    if (attempt <= 15) {
-                        setTimeout(() => claimHost(attempt + 1), 1500);
-                    }
-                });
-            };
-            setTimeout(() => claimHost(1), 300);
+            this._claimHostId(hostPeerId, heir);
         } else if (heir) {
-            if (typeof UI !== 'undefined') UI.toast(`${heir.deviceName || 'Admin'} is becoming the new Host...`, 'info');
+            if (typeof UI !== 'undefined') UI.toast(`${heir.deviceName || 'Member'} is becoming the new Host...`, 'info');
             const connectToNewHost = (attempt = 1) => {
                 if (!this.roomCode || attempt > 15) return;
                 const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
@@ -698,13 +778,56 @@ class ConnectionManager {
         }
     }
 
+    _claimHostId(hostPeerId, heir = null) {
+        const tryClaim = (attempt = 1) => {
+            const oldPeer = this.peer;
+            if (oldPeer && !oldPeer.destroyed) { try { oldPeer.destroy(); } catch { } }
+            this.peer = new Peer(hostPeerId, this._getPeerOptions());
+            this.peer.on('open', (id) => {
+                this.myPeerId = id;
+                this.isCreator = true;
+                this._handoffInProgress = false;
+                this.peers = this.peers.filter(p => p.id !== hostPeerId);
+                const me = this.peers.find(p => p.deviceName === this.myInfo.deviceName || (heir && p.id === heir.id));
+                if (me) {
+                    me.id = id; me.isCreator = true;
+                } else {
+                    this.peers.unshift({ id: id, ...this.myInfo, isCreator: true });
+                }
+                if (typeof UI !== 'undefined') {
+                    UI.toast('You are now the Room Host!', 'success');
+                }
+                if (window.app) {
+                    window.app._hasEnteredLiveRoom = true;
+                    if (window.app.refreshPeerLists) window.app.refreshPeerLists();
+                    if (window.app.updatePrivilegeUI) window.app.updatePrivilegeUI();
+                    if (window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
+                } else if (typeof UI !== 'undefined') {
+                    UI.updateDevicesList(this.peers, this.myPeerId);
+                }
+                this._startHeartbeat();
+            });
+            this.peer.on('connection', (conn) => this._handleIncoming(conn));
+            this.peer.on('error', (err) => {
+                if (err && err.type === 'unavailable-id' && attempt <= 10) {
+                    setTimeout(() => tryClaim(attempt + 1), 1500);
+                } else if (attempt <= 10) {
+                    setTimeout(() => tryClaim(attempt + 1), 1500);
+                }
+            });
+            this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });
+        };
+        tryClaim(1);
+    }
+
     _startHeartbeat() {
         if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
         this._heartbeatInterval = setInterval(() => {
+            if (this._handoffInProgress) return;
             if (!this.peer || this.peer.destroyed) return;
-            if (this.peer.disconnected) { try { this.peer.reconnect(); } catch {} }
+            if (this.peer.disconnected) { try { this.peer.reconnect(); } catch { } }
             for (const [peerId, conn] of this.connections.entries()) {
-                if (conn && conn.open) { try { conn.send({ type: 'ping', payload: { time: Date.now() } }); } catch {} }
+                if (conn && conn.open) { try { conn.send({ type: 'ping', payload: { time: Date.now() } }); } catch { } }
             }
             if (!this.isCreator && this.roomCode) {
                 const hostPeerId = this._roomCodeToPeerId(this.roomCode);
@@ -717,6 +840,7 @@ class ConnectionManager {
     }
 
     _reconnectToHost() {
+        if (this._handoffInProgress) return;
         if (!this.roomCode || !this.peer || this.peer.destroyed || this._reconnecting) return;
         this._reconnecting = true;
         setTimeout(() => { this._reconnecting = false; }, 4000);
@@ -729,31 +853,40 @@ class ConnectionManager {
                 const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
                 conn.send({ type: 'peer-info', payload: { id: this.myPeerId, ...this.myInfo, authHash } });
             });
-        } catch {}
+        } catch { }
     }
 
-    leaveRoom(isUnload = false) {
+    leaveRoom(isUnload = false, deleteRoom = false) {
         if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
-        try {
-            this._broadcast({ type: 'peer-leaving', payload: { id: this.myPeerId, deviceName: this.myInfo ? this.myInfo.deviceName : 'Member' } });
-        } catch {}
-        if (this.isCreator) {
-            try { this._broadcast({ type: 'host-leaving' }); } catch {}
+        if (deleteRoom) {
+            const delMsg = { type: 'room-deleted' };
+            if (this.isCreator) {
+                try { this._broadcast(delMsg); } catch { }
+            } else if (this.roomCode) {
+                try {
+                    const hostId = this._roomCodeToPeerId(this.roomCode);
+                    this.sendDirect(hostId, delMsg);
+                } catch { }
+            }
+        } else {
+            try {
+                this._broadcast({ type: 'peer-leaving', payload: { id: this.myPeerId, deviceName: this.myInfo ? this.myInfo.deviceName : 'Member' } });
+            } catch { }
         }
         this.auditLogs = [];
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const cleanup = () => {
-            for (const conn of this.connections.values()) { try { conn.close(); } catch {} }
+            for (const conn of this.connections.values()) { try { conn.close(); } catch { } }
             this.connections.clear();
-            if (this.peer) { try { this.peer.destroy(); } catch {} this.peer = null; }
-            this.roomCode = null; this.isCreator = false; this.peers = []; this.myPeerId = null;
+            if (this.peer) { try { this.peer.destroy(); } catch { } this.peer = null; }
+            this.roomCode = null; this.isCreator = false; this.isRoomAdmin = false; this.peers = []; this.myPeerId = null;
             this.auditLogs = [];
         };
         if (isUnload) {
             cleanup();
         } else {
-            setTimeout(cleanup, 150);
+            setTimeout(cleanup, 300);
         }
     }
 

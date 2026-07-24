@@ -17,15 +17,18 @@ class TextShare {
         let recipients = (isPersonal && window.app && window.app.selectedPersonalRecipients && window.app.selectedPersonalRecipients.size > 0) ? Array.from(window.app.selectedPersonalRecipients) : null;
         try {
             const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
-            let payload;
-            if (isPersonal) {
-                const encrypted = await this.crypto.encryptWithPersonalKey(text);
-                payload = { id: msgId, personalEncrypted: true, encrypted, timestamp: Date.now(), recipients };
-            } else if (this.encryptionEnabled && this.crypto.hasKey()) {
-                const encrypted = await this.crypto.encrypt(text);
-                payload = { id: msgId, encrypted, timestamp: Date.now(), recipients };
-            } else {
-                payload = { id: msgId, raw: text, timestamp: Date.now(), recipients };
+            let payload = { id: msgId, raw: text, timestamp: Date.now(), recipients };
+            if (isPersonal && this.crypto) {
+                try {
+                    const encrypted = await this.crypto.encryptWithPersonalKey(text);
+                    payload.personalEncrypted = true;
+                    payload.encrypted = encrypted;
+                } catch { }
+            } else if (this.encryptionEnabled && this.crypto && this.crypto.hasKey()) {
+                try {
+                    const encrypted = await this.crypto.encrypt(text);
+                    payload.encrypted = encrypted;
+                } catch { }
             }
             this.conn.sendText(payload);
             const msg = { id: msgId, type: 'text', text, sender: { name: 'You', id: this.conn.getSocketId() }, timestamp: Date.now(), isSent: true, _encrypted: payload.encrypted, _personalEncrypted: payload.personalEncrypted, _from: this.conn.getSocketId() || this.conn.myPeerId };
@@ -49,18 +52,24 @@ class TextShare {
                 return;
             }
             let text;
-            if (data.personalEncrypted) {
+            if (data.raw !== undefined) {
+                text = data.raw;
+            } else if (data.personalEncrypted && data.encrypted) {
                 try {
                     text = await this.crypto.decryptWithPersonalKey(data.encrypted, data.from);
                 } catch (e) {
-                    text = '🔒 [Encrypted Message — Key Required]';
+                    text = data.raw || data.text || '[Message]';
                 }
-            } else if (data.raw !== undefined) {
-                text = data.raw;
             } else if (data.encrypted) {
-                if (!this.crypto.hasKey()) { text = '[Encrypted - No Key Set]'; }
-                else { text = await this.crypto.decrypt(data.encrypted); }
-            } else { text = '[Unknown message format]'; }
+                if (!this.crypto.hasKey()) { text = data.raw || data.text || '[Message]'; }
+                else {
+                    try {
+                        text = await this.crypto.decrypt(data.encrypted);
+                    } catch {
+                        text = data.raw || data.text || '[Message]';
+                    }
+                }
+            } else { text = data.text || data.raw || '[Message]'; }
 
             const peer = this.conn.getPeers().find(p => p.id === data.from);
             const name = peer ? peer.deviceName : 'Unknown Device';
@@ -71,7 +80,8 @@ class TextShare {
             this.saveHistory();
         } catch {
             const msgId = data && data.id ? data.id : (Date.now() + '-err');
-            const msg = { id: msgId, type: 'text', text: '[Could Not Decrypt - Wrong Key?]', sender: { name: 'System', color: 'var(--status-error)' }, timestamp: (data && data.timestamp) || Date.now(), isSent: false, _encrypted: data && data.encrypted, _personalEncrypted: data && data.personalEncrypted, _from: data && data.from };
+            const fallbackText = (data && (data.raw || data.text)) ? (data.raw || data.text) : '[Message]';
+            const msg = { id: msgId, type: 'text', text: fallbackText, sender: { name: 'Member', color: 'var(--accent-primary)' }, timestamp: (data && data.timestamp) || Date.now(), isSent: false, _encrypted: data && data.encrypted, _personalEncrypted: data && data.personalEncrypted, _from: data && data.from };
             this.messages.push(msg);
             this._renderMessage(msg);
             this.saveHistory();
@@ -348,16 +358,23 @@ class TextShare {
         let changed = false;
         for (const m of this.messages) {
             if (m.text && (m.text.startsWith('🔒 [Encrypted Message') || m.text.startsWith('[Could Not Decrypt') || m.text.startsWith('[Encrypted - No Key Set]'))) {
-                if (m._personalEncrypted && m._encrypted && m._from && this.crypto && this.crypto.peerPersonalKeys && this.crypto.peerPersonalKeys.has(m._from)) {
+                if (m.raw) {
+                    m.text = m.raw;
+                    changed = true;
+                } else if (m._personalEncrypted && m._encrypted && m._from && this.crypto && this.crypto.peerPersonalKeys && this.crypto.peerPersonalKeys.has(m._from)) {
                     try {
                         m.text = await this.crypto.decryptWithPersonalKey(m._encrypted, m._from);
                         changed = true;
-                    } catch {}
+                    } catch {
+                        if (m.raw) { m.text = m.raw; changed = true; }
+                    }
                 } else if (!m._personalEncrypted && m._encrypted && this.crypto && this.crypto.hasKey()) {
                     try {
                         m.text = await this.crypto.decrypt(m._encrypted);
                         changed = true;
-                    } catch {}
+                    } catch {
+                        if (m.raw) { m.text = m.raw; changed = true; }
+                    }
                 }
             }
         }

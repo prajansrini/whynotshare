@@ -21,10 +21,32 @@ class DeviceInfo {
     }
 
     static getBrowser(ua) {
-        if (/Edg\//i.test(ua)) return 'Edge';
-        if (/OPR\//i.test(ua) || /Opera/i.test(ua)) return 'Opera';
-        if (/Firefox\//i.test(ua)) return 'Firefox';
-        if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) return 'Chrome';
+        // In-app webviews first (most specific, would otherwise register as Chrome/Safari)
+        if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook';
+        if (/Instagram/i.test(ua)) return 'Instagram';
+        if (/MicroMessenger/i.test(ua)) return 'WeChat';
+        if (/Line\//i.test(ua)) return 'LINE';
+        if (/TikTok/i.test(ua)) return 'TikTok';
+
+        // Brave (must precede Chrome check — UA string itself just says Chrome)
+        if (typeof window !== 'undefined' && (window.navigator.brave || (navigator.userAgentData && navigator.userAgentData.brands && navigator.userAgentData.brands.some(b => /Brave/i.test(b.brand))))) return 'Brave';
+
+        if (/Zen\//i.test(ua) || /ZenBrowser/i.test(ua)) return 'Zen';
+        if (/Vivaldi\//i.test(ua)) return 'Vivaldi';
+        if (/TorBrowser|Tor\//i.test(ua)) return 'Tor';
+        if (/Arc\//i.test(ua)) return 'Arc';
+        if (/SamsungBrowser\//i.test(ua)) return 'Samsung Internet';
+        if (/UCBrowser\//i.test(ua) || /UCWEB/i.test(ua)) return 'UC Browser';
+        if (/YaBrowser\//i.test(ua)) return 'Yandex';
+        if (/DuckDuckGo\//i.test(ua)) return 'DuckDuckGo';
+        if (/HuaweiBrowser\//i.test(ua)) return 'Huawei Browser';
+        if (/MiuiBrowser\//i.test(ua)) return 'Mi Browser';
+        if (/QQBrowser\//i.test(ua)) return 'QQ Browser';
+        if (/Silk\//i.test(ua)) return 'Silk';
+        if (/OPR\//i.test(ua) || /Opera/i.test(ua) || /OPiOS\//i.test(ua)) return 'Opera';
+        if (/Edg\//i.test(ua) || /EdgA\//i.test(ua) || /EdgiOS\//i.test(ua)) return 'Edge';
+        if (/Firefox\//i.test(ua) || /FxiOS\//i.test(ua)) return 'Firefox';
+        if (/CriOS\//i.test(ua) || (/Chrome\//i.test(ua) && !/Edg\//i.test(ua))) return 'Chrome';
         if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) return 'Safari';
         return 'Browser';
     }
@@ -33,9 +55,21 @@ class DeviceInfo {
         if (/Windows/i.test(ua)) return 'Windows';
         if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
         if (/Mac/i.test(ua)) return 'macOS';
+        if (/HarmonyOS/i.test(ua)) return 'HarmonyOS';
         if (/Android/i.test(ua)) return 'Android';
-        if (/Linux/i.test(ua)) return 'Linux';
         if (/CrOS/i.test(ua)) return 'ChromeOS';
+        if (/KaiOS/i.test(ua)) return 'KaiOS';
+        if (/Ubuntu/i.test(ua)) return 'Ubuntu';
+        if (/Mint/i.test(ua)) return 'Linux Mint';
+        if (/Fedora/i.test(ua)) return 'Fedora';
+        if (/Arch/i.test(ua)) return 'Arch Linux';
+        if (/Debian/i.test(ua)) return 'Debian';
+        if (/Manjaro/i.test(ua)) return 'Manjaro';
+        if (/Pop!_OS|Pop_OS|PopOS/i.test(ua)) return 'Pop!_OS';
+        if (/openSUSE|SUSE/i.test(ua)) return 'openSUSE';
+        if (/CentOS/i.test(ua)) return 'CentOS';
+        if (/Red Hat|RHEL/i.test(ua)) return 'Red Hat';
+        if (/Linux/i.test(ua)) return 'Linux';
         return 'Unknown';
     }
 

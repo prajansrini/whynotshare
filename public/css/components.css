@@ -1587,21 +1587,33 @@ body.light-theme #btn-host-manage {
     }
 }
 
-/* --- Landing Screen Theme Toggle Placement --- */
+/* --- Landing Screen Actions (Info & Theme Toggle) --- */
 @media (min-width: 601px) {
-    #screen-landing #btn-theme-toggle {
+    #screen-landing .landing-header-actions {
         position: fixed !important;
         top: 24px !important;
         right: 28px !important;
         z-index: 10000;
+        display: flex !important;
+        gap: 10px !important;
+        align-items: center !important;
     }
 }
 @media (max-width: 600px) {
-    #screen-landing #btn-theme-toggle {
+    #screen-landing .landing-header-actions {
         position: absolute !important;
         top: 16px !important;
         right: 16px !important;
+        z-index: 10000;
+        display: flex !important;
+        gap: 8px !important;
+        align-items: center !important;
     }
+}
+
+#screen-landing #btn-theme-toggle,
+#screen-landing #btn-landing-info {
+    position: static !important;
 }
 
 /* ==========================================================================
