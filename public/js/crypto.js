@@ -175,17 +175,31 @@ class CryptoManager {
     }
 
     _bufToBase64(buffer) {
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        return btoa(binary);
+        if (!buffer) return '';
+        try {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+            }
+            return btoa(binary);
+        } catch (e) {
+            return '';
+        }
     }
 
     _base64ToBuf(base64) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return bytes.buffer;
+        if (!base64 || typeof base64 !== 'string') return new ArrayBuffer(0);
+        try {
+            const clean = base64.trim().replace(/\s/g, '');
+            const binary = atob(clean);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes.buffer;
+        } catch (e) {
+            return new ArrayBuffer(0);
+        }
     }
 
     getPhrase() { return this.phrase; }
@@ -315,6 +329,17 @@ class CryptoManager {
             const dec = this._fallbackCrypt(ciphertextBuf, new Uint8Array(ivBuf), peerKey);
             return new TextDecoder().decode(dec);
         }
+    }
+
+    getSecurityDiagnostics() {
+        return {
+            mode: this.key ? 'AES-256-GCM' : 'Plaintext',
+            cipher: 'AES-GCM-256',
+            kdf: 'PBKDF2-SHA256',
+            iterations: 100000,
+            hasSubtle: this.hasSubtle,
+            rotationCount: this.rotationCount || 0
+        };
     }
 }
 

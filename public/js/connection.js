@@ -31,7 +31,9 @@ class ConnectionManager {
     }
 
     _ensureActiveAdmin() {
+        if (this._isLeaving) return;
         if (!this.peers || this.peers.length === 0) return;
+        if (!this.roomCode) return;
         if (!this.isCreator && !this.isRoomAdmin && window.app && !window.app._hasEnteredLiveRoom) {
             return;
         }
@@ -39,6 +41,7 @@ class ConnectionManager {
         if (!hasAdmin) {
             const hostPeerId = this._roomCodeToPeerId(this.roomCode);
             const creatorPeer = this.peers.find(p => p.id === hostPeerId);
+            // The oldest remaining member is this.peers[0]
             const newAdmin = creatorPeer || this.peers[0];
             if (newAdmin) {
                 for (const p of this.peers) {
@@ -47,10 +50,16 @@ class ConnectionManager {
                 }
                 if (newAdmin.id === this.myPeerId) {
                     this.isRoomAdmin = true;
-                    if (typeof UI !== 'undefined') UI.toast('You are now the Room Host!', 'success');
+                    if (typeof UI !== 'undefined' && !this._isLeaving && window.app && window.app._hasEnteredLiveRoom) {
+                        UI.toast('You are now the Room Host!', 'success');
+                    }
+                    this.addAuditLog('You are now the Room Host', 'success');
                 } else {
                     this.isRoomAdmin = false;
-                    if (typeof UI !== 'undefined') UI.toast(`${newAdmin.deviceName || 'Member'} is now the Room Host!`, 'info');
+                    if (typeof UI !== 'undefined' && !this._isLeaving && window.app && window.app._hasEnteredLiveRoom) {
+                        UI.toast(`${newAdmin.deviceName || 'Member'} is now the Room Host!`, 'info');
+                    }
+                    this.addAuditLog(`${newAdmin.deviceName || 'Member'} is now the Room Host`, 'success');
                 }
                 if (this.isCreator) {
                     this._broadcast({ type: 'host-handoff', payload: { targetId: newAdmin.id, adminPeerId: newAdmin.id } });
@@ -71,18 +80,23 @@ class ConnectionManager {
     }
 
     addAuditLog(text, category = 'info', skipForward = false) {
-        if (this.auditLogs.length > 0 && this.auditLogs[0].text === text && (Date.now() - (this.auditLogs[0].time || 0)) < 2000) {
+        if (!text || typeof text !== 'string' || !text.trim()) return null;
+        const cleanText = text.trim();
+        
+        // Deduplicate identical log entries within a 5-second window
+        if (this.auditLogs.length > 0 && this.auditLogs[0].text === cleanText && (Date.now() - (this.auditLogs[0].time || 0)) < 5000) {
             return this.auditLogs[0];
         }
-        const entry = { time: Date.now(), text, category };
+        
+        const entry = { time: Date.now(), text: cleanText, category };
         this.auditLogs.unshift(entry);
         if (this.auditLogs.length > 500) this.auditLogs = this.auditLogs.slice(0, 500);
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
-        if (this.isCreator) {
+        if (this.isCreator || this.isRoomAdmin) {
             this._broadcast({ type: 'audit-log-sync', payload: this.auditLogs });
         } else if (this.roomCode && !skipForward) {
-            this.sendDirect(this._roomCodeToPeerId(this.roomCode), { type: 'client-audit-log', payload: { text, category } });
+            this.sendDirect(this._roomCodeToPeerId(this.roomCode), { type: 'client-audit-log', payload: { text: cleanText, category } });
         }
         return entry;
     }
@@ -100,7 +114,9 @@ class ConnectionManager {
     }
 
     _getPeerOptions() {
-        return {
+        const isHttps = window.location.protocol === 'https:';
+        const opts = {
+            secure: isHttps,
             pingInterval: 5000,
             config: {
                 iceCandidatePoolSize: 10,
@@ -111,10 +127,30 @@ class ConnectionManager {
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' },
                     { urls: 'stun:stun.services.mozilla.com' },
-                    { urls: 'stun:global.stun.twilio.com:3478' }
+                    { urls: 'stun:global.stun.twilio.com:3478' },
+                    // OpenRelay Free TURN Relay Servers for Cross-Network / Cellular 4G/5G / Strict NAT Traversal
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelay',
+                        credential: 'openrelay'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelay',
+                        credential: 'openrelay'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelay',
+                        credential: 'openrelay'
+                    }
                 ]
             }
         };
+        if (isHttps) {
+            opts.port = 443;
+        }
+        return opts;
     }
 
     _onConnOpen(conn, callback) {
@@ -857,6 +893,7 @@ class ConnectionManager {
     }
 
     leaveRoom(isUnload = false, deleteRoom = false) {
+        this._isLeaving = true;
         if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
         if (deleteRoom) {
             const delMsg = { type: 'room-deleted' };
@@ -882,11 +919,92 @@ class ConnectionManager {
             if (this.peer) { try { this.peer.destroy(); } catch { } this.peer = null; }
             this.roomCode = null; this.isCreator = false; this.isRoomAdmin = false; this.peers = []; this.myPeerId = null;
             this.auditLogs = [];
+            this._isLeaving = false;
         };
         if (isUnload) {
             cleanup();
         } else {
             setTimeout(cleanup, 300);
+        }
+    }
+
+    async getPeerStats(peerId) {
+        const conn = this.connections.get(peerId);
+        if (!conn) return null;
+        const pc = conn._peerConnection || conn.peerConnection;
+        if (!pc || typeof pc.getStats !== 'function') return null;
+
+        try {
+            const stats = await pc.getStats();
+            let rtt = null;
+            let candidateType = 'host';
+            let protocol = 'UDP';
+            let bytesSent = 0;
+            let bytesReceived = 0;
+
+            let activePair = null;
+            stats.forEach(report => {
+                if (report.type === 'candidate-pair' && (report.nominated || report.state === 'succeeded' || report.selected)) {
+                    if (!activePair || report.currentRoundTripTime !== undefined) {
+                        activePair = report;
+                    }
+                }
+                if (report.type === 'transport' || report.type === 'data-channel') {
+                    if (typeof report.bytesSent === 'number') bytesSent = report.bytesSent;
+                    if (typeof report.bytesReceived === 'number') bytesReceived = report.bytesReceived;
+                }
+            });
+
+            if (activePair) {
+                if (typeof activePair.currentRoundTripTime === 'number') {
+                    rtt = Math.round(activePair.currentRoundTripTime * 1000);
+                }
+                const localCand = activePair.localCandidateId ? stats.get(activePair.localCandidateId) : null;
+                const remoteCand = activePair.remoteCandidateId ? stats.get(activePair.remoteCandidateId) : null;
+
+                if (localCand && localCand.candidateType) {
+                    candidateType = localCand.candidateType;
+                } else if (remoteCand && remoteCand.candidateType) {
+                    candidateType = remoteCand.candidateType;
+                }
+                if (localCand && localCand.protocol) {
+                    protocol = localCand.protocol.toUpperCase();
+                }
+            }
+
+            let routeLabel = 'Direct LAN P2P';
+            if (candidateType === 'srflx' || candidateType === 'prflx') {
+                routeLabel = (rtt !== null && rtt <= 35) ? 'Direct LAN P2P' : 'STUN NAT Traversal';
+            } else if (candidateType === 'relay') {
+                routeLabel = 'TURN Relay';
+            }
+
+            let score = 98;
+            if (rtt !== null) {
+                if (rtt <= 30) score = 98;
+                else if (rtt <= 70) score = 90;
+                else if (rtt <= 150) score = 78;
+                else score = Math.max(45, 100 - Math.round(rtt * 0.3));
+            }
+            let rttDisplay = '< 1 ms';
+            if (rtt !== null && rtt > 0) {
+                rttDisplay = `${rtt} ms`;
+            }
+
+            return {
+                rtt: rttDisplay,
+                rttValue: rtt !== null ? rtt : 1,
+                routeLabel,
+                candidateType,
+                protocol,
+                iceState: pc.iceConnectionState || 'connected',
+                channelState: conn.open ? 'open' : 'connecting',
+                bytesSent,
+                bytesReceived,
+                score: Math.min(100, Math.max(30, score))
+            };
+        } catch {
+            return null;
         }
     }
 

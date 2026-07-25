@@ -2120,3 +2120,59 @@ body.light-theme .portrait-lock-overlay {
     }
 }
 
+/* --- Mobile Virtual Keyboard Viewport Adjustment & Smooth Gliding --- */
+:root {
+    --vv-height: 100dvh;
+}
+
+@media (max-width: 600px) {
+    .screen.share-screen.active {
+        height: var(--vv-height, 100dvh) !important;
+        max-height: var(--vv-height, 100dvh) !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        padding-bottom: env(safe-area-inset-bottom, 4px) !important;
+    }
+
+    #tab-text.tab-content.active {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .messages-container {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+    }
+
+    .text-input-area {
+        flex-shrink: 0 !important;
+        transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1), padding 0.15s ease-out !important;
+        will-change: transform;
+    }
+
+    body.keyboard-open .share-header-top {
+        margin-bottom: 2px !important;
+    }
+    body.keyboard-open .share-header-card {
+        padding: 4px 8px !important;
+        margin-bottom: 4px !important;
+        gap: 4px !important;
+    }
+    body.keyboard-open .tab-nav {
+        margin: 2px 0 !important;
+        padding: 2px !important;
+    }
+}
+

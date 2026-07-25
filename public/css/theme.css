@@ -151,10 +151,25 @@ body.light-theme .diagnostic-panel {
     color: #f87171 !important;
 }
 
-body.light-theme .server-status-pill {
-    background: rgba(255, 255, 255, 0.8) !important;
-    border-color: rgba(235, 150, 120, 0.3) !important;
-    color: var(--text-primary) !important;
+body.light-theme .server-status-pill.error {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    color: #dc2626 !important;
+}
+
+/* Real-time P2P Diagnostic Subcard Styling */
+.p2p-stat-subcard {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--glass-border) !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
+    transition: background 0.3s ease, border-color 0.3s ease !important;
+}
+
+body.light-theme .p2p-stat-subcard {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(234, 88, 12, 0.18) !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.04) !important;
 }
 
 body.light-theme .server-status-pill.testing {

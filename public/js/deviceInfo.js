@@ -29,7 +29,14 @@ class DeviceInfo {
         if (/TikTok/i.test(ua)) return 'TikTok';
 
         // Brave (must precede Chrome check — UA string itself just says Chrome)
-        if (typeof window !== 'undefined' && (window.navigator.brave || (navigator.userAgentData && navigator.userAgentData.brands && navigator.userAgentData.brands.some(b => /Brave/i.test(b.brand))))) return 'Brave';
+        if (typeof window !== 'undefined') {
+            if (window._isBrave ||
+                Boolean(window.navigator && window.navigator.brave) ||
+                (navigator.userAgentData && navigator.userAgentData.brands && navigator.userAgentData.brands.some(b => /Brave/i.test(b.brand))) ||
+                /Brave/i.test(ua)) {
+                return 'Brave';
+            }
+        }
 
         if (/Zen\//i.test(ua) || /ZenBrowser/i.test(ua)) return 'Zen';
         if (/Vivaldi\//i.test(ua)) return 'Vivaldi';
@@ -155,3 +162,17 @@ class DeviceInfo {
 }
 
 window.DeviceInfo = DeviceInfo;
+
+// Async Brave detection for Android & Privacy-shielded Browsers
+if (typeof navigator !== 'undefined' && navigator.brave && typeof navigator.brave.isBrave === 'function') {
+    navigator.brave.isBrave().then(isBrave => {
+        if (isBrave) {
+            window._isBrave = true;
+            if (window.app && window.app.conn && window.app.conn.myInfo) {
+                window.app.conn.myInfo.browser = 'Brave';
+                window.app.conn.myInfo.systemName = `Brave on ${window.app.conn.myInfo.os || DeviceInfo.getOS(navigator.userAgent)}`;
+                if (window.app.updateMyNameDisplay) window.app.updateMyNameDisplay();
+            }
+        }
+    }).catch(() => {});
+}

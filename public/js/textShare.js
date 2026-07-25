@@ -132,17 +132,30 @@ class TextShare {
         const prev = index > 0 ? this.messages[index - 1] : null;
         const next = index < this.messages.length - 1 ? this.messages[index + 1] : null;
 
-        const isSameSender = (m1, m2) => {
+        const isSameSenderAndMinute = (m1, m2) => {
             if (!m1 || !m2) return false;
             if (m1.isSent !== m2.isSent) return false;
             const s1 = typeof m1.sender === 'object' && m1.sender ? (m1.sender.id || m1.sender.name) : (m1.sender || 'Peer');
             const s2 = typeof m2.sender === 'object' && m2.sender ? (m2.sender.id || m2.sender.name) : (m2.sender || 'Peer');
-            return s1 === s2 && Math.abs((m1.timestamp || 0) - (m2.timestamp || 0)) < 300000;
+            if (s1 !== s2) return false;
+
+            const t1 = m1.timestamp || 0;
+            const t2 = m2.timestamp || 0;
+
+            // If time gap is 60s or more, break grouping
+            if (Math.abs(t1 - t2) >= 60000) return false;
+
+            // If formatted timestamp string (e.g. "10:20" vs "10:25") changes, break grouping
+            if (typeof UI !== 'undefined' && typeof UI.formatTime === 'function') {
+                if (UI.formatTime(t1) !== UI.formatTime(t2)) return false;
+            }
+
+            return true;
         };
 
         return {
-            isGroupFollowup: isSameSender(prev, curr),
-            hasGroupFollowup: isSameSender(curr, next)
+            isGroupFollowup: isSameSenderAndMinute(prev, curr),
+            hasGroupFollowup: isSameSenderAndMinute(curr, next)
         };
     }
 
@@ -151,8 +164,18 @@ class TextShare {
         if (!container || !msg) return false;
         const fid = (msg.meta && msg.meta.fileId) ? msg.meta.fileId : null;
         let existingEl = null;
-        if (fid) existingEl = container.querySelector(`.message[data-file-id="${fid}"]`);
-        if (!existingEl && msg.id) existingEl = container.querySelector(`.message[data-msg-id="${msg.id}"]`);
+        if (fid) {
+            try {
+                const escFid = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(fid) : fid.replace(/"/g, '\\"');
+                existingEl = container.querySelector(`.message[data-file-id="${escFid}"]`);
+            } catch (e) { }
+        }
+        if (!existingEl && msg.id) {
+            try {
+                const escId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(msg.id) : msg.id.replace(/"/g, '\\"');
+                existingEl = container.querySelector(`.message[data-msg-id="${escId}"]`);
+            } catch (e) { }
+        }
         if (existingEl) {
             const idx = this.messages.indexOf(msg);
             const groupInfo = idx >= 0 ? this._getGroupingInfo(idx) : { isGroupFollowup: false, hasGroupFollowup: false };
