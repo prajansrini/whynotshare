@@ -11,7 +11,8 @@ class UI {
                 try {
                     const currentState = window.history.state;
                     if (!currentState || currentState.screenId !== screenId) {
-                        window.history.pushState({ screenId }, '', window.location.href);
+                        const targetUrl = screenId === 'screen-landing' ? (window.location.pathname + window.location.search) : window.location.href;
+                        window.history.pushState({ screenId }, '', targetUrl);
                     }
                 } catch {}
             }
@@ -88,7 +89,7 @@ class UI {
     }
 
     static renderMessage(text, sender, timestamp, isSent, groupInfo = {}) {
-        const { isGroupFollowup, hasGroupFollowup } = groupInfo;
+        const { isGroupFollowup, hasGroupFollowup, isSameSender } = groupInfo;
         const msg = document.createElement('div');
         let classes = 'message ' + (isSent ? 'message-sent' : 'message-received');
         if (isGroupFollowup) classes += ' message-group-followup';
@@ -99,7 +100,8 @@ class UI {
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
 
-        const senderHtml = (!isSent && !isGroupFollowup)
+        const hideSender = isSent || (isSameSender !== undefined ? isSameSender : isGroupFollowup);
+        const senderHtml = !hideSender
             ? '<span class="message-sender" style="color:' + sColor + '">' + sName + '</span>'
             : '';
 
@@ -502,7 +504,9 @@ class UI {
 
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
-        const senderHtml = (!isSent && !isGroupFollowup)
+        const isSameSender = groupInfo && typeof groupInfo.isSameSender === 'boolean' ? groupInfo.isSameSender : isGroupFollowup;
+        const hideSender = isSent || isSameSender;
+        const senderHtml = !hideSender
             ? '<span class="message-sender" style="color:' + sColor + '">' + sName + '</span>'
             : '';
 

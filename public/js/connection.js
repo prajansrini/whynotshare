@@ -424,6 +424,16 @@ class ConnectionManager {
                         setTimeout(() => { if (c && (c.open || c._open)) try { c.send({ type: 'audit-log-sync', payload: this.auditLogs }); } catch { } }, 1500);
                     }
                     this._broadcast({ type: 'peer-update', payload: [...this.peers] }, fromId);
+                    setTimeout(() => {
+                        if (this.isCreator) {
+                            this._broadcast({ type: 'peer-update', payload: [...this.peers] });
+                        }
+                    }, 400);
+                    setTimeout(() => {
+                        if (this.isCreator) {
+                            this._broadcast({ type: 'peer-update', payload: [...this.peers] });
+                        }
+                    }, 1200);
                     if (this.onSyncRequest) {
                         const history = this.onSyncRequest();
                         if (history && history.length > 0) {
@@ -737,13 +747,21 @@ class ConnectionManager {
     _broadcast(message, excludeId) {
         const recipients = message && message.payload && message.payload.recipients ? message.payload.recipients : null;
         for (const [pid, conn] of this.connections) {
-            if (pid !== excludeId && conn && (conn.open || conn._open)) {
+            if (pid !== excludeId && conn) {
                 if (recipients && Array.isArray(recipients) && recipients.length > 0) {
                     if (!recipients.includes(pid) && pid !== this._roomCodeToPeerId(this.roomCode) && pid !== (message.payload && message.payload.senderId) && pid !== (message.payload && message.payload.from)) {
                         continue;
                     }
                 }
-                try { conn.send(message); } catch (e) { }
+                if (conn.open || conn._open) {
+                    try { conn.send(message); } catch (e) { }
+                } else {
+                    setTimeout(() => {
+                        if (conn && (conn.open || conn._open)) {
+                            try { conn.send(message); } catch (e) { }
+                        }
+                    }, 400);
+                }
             }
         }
     }
@@ -937,10 +955,13 @@ class ConnectionManager {
         try {
             const stats = await pc.getStats();
             let rtt = null;
-            let candidateType = 'host';
+            let candidateType = null;
+            let remoteCandidateType = null;
+            let localCandidateType = null;
             let protocol = 'UDP';
             let bytesSent = 0;
             let bytesReceived = 0;
+            let isPrivateIp = true;
 
             let activePair = null;
             stats.forEach(report => {
@@ -948,6 +969,16 @@ class ConnectionManager {
                     if (!activePair || report.currentRoundTripTime !== undefined) {
                         activePair = report;
                     }
+                }
+                if (report.type === 'remote-candidate') {
+                    remoteCandidateType = report.candidateType;
+                    const ip = report.address || report.ip || '';
+                    if (ip && !ip.startsWith('192.168.') && !ip.startsWith('10.') && !ip.startsWith('172.16.') && !ip.startsWith('172.31.') && !ip.startsWith('127.') && ip !== '::1') {
+                        isPrivateIp = false;
+                    }
+                }
+                if (report.type === 'local-candidate') {
+                    localCandidateType = report.candidateType;
                 }
                 if (report.type === 'transport' || report.type === 'data-channel') {
                     if (typeof report.bytesSent === 'number') bytesSent = report.bytesSent;
@@ -962,21 +993,29 @@ class ConnectionManager {
                 const localCand = activePair.localCandidateId ? stats.get(activePair.localCandidateId) : null;
                 const remoteCand = activePair.remoteCandidateId ? stats.get(activePair.remoteCandidateId) : null;
 
-                if (localCand && localCand.candidateType) {
-                    candidateType = localCand.candidateType;
-                } else if (remoteCand && remoteCand.candidateType) {
+                if (remoteCand && remoteCand.candidateType) {
                     candidateType = remoteCand.candidateType;
+                } else if (localCand && localCand.candidateType) {
+                    candidateType = localCand.candidateType;
+                } else {
+                    candidateType = remoteCandidateType || localCandidateType;
                 }
                 if (localCand && localCand.protocol) {
                     protocol = localCand.protocol.toUpperCase();
+                } else if (remoteCand && remoteCand.protocol) {
+                    protocol = remoteCand.protocol.toUpperCase();
                 }
             }
 
-            let routeLabel = 'Direct LAN P2P';
-            if (candidateType === 'srflx' || candidateType === 'prflx') {
-                routeLabel = (rtt !== null && rtt <= 35) ? 'Direct LAN P2P' : 'STUN NAT Traversal';
-            } else if (candidateType === 'relay') {
+            let routeLabel = 'STUN NAT Traversal';
+            if (candidateType === 'relay' || remoteCandidateType === 'relay' || localCandidateType === 'relay') {
                 routeLabel = 'TURN Relay';
+            } else if (candidateType === 'srflx' || candidateType === 'prflx' || remoteCandidateType === 'srflx' || remoteCandidateType === 'prflx') {
+                routeLabel = 'STUN NAT Traversal';
+            } else if (candidateType === 'host' && isPrivateIp) {
+                routeLabel = 'Direct LAN P2P';
+            } else if (!isPrivateIp) {
+                routeLabel = 'STUN NAT Traversal';
             }
 
             let score = 98;

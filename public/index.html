@@ -185,7 +185,7 @@
                 </div>
 
                 <!-- PRIMARY ACTION GROUP: ENTER ROOM, SHARE LINK INPUT, COPY SHARE LINK & CANCEL -->
-                <div class="enter-room-section" style="margin:14px 0 0 0;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:0;margin-top:14px">
                     <button id="btn-host-enter-room" class="btn btn-primary btn-full"
                         style="padding:14px;font-size:1.05rem;font-weight:700;box-shadow:0 4px 16px rgba(108, 92, 231, 0.4)"><svg
                             width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -194,80 +194,91 @@
                             <polyline points="10 17 15 12 10 7" />
                             <line x1="15" y1="12" x2="3" y2="12" />
                         </svg>Enter Room</button>
+
+                    <!-- DIVIDER 1 -->
                     <div style="margin:14px 0;border-top:1px solid var(--glass-border)"></div>
-                    <div class="secret-phrase-label" style="margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                        </svg>Direct Room Share Link</div>
-                    <div style="display:flex;gap:8px">
+
+                    <!-- SECTION 1: DIRECT ROOM SHARE LINK -->
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div class="secret-phrase-label" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                            </svg>DIRECT ROOM SHARE LINK</div>
                         <input type="text" id="share-url" class="input-field text-mono" readonly
                             placeholder="Generating share link..."
-                            style="padding:10px 14px;font-size:0.85rem;height:42px;margin:0;flex:1;background:rgba(0,0,0,0.25);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:10px;cursor:text"
+                            style="padding:10px 14px;font-size:0.85rem;height:42px;margin:0;width:100%;box-sizing:border-box;background:rgba(0,0,0,0.25);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:10px;cursor:text"
                             onclick="this.select()">
+                        <div style="display:flex;gap:10px">
+                            <button id="btn-copy-link" class="btn btn-secondary" style="flex:2;padding:10px 16px;font-size:0.88rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg
+                                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                            </svg>Copy Share Link</button>
+                            <button id="btn-back-from-room" class="btn btn-secondary" style="flex:1;padding:10px 16px;font-size:0.88rem">Cancel</button>
+                        </div>
                     </div>
-                    <div style="display:flex;gap:10px">
-                        <button id="btn-copy-link" class="btn btn-secondary" style="flex:2;padding:10px 16px;font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg
-                            width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                        </svg>Copy Share Link</button>
-                        <button id="btn-back-from-room" class="btn btn-secondary" style="flex:1">Cancel</button>
-                    </div>
-                </div>
 
-                <div style="margin:14px 0;border-top:1px solid var(--glass-border)"></div>
-                <div class="security-mode-section" style="margin:0">
-                    <div class="security-mode-label" style="margin-bottom:8px">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                        </svg>
-                        Room Access &amp; Key Mode
-                    </div>
-                    <div class="security-switch-bar">
-                        <div class="sec-slider"></div>
-                        <button id="btn-room-encrypt-on" class="sec-pill-btn active">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align:-2px">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                    <path d="m9 12 2 2 4-4" />
-                                </svg></span><span>Encrypted Room</span>
-                        </button>
-                        <button id="btn-room-encrypt-off" class="sec-pill-btn">
-                            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" style="vertical-align:-2px">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="2" y1="12" x2="22" y2="12" />
-                                    <path
-                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                </svg></span><span>Open Room</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="secret-phrase-container" class="secret-phrase-section" style="margin:0">
+                    <!-- DIVIDER 2 -->
                     <div style="margin:14px 0;border-top:1px solid var(--glass-border)"></div>
-                    <div class="secret-phrase-label" style="margin-bottom:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-                        </svg>Room Key (Passphrase)</div>
-                    <div style="display:flex;gap:8px">
-                        <input type="text" id="display-secret-phrase" class="input-field text-mono"
-                            placeholder="Room Key" style="margin:0;flex:1;transition:all 0.2s ease" autocomplete="off"
-                            autocapitalize="none" spellcheck="false">
-                        <button id="btn-gen-room-key" class="btn btn-secondary"
-                            style="padding:0 14px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center"
-                            title="Generate Random Passphrase"><svg width="18" height="18" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <polyline points="23 4 23 10 17 10" />
-                                <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                            </svg></button>
-                        <button id="btn-copy-phrase" class="btn btn-secondary"
-                            style="padding:0 20px;font-size:0.95rem;border-radius:var(--radius-md);display:flex;align-items:center;gap:6px"
-                            title="Copy Room Key">Copy</button>
+
+                    <!-- SECTION 2: ROOM ACCESS & SECURITY KEY MODE -->
+                    <div class="security-mode-section" style="margin:0;padding:0;border:none;display:flex;flex-direction:column;gap:8px">
+                        <div class="security-mode-label" style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            ROOM ACCESS &amp; KEY MODE
+                        </div>
+                        <div class="security-switch-bar">
+                            <div class="sec-slider"></div>
+                            <button id="btn-room-encrypt-on" class="sec-pill-btn active">
+                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="vertical-align:-2px">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                        <path d="m9 12 2 2 4-4" />
+                                    </svg></span><span>Encrypted Room</span>
+                            </button>
+                            <button id="btn-room-encrypt-off" class="sec-pill-btn">
+                                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="vertical-align:-2px">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="2" y1="12" x2="22" y2="12" />
+                                        <path
+                                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                    </svg></span><span>Open Room</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: ROOM KEY (PASSPHRASE) -->
+                    <div id="secret-phrase-container" class="secret-phrase-section" style="margin:0;padding:0;border:none">
+                        <!-- DIVIDER 3 -->
+                        <div style="margin:14px 0;border-top:1px solid var(--glass-border)"></div>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                            <div class="secret-phrase-label" style="font-size:0.75rem;font-weight:700;color:var(--text-tertiary);letter-spacing:0.5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                                </svg>ROOM KEY (PASSPHRASE)</div>
+                            <div style="display:flex;gap:8px">
+                                <input type="text" id="display-secret-phrase" class="input-field text-mono"
+                                    placeholder="Room Key" style="margin:0;flex:1;transition:all 0.2s ease" autocomplete="off"
+                                    autocapitalize="none" spellcheck="false">
+                                <button id="btn-gen-room-key" class="btn btn-secondary"
+                                    style="padding:0 14px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center"
+                                    title="Generate Random Passphrase"><svg width="18" height="18" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                                    </svg></button>
+                                <button id="btn-copy-phrase" class="btn btn-secondary"
+                                    style="padding:0 20px;font-size:0.95rem;border-radius:var(--radius-md);display:flex;align-items:center;gap:6px"
+                                    title="Copy Room Key">Copy</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -837,8 +848,7 @@
     <div id="modal-leave-confirm" class="modal-overlay" style="display:none">
         <div class="modal-card glass-card" style="max-width:320px;padding:24px;text-align:center">
             <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Leave Room?</h3>
-            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 20px;line-height:1.4">Are you sure to
-                LEAVE THE room?</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 20px;line-height:1.4">Are you sure you want to leave this room?</p>
             <div style="display:flex;gap:12px;width:100%">
                 <button id="btn-confirm-leave" class="btn"
                     style="flex:1;background:rgba(239, 68, 68, 0.12);color:#f87171;border:1px solid rgba(239, 68, 68, 0.35);border-radius:10px;font-weight:600;padding:10px;transition:all 0.2s">Leave</button>

@@ -132,9 +132,9 @@ body.light-theme .chat-logo-icon {
 }
 
 .secret-phrase-section {
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--glass-border);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
     max-height: 250px;
     opacity: 1;
     overflow: hidden;
@@ -744,8 +744,8 @@ button .waiting-dots span {
 /* --- Professional Security Mode Pill Switch --- */
 .security-mode-section {
     width: 100%;
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--glass-border);
+    padding-top: 0;
+    border-top: none;
 }
 
 .security-mode-label {

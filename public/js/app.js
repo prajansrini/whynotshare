@@ -313,6 +313,13 @@ class App {
     }
 
     leaveRoom(pushToHistory = true) {
+        const screenShare = document.getElementById('screen-share');
+        const isLiveRoom = (screenShare && screenShare.classList.contains('active')) || this._hasEnteredLiveRoom;
+        if (!isLiveRoom) {
+            this._performLeaveRoom(pushToHistory);
+            return;
+        }
+
         const isPrivileged = Boolean(this.conn && (this.conn.isPrivileged ? this.conn.isPrivileged() : this.conn.isCreator));
         if (isPrivileged && this.conn && this.conn.peers && this.conn.peers.length > 1) {
             const otherPeers = this.conn.peers.filter(p => p.id !== this.conn.myPeerId);
@@ -498,8 +505,10 @@ class App {
         this.conn.onTextReceived = (d) => this.textShare.receive(d);
         this.conn.onFileEvent = (t, d) => this.fileTransfer.handleFileEvent(t, d);
         this.fileTransfer.onProgress = this.fileTransfer.onIncomingFile = this.fileTransfer.onFileReceived = null;
-        if (pushToHistory) history.pushState({ page: 'home' }, '', '/');
-        UI.showScreen('screen-landing');
+        if (pushToHistory) {
+            history.pushState({ screenId: 'screen-landing' }, '', this._getBasePath());
+        }
+        UI.showScreen('screen-landing', false);
         if (this.screenStream) this.stopScreenShare();
         const v = document.getElementById('screen-video');
         if (v) { v.srcObject = null; v.style.display = 'none'; }
@@ -1852,6 +1861,10 @@ class App {
         if (this.conn && peer && peer.deviceName) {
             this.conn.addAuditLog(`${peer.deviceName} joined the room`, 'info');
         }
+        if (peer && peer.id) {
+            if (!this.selectedPersonalRecipients) this.selectedPersonalRecipients = new Set();
+            this.selectedPersonalRecipients.add(peer.id);
+        }
         if (this.crypto && this.conn && peer && peer.id) {
             this.crypto.generatePersonalKey().then(myKey => {
                 if (myKey) {
@@ -2252,13 +2265,21 @@ class App {
         });
         window.addEventListener('popstate', (e) => {
             const state = e.state;
-            const targetScreenId = state && state.screenId ? state.screenId : 'screen-landing';
+            const hash = window.location.hash ? window.location.hash.slice(1).split(':')[0] : '';
+            let targetScreenId = state && state.screenId ? state.screenId : null;
+            if (!targetScreenId) {
+                if (hash === 'create-room') targetScreenId = 'screen-room';
+                else if (hash === 'join-room') targetScreenId = 'screen-join';
+                else if (hash) targetScreenId = 'screen-share';
+                else targetScreenId = 'screen-landing';
+            }
+
             const currentActive = document.querySelector('.screen.active');
             const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
             if (currentScreenId === 'screen-share' && targetScreenId !== 'screen-share') {
                 this.leaveRoom(false);
             } else if (targetScreenId === 'screen-share' && !this.conn.getRoomCode()) {
-                const codeToRejoin = this.lastRoomCodeLeft || (window.location.hash ? window.location.hash.slice(1).split(':')[0] : null);
+                const codeToRejoin = this.lastRoomCodeLeft || hash;
                 if (this.lastCreatedRoomCode || codeToRejoin === 'create-room') {
                     UI.showScreen('screen-room', false);
                     return;
@@ -2931,6 +2952,7 @@ class App {
             btnHeaderInfo.addEventListener('click', () => {
                 const modal = document.getElementById('modal-personal-e2e');
                 if (modal) modal.style.display = 'flex';
+                this.renderLiveP2PDiagnostics();
             });
         }
         const btnClosePe2eModal = document.getElementById('btn-close-pe2e-modal');

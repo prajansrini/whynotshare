@@ -128,16 +128,20 @@ class TextShare {
 
     _getGroupingInfo(index) {
         const curr = this.messages[index];
-        if (!curr) return { isGroupFollowup: false, hasGroupFollowup: false };
+        if (!curr) return { isGroupFollowup: false, hasGroupFollowup: false, isSameSender: false };
         const prev = index > 0 ? this.messages[index - 1] : null;
         const next = index < this.messages.length - 1 ? this.messages[index + 1] : null;
 
-        const isSameSenderAndMinute = (m1, m2) => {
+        const checkSameSender = (m1, m2) => {
             if (!m1 || !m2) return false;
             if (m1.isSent !== m2.isSent) return false;
             const s1 = typeof m1.sender === 'object' && m1.sender ? (m1.sender.id || m1.sender.name) : (m1.sender || 'Peer');
             const s2 = typeof m2.sender === 'object' && m2.sender ? (m2.sender.id || m2.sender.name) : (m2.sender || 'Peer');
-            if (s1 !== s2) return false;
+            return s1 === s2;
+        };
+
+        const isSameSenderAndMinute = (m1, m2) => {
+            if (!checkSameSender(m1, m2)) return false;
 
             const t1 = m1.timestamp || 0;
             const t2 = m2.timestamp || 0;
@@ -155,7 +159,8 @@ class TextShare {
 
         return {
             isGroupFollowup: isSameSenderAndMinute(prev, curr),
-            hasGroupFollowup: isSameSenderAndMinute(curr, next)
+            hasGroupFollowup: isSameSenderAndMinute(curr, next),
+            isSameSender: checkSameSender(prev, curr)
         };
     }
 
