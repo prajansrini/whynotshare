@@ -1707,7 +1707,10 @@ class App {
 
     _onRoomIdChanged(newCode) {
         this.conn.roomCode = newCode;
-        document.getElementById('share-room-code').textContent = newCode;
+        const shareCodeEl = document.getElementById('share-room-code');
+        if (shareCodeEl) shareCodeEl.textContent = newCode;
+        const quickEl = document.getElementById('header-quick-room-code');
+        if (quickEl) quickEl.textContent = newCode;
         document.getElementById('display-room-code').textContent = newCode;
         const phrase = this.crypto.getPhrase() || '';
         const targetUrl = this.e2eEnabled ? this._buildShareUrl(newCode, phrase) : (window.location.origin + this._getBasePath() + '#' + newCode);
@@ -1734,6 +1737,49 @@ class App {
         } catch { }
         this.renderInlineQr(targetUrl);
         UI.toast('Room ID changed to: ' + newCode, 'success');
+    }
+
+    copyRoomLink() {
+        const codeEl = document.getElementById('share-room-code') || document.getElementById('header-quick-room-code');
+        const codeFromDOM = (codeEl && codeEl.textContent !== '---') ? codeEl.textContent.trim() : '';
+        const roomCode = (this.conn && typeof this.conn.getRoomCode === 'function' ? this.conn.getRoomCode() : null) || (this.conn && this.conn.roomCode) || codeFromDOM || this.roomCode;
+
+        if (!roomCode || roomCode === '---') {
+            UI.toast('No active room code to copy', 'error');
+            return;
+        }
+
+        const phrase = (this.crypto && typeof this.crypto.getPhrase === 'function') ? this.crypto.getPhrase() : '';
+        let fullLink = window.location.origin + this._getBasePath() + '#' + roomCode;
+        if (this.e2eEnabled && phrase) {
+            fullLink = window.location.origin + this._getBasePath() + '#' + roomCode + ':' + phrase;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullLink).then(() => {
+                UI.toast('Room share link copied to clipboard!', 'success');
+            }).catch(() => {
+                this._fallbackCopyText(fullLink);
+            });
+        } else {
+            this._fallbackCopyText(fullLink);
+        }
+    }
+
+    _fallbackCopyText(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            UI.toast('Room share link copied to clipboard!', 'success');
+        } catch {
+            UI.toast('Failed to copy link', 'error');
+        }
+        document.body.removeChild(ta);
     }
 
     async _onRoomKeyRotated(newKey) {
@@ -1808,7 +1854,10 @@ class App {
     }
 
     _enterShareScreen(code, peers) {
-        document.getElementById('share-room-code').textContent = code;
+        const shareCodeEl = document.getElementById('share-room-code');
+        if (shareCodeEl) shareCodeEl.textContent = code;
+        const quickEl = document.getElementById('header-quick-room-code');
+        if (quickEl) quickEl.textContent = code;
         this.refreshPeerLists();
         if (this.textShare) {
             this.textShare.loadHistory();
@@ -2331,27 +2380,24 @@ class App {
                     }
                     return;
                 }
-                const activeModals = document.querySelectorAll('.modal-overlay');
-                let closedAny = false;
-                activeModals.forEach(m => {
-                    if (m.style.display !== 'none') {
-                        m.style.display = 'none';
-                        closedAny = true;
-                    }
-                });
-                const devicesList = document.getElementById('devices-list');
-                const chevron = document.getElementById('devices-dropdown-chevron');
-                if (devicesList && devicesList.classList.contains('expanded')) {
-                    devicesList.classList.remove('expanded');
-                    if (chevron) chevron.style.transform = 'rotate(0deg)';
-                    closedAny = true;
+                const activeModals = Array.from(document.querySelectorAll('.modal-overlay'))
+                    .filter(m => m.id !== 'drawer-backdrop' && m.style.display !== 'none');
+                if (activeModals.length > 0) {
+                    const topModal = activeModals[activeModals.length - 1];
+                    topModal.style.display = 'none';
+                    return;
                 }
-                if (closedAny) {
-                    const ti = document.getElementById('text-input');
-                    const shareScreen = document.getElementById('screen-share');
-                    if (ti && shareScreen && shareScreen.classList.contains('active')) {
-                        ti.focus();
-                    }
+                const drawer = document.getElementById('drawer-room-menu');
+                const backdrop = document.getElementById('drawer-backdrop');
+                if (drawer && drawer.classList.contains('active')) {
+                    drawer.classList.remove('active');
+                    if (backdrop) backdrop.classList.remove('active');
+                    return;
+                }
+                const ti = document.getElementById('text-input');
+                const shareScreen = document.getElementById('screen-share');
+                if (ti && shareScreen && shareScreen.classList.contains('active')) {
+                    ti.focus();
                 }
             }
         });
@@ -2491,10 +2537,7 @@ class App {
         }
         const btnCopyRoomLink = document.getElementById('btn-copy-room-link');
         if (btnCopyRoomLink) {
-            btnCopyRoomLink.addEventListener('click', () => {
-                const urlEl = document.getElementById('share-url');
-                UI.copyToClipboard(urlEl && urlEl.dataset.url ? urlEl.dataset.url : window.location.href);
-            });
+            btnCopyRoomLink.addEventListener('click', () => this.copyRoomLink());
         }
         const btnCopyGithubRepoLink = document.getElementById('btn-copy-github-repo-link');
         if (btnCopyGithubRepoLink) {
@@ -2509,8 +2552,10 @@ class App {
         };
         const btnShowQrRoom = document.getElementById('btn-show-qr-room');
         const btnShowQrShare = document.getElementById('btn-show-qr-share');
+        const btnHeaderQr = document.getElementById('btn-header-qr');
         if (btnShowQrRoom) btnShowQrRoom.addEventListener('click', openQr);
         if (btnShowQrShare) btnShowQrShare.addEventListener('click', openQr);
+        if (btnHeaderQr) btnHeaderQr.addEventListener('click', openQr);
 
         const btnCloseQr = document.getElementById('btn-close-qr');
         const btnCloseQrTop = document.getElementById('btn-close-qr-top');
@@ -2549,7 +2594,8 @@ class App {
                 this._p2pDiagInterval = setInterval(() => {
                     const m1 = document.getElementById('modal-personal-e2e');
                     const m2 = document.getElementById('modal-connected-devices');
-                    if ((m1 && m1.style.display !== 'none') || (m2 && m2.style.display !== 'none')) {
+                    const m3 = document.getElementById('modal-export-center');
+                    if ((m1 && m1.style.display !== 'none') || (m2 && m2.style.display !== 'none') || (m3 && m3.style.display !== 'none')) {
                         this.renderLiveP2PDiagnostics();
                     } else {
                         clearInterval(this._p2pDiagInterval);
@@ -2644,10 +2690,14 @@ class App {
             if (e.target.id === 'modal-host-leave') closeAllLeaveModals();
         });
 
-        document.getElementById('btn-disconnect').addEventListener('click', () => {
+        const triggerLeave = () => {
             document.addEventListener('keydown', handleEscapeLeave);
             this.leaveRoom();
-        });
+        };
+        const btnDisconnect = document.getElementById('btn-disconnect');
+        if (btnDisconnect) btnDisconnect.addEventListener('click', triggerLeave);
+        const btnHeaderLeave = document.getElementById('btn-header-leave');
+        if (btnHeaderLeave) btnHeaderLeave.addEventListener('click', triggerLeave);
 
         const btnTestServer = document.getElementById('btn-test-peerjs-server');
         if (btnTestServer) {
@@ -2947,6 +2997,48 @@ class App {
             });
         }
 
+        const drawer = document.getElementById('drawer-room-menu');
+        const backdrop = document.getElementById('drawer-backdrop');
+        const btnOpenRoomMenu = document.getElementById('btn-open-room-menu');
+        const btnHeaderRoomCode = document.getElementById('btn-header-room-code');
+        const btnCloseRoomMenu = document.getElementById('btn-close-room-menu');
+
+        const openDrawer = () => {
+            if (drawer) drawer.classList.add('active');
+            if (backdrop) backdrop.classList.add('active');
+        };
+
+        const closeDrawer = () => {
+            if (drawer) drawer.classList.remove('active');
+            if (backdrop) backdrop.classList.remove('active');
+        };
+
+        if (btnOpenRoomMenu) btnOpenRoomMenu.addEventListener('click', openDrawer);
+        const handleCopyLink = () => this.copyRoomLink();
+        if (btnHeaderRoomCode) btnHeaderRoomCode.addEventListener('click', handleCopyLink);
+        const btnRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
+        if (btnRoomBadgeCopy) btnRoomBadgeCopy.addEventListener('click', handleCopyLink);
+
+        const inputDevicesModalSearch = document.getElementById('input-devices-modal-search');
+        if (inputDevicesModalSearch) {
+            inputDevicesModalSearch.addEventListener('input', () => {
+                if (typeof UI !== 'undefined' && typeof UI.updateDevicesList === 'function') {
+                    UI.updateDevicesList();
+                }
+            });
+        }
+        if (btnCloseRoomMenu) btnCloseRoomMenu.addEventListener('click', closeDrawer);
+        if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            if (modal.id === 'drawer-backdrop') return;
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
         const btnHeaderInfo = document.getElementById('btn-header-info');
         if (btnHeaderInfo) {
             btnHeaderInfo.addEventListener('click', () => {
@@ -2968,6 +3060,8 @@ class App {
             btnOpenExportModal.addEventListener('click', () => {
                 const modal = document.getElementById('modal-export-center');
                 if (modal) modal.style.display = 'flex';
+                this.renderLiveP2PDiagnostics();
+                if (typeof startP2PDiagLoop === 'function') startP2PDiagLoop();
             });
         }
         const btnCloseExportModal = document.getElementById('btn-close-export-modal');
@@ -3012,15 +3106,9 @@ class App {
             });
         }
 
-        const btnRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
-        if (btnRoomBadgeCopy) {
-            btnRoomBadgeCopy.addEventListener('click', () => {
-                const code = (this.conn && (typeof this.conn.getRoomCode === 'function' ? this.conn.getRoomCode() : this.conn.roomCode)) || (document.getElementById('share-room-code') && document.getElementById('share-room-code').textContent !== '---' ? document.getElementById('share-room-code').textContent : '') || this.roomCode;
-                if (code && code !== '---') {
-                    navigator.clipboard.writeText(code);
-                    UI.toast('Room ID (' + code + ') copied to clipboard!', 'success');
-                }
-            });
+        const elRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
+        if (elRoomBadgeCopy) {
+            elRoomBadgeCopy.addEventListener('click', () => this.copyRoomLink());
         }
         const btnCopyModalRoomId = document.getElementById('btn-copy-modal-room-id');
         if (btnCopyModalRoomId) {
@@ -3185,9 +3273,18 @@ class App {
         const syncViewport = () => {
             if (window.visualViewport) {
                 const vvHeight = window.visualViewport.height;
+                const winHeight = window.innerHeight || document.documentElement.clientHeight;
+                const isKeyboardVisible = (winHeight - vvHeight) > 120;
+
                 document.documentElement.style.setProperty('--vv-height', `${vvHeight}px`);
                 if (shareScreen) {
                     shareScreen.style.setProperty('--vv-height', `${vvHeight}px`);
+                }
+
+                if (isKeyboardVisible) {
+                    document.body.classList.add('keyboard-open');
+                } else if (document.activeElement !== textInput) {
+                    document.body.classList.remove('keyboard-open');
                 }
             }
         };
@@ -3216,8 +3313,14 @@ class App {
             });
 
             textInput.addEventListener('blur', () => {
-                document.body.classList.remove('keyboard-open');
-                setTimeout(syncViewport, 120);
+                setTimeout(() => {
+                    const vvHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    const winHeight = window.innerHeight || document.documentElement.clientHeight;
+                    if ((winHeight - vvHeight) <= 120) {
+                        document.body.classList.remove('keyboard-open');
+                    }
+                    syncViewport();
+                }, 120);
             });
         }
     }

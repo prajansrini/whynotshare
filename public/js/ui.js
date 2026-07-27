@@ -6,6 +6,13 @@ class UI {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const t = document.getElementById(screenId);
         if (t) t.classList.add('active');
+        if (typeof document !== 'undefined' && document.body) {
+            if (screenId === 'screen-share') {
+                document.body.classList.add('in-share-screen');
+            } else {
+                document.body.classList.remove('in-share-screen');
+            }
+        }
         if (typeof window !== 'undefined') {
             if (pushToHistory && window.history && window.history.pushState) {
                 try {
@@ -117,15 +124,39 @@ class UI {
     }
 
     static updateDevicesList(peers, myId) {
+        if (!peers) peers = UI._lastPeers || [];
+        if (!myId) myId = UI._lastMyId || '';
+        UI._lastPeers = peers;
+        UI._lastMyId = myId;
+
         const list = document.getElementById('devices-list');
         const count = document.getElementById('devices-count');
         const countModal = document.getElementById('devices-count-modal');
         const countPill = document.getElementById('devices-count-pill');
         if (!list) return;
+
+        const searchInput = document.getElementById('input-devices-modal-search');
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        const filtered = peers.filter((p, index) => {
+            if (!query) return true;
+            const name = (p.deviceName || '').toLowerCase();
+            const os = (p.osName || '').toLowerCase();
+            const isHostDevice = p.isHost || p.isCreator || p.role === 'host' || index === 0;
+            const roleStr = isHostDevice ? 'host creator owner' : 'guest peer participant';
+            const searchHaystack = `${name} ${os} ${roleStr}`.toLowerCase();
+            return searchHaystack.includes(query);
+        });
+
         list.innerHTML = '';
-        peers.forEach(p => list.appendChild(UI.renderDeviceChip(p, p.id === myId)));
+        if (filtered.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.85rem">No matching devices found</div>';
+        } else {
+            filtered.forEach(p => list.appendChild(UI.renderDeviceChip(p, p.id === myId)));
+        }
+
         if (count) count.textContent = peers.length + ' user' + (peers.length !== 1 ? 's' : '');
-        if (countModal) countModal.textContent = peers.length;
+        if (countModal) countModal.textContent = filtered.length !== peers.length ? `${filtered.length}/${peers.length}` : peers.length;
         if (countPill) countPill.textContent = peers.length > 10 ? '10+' : peers.length;
     }
 
