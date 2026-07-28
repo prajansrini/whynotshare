@@ -301,14 +301,63 @@ button .waiting-dots span {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-sm);
+    gap: 12px;
     padding: 10px 16px;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-full);
     font-size: 0.85rem;
     transition: all var(--transition-base);
-    animation: chipIn 0.3s ease;
+    animation: fadeIn 0.15s ease;
+}
+
+.device-chip-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.device-chip-main .device-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.device-chip-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.device-system-name {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .device-chip {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 10px 14px !important;
+        border-radius: 14px !important;
+    }
+
+    .device-chip-main {
+        width: 100% !important;
+    }
+
+    .device-chip-meta {
+        width: 100% !important;
+        padding-left: 24px !important;
+        flex-wrap: wrap !important;
+    }
 }
 
 .device-chip.is-you {
@@ -324,8 +373,14 @@ button .waiting-dots span {
     box-shadow: 0 0 8px rgba(0, 184, 148, 0.5);
 }
 
-.device-icon {
-    font-size: 1rem;
+.device-icon,
+.device-icon-span,
+.device-icon-span svg,
+.device-chip-main svg,
+.device-chip svg,
+.member-card-item svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
     flex-shrink: 0;
 }
 
@@ -670,7 +725,7 @@ button .waiting-dots span {
 
 .text-input-area textarea:focus {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    box-shadow: none !important;
 }
 
 .text-input-area textarea::placeholder {
@@ -699,6 +754,62 @@ button .waiting-dots span {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+/* Floating Scroll-to-Bottom Button */
+.btn-scroll-bottom {
+    position: absolute;
+    bottom: 84px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-gradient, #2563eb);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: all 0.25s ease;
+}
+
+.btn-scroll-bottom:hover {
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* Green Save Button for Inline Rename */
+.btn-save-inline {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-save-inline:hover {
+    background: rgba(16, 185, 129, 0.28) !important;
+    color: #ffffff !important;
+    border-color: rgba(16, 185, 129, 0.55) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Red Cancel Button for Inline Rename */
+.btn-cancel-inline {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-cancel-inline:hover {
+    background: rgba(239, 68, 68, 0.28) !important;
+    color: #ffffff !important;
+    border-color: rgba(239, 68, 68, 0.55) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
 }
 
 .btn-send svg { width: 20px; height: 20px; }
@@ -1009,6 +1120,35 @@ button .waiting-dots span {
     -webkit-backdrop-filter: blur(28px) !important;
 }
 
+/* Leave Confirmation Keyboard Focus Styling */
+#btn-confirm-leave,
+#btn-cancel-leave {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease !important;
+}
+
+#btn-confirm-leave:focus,
+#btn-confirm-leave:focus-visible {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
+    outline: none !important;
+}
+
+#btn-cancel-leave:focus,
+#btn-cancel-leave:focus-visible {
+    border-color: var(--accent-primary, #2563eb) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4) !important;
+    outline: none !important;
+}
+
+body.light-theme #btn-cancel-leave:focus,
+body.light-theme #btn-cancel-leave:focus-visible {
+    border-color: #ea580c !important;
+    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.35) !important;
+    outline: none !important;
+}
+
 .btn-close-modal {
     width: 34px;
     height: 34px;
@@ -1026,10 +1166,19 @@ button .waiting-dots span {
 }
 
 .btn-close-modal:hover {
-    background: rgba(255, 99, 132, 0.2);
-    border-color: rgba(255, 99, 132, 0.4);
-    color: #ff6b81;
-    transform: translateY(-1px);
+    background: rgba(239, 68, 68, 0.18) !important;
+    border-color: rgba(239, 68, 68, 0.45) !important;
+    color: #ef4444 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+    transform: scale(1.05);
+}
+
+body.light-theme .btn-close-modal:hover {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+    transform: scale(1.05);
 }
 
 /* --- QR Code Canvas & SVG Strict Sizing --- */
@@ -2259,16 +2408,26 @@ body.light-theme .drawer-panel {
 }
 
 .btn-close-drawer:hover {
-    color: #ffffff !important;
-    background: rgba(255, 255, 255, 0.15) !important;
-    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.18) !important;
+    border-color: rgba(239, 68, 68, 0.45) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
     transform: scale(1.05);
 }
 
 body.light-theme .btn-close-drawer {
-    background: rgba(235, 150, 120, 0.18) !important;
-    border: 1px solid rgba(235, 150, 120, 0.35) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
     color: #2d1810 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.light-theme .btn-close-drawer:hover {
+    color: #dc2626 !important;
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+    transform: scale(1.05);
 }
 
 .drawer-section {

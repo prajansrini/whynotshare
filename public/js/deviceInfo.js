@@ -59,24 +59,25 @@ class DeviceInfo {
     }
 
     static getOS(ua) {
-        if (/Windows/i.test(ua)) return 'Windows';
-        if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
-        if (/Mac/i.test(ua)) return 'macOS';
-        if (/HarmonyOS/i.test(ua)) return 'HarmonyOS';
-        if (/Android/i.test(ua)) return 'Android';
-        if (/CrOS/i.test(ua)) return 'ChromeOS';
-        if (/KaiOS/i.test(ua)) return 'KaiOS';
-        if (/Ubuntu/i.test(ua)) return 'Ubuntu';
-        if (/Mint/i.test(ua)) return 'Linux Mint';
-        if (/Fedora/i.test(ua)) return 'Fedora';
-        if (/Arch/i.test(ua)) return 'Arch Linux';
-        if (/Debian/i.test(ua)) return 'Debian';
-        if (/Manjaro/i.test(ua)) return 'Manjaro';
-        if (/Pop!_OS|Pop_OS|PopOS/i.test(ua)) return 'Pop!_OS';
-        if (/openSUSE|SUSE/i.test(ua)) return 'openSUSE';
-        if (/CentOS/i.test(ua)) return 'CentOS';
-        if (/Red Hat|RHEL/i.test(ua)) return 'Red Hat';
-        if (/Linux/i.test(ua)) return 'Linux';
+        const fullStr = ((ua || '') + ' ' + (typeof navigator !== 'undefined' ? ((navigator.oscpu || '') + ' ' + (navigator.platform || '') + ' ' + (navigator.appVersion || '')) : '')).toLowerCase();
+        if (/windows/i.test(fullStr)) return 'Windows';
+        if (/iphone|ipad|ipod/i.test(fullStr)) return 'iOS';
+        if (/mac/i.test(fullStr) && !/iphone|ipad|ipod/i.test(fullStr)) return 'macOS';
+        if (/harmonyos/i.test(fullStr)) return 'HarmonyOS';
+        if (/android/i.test(fullStr)) return 'Android';
+        if (/cros/i.test(fullStr)) return 'ChromeOS';
+        if (/kaios/i.test(fullStr)) return 'KaiOS';
+        if (/ubuntu/i.test(fullStr)) return 'Ubuntu';
+        if (/mint/i.test(fullStr)) return 'Linux Mint';
+        if (/fedora/i.test(fullStr)) return 'Fedora';
+        if (/arch/i.test(fullStr)) return 'Arch Linux';
+        if (/debian/i.test(fullStr)) return 'Debian';
+        if (/manjaro/i.test(fullStr)) return 'Manjaro';
+        if (/pop!_os|pop_os|popos/i.test(fullStr)) return 'Pop!_OS';
+        if (/opensuse|suse/i.test(fullStr)) return 'openSUSE';
+        if (/centos/i.test(fullStr)) return 'CentOS';
+        if (/red hat|rhel/i.test(fullStr)) return 'Red Hat';
+        if (/linux/i.test(fullStr)) return 'Ubuntu';
         return 'Unknown';
     }
 

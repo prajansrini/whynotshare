@@ -222,6 +222,7 @@ class App {
     }
 
     async createRoom() {
+        this.commitActiveInlineRename();
         const btn = document.getElementById('btn-create');
         if (btn) {
             btn.disabled = true;
@@ -270,6 +271,7 @@ class App {
     }
 
     async joinRoom(code, phrase) {
+        this.commitActiveInlineRename();
         if (!code) { UI.toast('Enter a room code', 'error'); return; }
         code = code.toUpperCase().trim();
         if (code.length === 6 && !code.includes('-')) code = code.slice(0, 3) + '-' + code.slice(3);
@@ -342,12 +344,38 @@ class App {
         }
 
         modalLeave.style.display = 'flex';
+
+        // Default focus to Stay button (safe option)
+        setTimeout(() => {
+            if (btnCancel) btnCancel.focus();
+        }, 50);
+
         const cleanup = () => {
             modalLeave.style.display = 'none';
+            document.removeEventListener('keydown', handleKeyNav);
             this._pendingPastedHash = null;
         };
 
-        btnConfirm.onclick = () => { modalLeave.style.display = 'none'; this._performLeaveRoom(pushToHistory); };
+        const handleKeyNav = (e) => {
+            if (modalLeave.style.display === 'none') return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (btnConfirm) btnConfirm.focus();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (btnCancel) btnCancel.focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cleanup();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyNav);
+
+        btnConfirm.onclick = () => {
+            cleanup();
+            this._performLeaveRoom(pushToHistory);
+        };
         btnCancel.onclick = cleanup;
     }
 
@@ -1005,7 +1033,7 @@ class App {
         const myId = this.conn ? this.conn.getSocketId() : null;
         const otherPeers = peers.filter(p => p.id !== myId);
 
-        const svgDot = '<svg width="7" height="7" viewBox="0 0 8 8" fill="#4ade80" style="vertical-align:1px;margin-right:5px"><circle cx="4" cy="4" r="4"/></svg>';
+        const svgDot = '<svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" style="vertical-align:middle;margin-right:5px;display:inline-block;flex-shrink:0"><circle cx="3" cy="3" r="3"/></svg>';
         const svgCrown = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><circle cx="12" cy="19" r="1"/></svg>';
         const svgGlobe = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
         const svgLock = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
@@ -1025,7 +1053,7 @@ class App {
                             <span>${myInfo.deviceName || 'Local Device'}</span>
                             <span style="font-size:0.72rem;color:var(--text-tertiary);font-weight:500">(${myInfo.systemName || 'Local Peer'})</span>
                         </div>
-                        <div style="font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(34,197,94,0.12);color:#4ade80;border:1px solid rgba(34,197,94,0.3);display:inline-flex;align-items:center">
+                        <div class="p2p-status-badge" style="font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(6,78,59,0.4);color:#34d399;border:1px solid rgba(16,185,129,0.3);display:inline-flex;align-items:center">
                             ${svgDot}<span>Ready for P2P</span>
                         </div>
                     </div>
@@ -1155,6 +1183,11 @@ class App {
                 this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: init.phrase } });
                 this._onRoomKeyRotated(init.phrase);
             }
+            if (typeof init.isRoomLocked === 'boolean' && this.conn) {
+                this.conn.isRoomLocked = init.isRoomLocked;
+                this.updateRoomLockUI(init.isRoomLocked);
+                this.conn._broadcast({ type: 'room-lock-toggled', payload: { locked: init.isRoomLocked } });
+            }
         }
     }
 
@@ -1162,7 +1195,8 @@ class App {
         this._initialHostManageState = {
             roomCode: this.conn.getRoomCode() || '',
             e2eEnabled: this.e2eEnabled,
-            phrase: this.crypto.getPhrase() || ''
+            phrase: this.crypto.getPhrase() || '',
+            isRoomLocked: Boolean(this.conn && this.conn.isRoomLocked)
         };
         const isPrivileged = Boolean(this.conn && (this.conn.isPrivileged ? this.conn.isPrivileged() : this.conn.isCreator));
         const roomCode = this.conn.getRoomCode() || '';
@@ -1341,9 +1375,9 @@ class App {
             const left = document.createElement('div');
             left.style.cssText = 'display:flex;align-items:center;gap:10px';
             left.innerHTML = `
-                <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
+                <span class="device-icon" style="font-size:1rem;display:inline-flex;align-items:center;flex-shrink:0;margin-right:2px">
+                    ${DeviceInfo.getIcon(p.deviceType || 'laptop')}
+                </span>
                 <div style="display:flex;flex-direction:column;gap:2px">
                     <span style="font-weight:600;font-size:0.88rem;color:var(--text-primary);display:flex;align-items:center;gap:6px">
                         ${p.deviceName || 'Device'}
@@ -1608,6 +1642,39 @@ class App {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         UI.toast('Room roster downloaded as TXT', 'success');
+    }
+
+    exportRosterAsJson() {
+        const peers = this.conn ? (this.conn.getPeers() || []) : [];
+        if (peers.length === 0) {
+            UI.toast('No members in room to export.', 'info');
+            return;
+        }
+        const data = {
+            app: 'WhyNotShare',
+            type: 'room-roster',
+            roomCode: this.conn.getRoomCode() || 'Unknown',
+            exportedAt: new Date().toISOString(),
+            totalMembers: peers.length,
+            members: peers.map(p => ({
+                id: p.id,
+                deviceName: p.deviceName || 'Member Device',
+                systemName: p.systemName || 'Web Client',
+                deviceType: p.deviceType || 'unknown',
+                role: p.isCreator ? 'Host' : 'Member',
+                isYou: p.id === (this.conn ? this.conn.myPeerId : null)
+            }))
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `whynotshare-roster-${this.conn.getRoomCode() || 'room'}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        UI.toast('Room roster downloaded as JSON', 'success');
     }
 
     exportChatAsTxt() {
@@ -2050,7 +2117,7 @@ class App {
         editBox.innerHTML = `
             <input type="text" class="input-field inline-input-el" value="${currentName}" style="padding:4px 8px;font-size:0.85rem;height:28px;min-width:110px;flex:1" maxlength="32" autocomplete="off" spellcheck="false">
             <button class="btn-rename-pill btn-random-inline" title="Random Name" style="padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg></button>
-            <button class="btn-rename-pill btn-save-inline" title="Save" style="padding:4px 8px;background:var(--status-online);color:white;border:none">✓</button>
+            <button class="btn-rename-pill btn-save-inline" title="Save" style="padding:4px 8px">✓</button>
             <button class="btn-rename-pill btn-cancel-inline" title="Cancel" style="padding:4px 8px">✕</button>
         `;
 
@@ -2119,6 +2186,16 @@ class App {
         });
 
         setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
+    }
+
+    commitActiveInlineRename() {
+        const activeInput = document.querySelector('.inline-rename-box .inline-input-el');
+        if (activeInput) {
+            const val = activeInput.value.trim();
+            if (val) {
+                this.renameMyDevice(val);
+            }
+        }
     }
 
     renameMyDevice(newName) {
@@ -2670,6 +2747,17 @@ class App {
             });
         }
         document.getElementById('btn-send-text').addEventListener('click', () => this.sendText());
+        const messagesEl = document.getElementById('messages');
+        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+        if (messagesEl && btnScrollBottom) {
+            messagesEl.addEventListener('scroll', () => {
+                const isScrolledUp = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight > 120;
+                btnScrollBottom.style.display = isScrolledUp ? 'inline-flex' : 'none';
+            });
+            btnScrollBottom.addEventListener('click', () => {
+                messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+            });
+        }
         const modalLeave = document.getElementById('modal-leave-confirm');
         const modalHostLeave = document.getElementById('modal-host-leave');
 
@@ -2982,9 +3070,13 @@ class App {
         if (btnBatchRemove) btnBatchRemove.addEventListener('click', handleRemoveNonAdmins);
 
         const btnExportRosterTxt = document.getElementById('btn-export-roster-txt');
+        const btnExportRosterJson = document.getElementById('btn-export-roster-json');
         const btnBatchExport = document.getElementById('btn-batch-export-roster');
         if (btnExportRosterTxt) {
             btnExportRosterTxt.addEventListener('click', () => this.exportRosterAsTxt());
+        }
+        if (btnExportRosterJson) {
+            btnExportRosterJson.addEventListener('click', () => this.exportRosterAsJson());
         }
         if (btnBatchExport) {
             btnBatchExport.addEventListener('click', () => this.exportRosterAsTxt());
@@ -3016,8 +3108,6 @@ class App {
         if (btnOpenRoomMenu) btnOpenRoomMenu.addEventListener('click', openDrawer);
         const handleCopyLink = () => this.copyRoomLink();
         if (btnHeaderRoomCode) btnHeaderRoomCode.addEventListener('click', handleCopyLink);
-        const btnRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
-        if (btnRoomBadgeCopy) btnRoomBadgeCopy.addEventListener('click', handleCopyLink);
 
         const inputDevicesModalSearch = document.getElementById('input-devices-modal-search');
         if (inputDevicesModalSearch) {
@@ -3108,7 +3198,13 @@ class App {
 
         const elRoomBadgeCopy = document.getElementById('btn-room-badge-copy');
         if (elRoomBadgeCopy) {
-            elRoomBadgeCopy.addEventListener('click', () => this.copyRoomLink());
+            elRoomBadgeCopy.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const code = (this.conn && (typeof this.conn.getRoomCode === 'function' ? this.conn.getRoomCode() : this.conn.roomCode)) || (document.getElementById('share-room-code') && document.getElementById('share-room-code').textContent !== '---' ? document.getElementById('share-room-code').textContent : '') || this.roomCode;
+                if (code && code !== '---') {
+                    UI.copyToClipboard(code, 'Room Code copied to clipboard!');
+                }
+            });
         }
         const btnCopyModalRoomId = document.getElementById('btn-copy-modal-room-id');
         if (btnCopyModalRoomId) {

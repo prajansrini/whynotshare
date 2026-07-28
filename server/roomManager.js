@@ -43,11 +43,13 @@ class RoomManager {
         if (room.peers.size >= this.maxPeers) return { error: 'Room is full' };
         if (room.peers.has(socketId)) return { error: 'Already in room' };
 
+        const isFirstPeer = room.peers.size === 0;
+
         room.peers.set(socketId, {
             id: socketId,
             ...deviceInfo,
             joinedAt: Date.now(),
-            isCreator: false
+            isCreator: isFirstPeer
         });
         room.lastActivity = Date.now();
         return { success: true, peers: this.getPeers(code) };
@@ -59,11 +61,7 @@ class RoomManager {
                 room.peers.delete(socketId);
                 room.lastActivity = Date.now();
                 if (room.peers.size === 0) {
-                    // Keep empty room active for 10 min for reconnects or rejoining
-                    setTimeout(() => {
-                        const r = this.rooms.get(code);
-                        if (r && r.peers.size === 0) this.rooms.delete(code);
-                    }, 10 * 60 * 1000);
+                    this.rooms.delete(code);
                 }
                 return { code, remainingPeers: this.getPeers(code) };
             }

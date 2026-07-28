@@ -185,8 +185,8 @@ class ConnectionManager {
                 });
                 this.peer.on('connection', (conn) => this._handleIncoming(conn));
                 this.peer.on('error', (err) => {
-                    if (err && err.type === 'unavailable-id' && attempt <= 3) {
-                        setTimeout(() => tryOpen(attempt + 1), 1500);
+                    if (err && err.type === 'unavailable-id' && attempt <= 10) {
+                        setTimeout(() => tryOpen(attempt + 1), 800);
                     } else if (err && err.type === 'unavailable-id') {
                         reject(new Error('Room code taken. Try again.'));
                     } else {
@@ -264,11 +264,22 @@ class ConnectionManager {
                 setTimeout(() => { if (this._joinReject && !connected) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
             });
             this.peer.on('error', (err) => {
-                if (err && err.type === 'peer-unavailable' && !connected && attempt < 12) {
-                    attempt++;
-                    if (tryConnect) setTimeout(tryConnect, 1000);
+                if (err && err.type === 'peer-unavailable' && !connected) {
+                    if (attempt < 4) {
+                        attempt++;
+                        if (tryConnect) setTimeout(tryConnect, 800);
+                    } else {
+                        // Host has left & room is empty: Auto-claim room as new Host!
+                        this.createRoom(code).then(() => {
+                            if (this._joinResolve) this._joinResolve(this.peers);
+                        }).catch(() => {
+                            if (this._joinReject && !connected) {
+                                this._joinReject(new Error('Room not found or host left.'));
+                            }
+                        });
+                    }
                 } else if (this._joinReject && !connected) {
-                    this._joinReject(new Error(err && err.type === 'peer-unavailable' ? 'Room not found.' : ((err && err.message) || 'Failed')));
+                    this._joinReject(new Error((err && err.message) || 'Failed'));
                 }
             });
             this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });

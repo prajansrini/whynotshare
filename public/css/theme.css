@@ -425,3 +425,80 @@ body.light-theme .device-tag {
     background: rgba(234, 88, 12, 0.15) !important;
     color: #ea580c !important;
 }
+
+/* --- Light Theme Input Focus Overrides (Single Clean Line Border, No Outer Shade) --- */
+body.light-theme input:focus,
+body.light-theme textarea:focus,
+body.light-theme select:focus,
+body.light-theme .input-field:focus,
+body.light-theme input:focus-visible,
+body.light-theme textarea:focus-visible,
+body.light-theme .input-field:focus-visible {
+    border-color: #ea580c !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+body.light-theme .device-id-badge:focus-within {
+    border-color: var(--glass-border) !important;
+    box-shadow: none !important;
+}
+
+body.light-theme input,
+body.light-theme textarea,
+body.light-theme select,
+body.light-theme .input-field {
+    outline: none !important;
+}
+
+/* --- Light Theme P2P Status Badges (High Contrast Emerald Text) --- */
+body.light-theme .p2p-status-badge,
+body.light-theme [style*="background:rgba(6,78,59"],
+body.light-theme [style*="background: rgba(6, 78, 59"] {
+    background: rgba(16, 185, 129, 0.14) !important;
+    color: #047857 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+body.light-theme .btn-scroll-bottom {
+    background: #ea580c !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35) !important;
+}
+
+body.light-theme .btn-save-inline {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #047857 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+body.light-theme .btn-save-inline:hover {
+    background: rgba(16, 185, 129, 0.24) !important;
+    color: #065f46 !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+}
+
+body.light-theme .btn-cancel-inline {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #dc2626 !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+body.light-theme .btn-cancel-inline:hover {
+    background: rgba(239, 68, 68, 0.24) !important;
+    color: #991b1b !important;
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Device Icons Color (Pure Black in Light Theme) */
+body.light-theme .device-icon,
+body.light-theme .device-icon-span,
+body.light-theme .device-icon-span svg,
+body.light-theme .device-chip-main svg,
+body.light-theme .device-chip svg,
+body.light-theme .member-card-item svg {
+    color: #000000 !important;
+    stroke: #000000 !important;
+}

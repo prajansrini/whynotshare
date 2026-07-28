@@ -70,25 +70,25 @@ class UI {
         return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     }
 
-    static async copyToClipboard(text) {
+    static async copyToClipboard(text, toastMsg = 'Copied!') {
         try { await navigator.clipboard.writeText(text); } catch {
             const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
             document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
         }
-        UI.toast('Copied!', 'success');
+        UI.toast(toastMsg, 'success');
     }
 
     static renderDeviceChip(peer, isYou) {
         const el = document.createElement('div');
         el.className = 'device-chip' + (isYou ? ' is-you' : '');
         el.dataset.peerId = peer.id;
-        const leftSide = '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
+        const leftSide = '<div class="device-chip-main">' +
             '<span class="device-dot"></span><span class="device-icon">' + DeviceInfo.getIcon(peer.deviceType) + '</span>' +
-            '<span class="device-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + peer.deviceName + '</span>' +
-            (peer.isCreator ? '<span class="badge-host">Host</span>' : '') +
+            '<span class="device-name">' + UI.escapeHtml(peer.deviceName) + '</span>' +
             '</div>';
-        const rightSide = '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
-            (peer.systemName ? '<span style="font-size:0.75rem;color:var(--text-tertiary);white-space:nowrap">' + peer.systemName + '</span>' : '') +
+        const rightSide = '<div class="device-chip-meta">' +
+            (peer.systemName ? '<span class="device-system-name">' + UI.escapeHtml(peer.systemName) + '</span>' : '') +
+            (peer.isCreator ? '<span class="badge-host">Host</span>' : '') +
             (isYou ? '<span class="device-tag">You</span>' : '') +
             '</div>';
         el.innerHTML = leftSide + rightSide;
