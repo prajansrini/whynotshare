@@ -757,7 +757,7 @@
     </div>
 
     <!-- GENERIC CONFIRM MODAL -->
-    <div id="modal-confirm-action" class="modal-overlay" style="display:none;z-index:9999">
+    <div id="modal-confirm-action" class="modal-overlay" style="display:none;z-index:999999">
         <div class="modal-card glass-card" style="max-width:320px;padding:24px;text-align:center">
             <h3 id="confirm-action-title"
                 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Confirm</h3>
@@ -774,14 +774,20 @@
 
     <!-- LEAVE CONFIRM MODAL (Standard) -->
     <div id="modal-leave-confirm" class="modal-overlay" style="display:none">
-        <div class="modal-card glass-card" style="max-width:320px;padding:24px;text-align:center">
+        <div class="modal-card glass-card" style="max-width:350px;padding:24px;text-align:center">
             <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Leave Room?</h3>
             <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 20px;line-height:1.4">Are you sure you want to leave this room?</p>
-            <div style="display:flex;gap:12px;width:100%">
-                <button id="btn-confirm-leave" class="btn"
-                    style="flex:1;background:rgba(239, 68, 68, 0.12);color:#f87171;border:1px solid rgba(239, 68, 68, 0.35);border-radius:10px;font-weight:600;padding:10px;transition:all 0.2s">Leave</button>
-                <button id="btn-cancel-leave" class="btn btn-primary"
-                    style="flex:1;border-radius:10px;font-weight:700;padding:10px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Stay</button>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+                <button id="btn-export-and-leave" class="btn btn-secondary" style="width:100%;border-radius:10px;font-weight:700;padding:11px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.35);color:var(--accent-primary);display:inline-flex;align-items:center;justify-content:center;gap:6px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Export Chat &amp; Leave</span>
+                </button>
+                <div style="display:flex;gap:10px;width:100%">
+                    <button id="btn-confirm-leave" class="btn"
+                        style="flex:1;background:rgba(239, 68, 68, 0.12);color:#f87171;border:1px solid rgba(239, 68, 68, 0.35);border-radius:10px;font-weight:600;padding:10px;transition:all 0.2s">Leave</button>
+                    <button id="btn-cancel-leave" class="btn btn-primary"
+                        style="flex:1;border-radius:10px;font-weight:700;padding:10px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Stay</button>
+                </div>
             </div>
         </div>
     </div>
@@ -804,15 +810,19 @@
                 <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Leave Room</h3>
                 <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 24px;line-height:1.4">You're the
                     Host. Please choose how to proceed before leaving.</p>
-                <div style="display:flex;flex-direction:column;gap:12px;width:100%">
+                <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+                    <button id="btn-host-export-leave" class="btn btn-secondary" style="width:100%;border-radius:10px;font-weight:700;padding:11px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.35);color:var(--accent-primary);display:inline-flex;align-items:center;justify-content:center;gap:6px">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Export Chat &amp; Leave</span>
+                    </button>
                     <button id="btn-host-assign-leave" class="btn btn-primary"
-                        style="width:100%;border-radius:10px;font-weight:700;padding:12px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Assign
+                        style="width:100%;border-radius:10px;font-weight:700;padding:11px;box-shadow:0 4px 12px rgba(108, 92, 231, 0.3)">Assign
                         Host & Leave</button>
                     <button id="btn-host-delete-leave" class="btn"
-                        style="width:100%;background:rgba(239, 68, 68, 0.1);color:#ef4444;border:1px solid rgba(239, 68, 68, 0.2);border-radius:10px;font-weight:600;padding:12px;transition:all 0.2s">Delete
+                        style="width:100%;background:rgba(239, 68, 68, 0.1);color:#ef4444;border:1px solid rgba(239, 68, 68, 0.2);border-radius:10px;font-weight:600;padding:11px;transition:all 0.2s">Delete
                         Room & Leave</button>
                     <button id="btn-host-cancel-leave" class="btn btn-secondary"
-                        style="width:100%;border-radius:10px;font-weight:600;padding:12px">Cancel</button>
+                        style="width:100%;border-radius:10px;font-weight:600;padding:10px">Cancel</button>
                 </div>
             </div>
 
@@ -862,6 +872,24 @@
                     <button id="btn-host-back-assign" class="btn btn-secondary"
                         style="flex:1;border-radius:10px;font-weight:600;padding:10px">Back</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KICKED / ROOM DELETED NOTICE MODAL -->
+    <div id="modal-kicked-notice" class="modal-overlay" style="display:none;z-index:999999">
+        <div class="modal-card glass-card" style="max-width:360px;padding:24px;text-align:center">
+            <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 id="kicked-notice-title" style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Room Notice</h3>
+            <p id="kicked-notice-message" style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 20px;line-height:1.4">You were removed by the host.</p>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+                <button id="btn-kicked-export-zip" class="btn btn-primary" style="width:100%;border-radius:10px;font-weight:700;padding:11px;display:inline-flex;align-items:center;justify-content:center;gap:6px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Download Chat Archive (.ZIP)</span>
+                </button>
+                <button id="btn-kicked-dismiss" class="btn btn-secondary" style="width:100%;border-radius:10px;font-weight:600;padding:10px">Dismiss</button>
             </div>
         </div>
     </div>
@@ -1039,11 +1067,12 @@
                             <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat History
                             </div>
-                            <div style="font-size:0.78rem;color:var(--text-tertiary)">Export all text messages and timestamps</div>
+                            <div style="font-size:0.78rem;color:var(--text-tertiary)">Export text, JSON, or full .MD + shared files ZIP</div>
                         </div>
                         <div style="display:flex;gap:6px">
                             <button id="btn-export-chat-txt" class="btn btn-secondary" style="padding:6px 12px;font-size:0.78rem;font-weight:600">TXT</button>
                             <button id="btn-export-chat-json" class="btn btn-secondary" style="padding:6px 12px;font-size:0.78rem;font-weight:600">JSON</button>
+                            <button id="btn-export-chat-md-zip" class="btn btn-secondary" style="padding:6px 12px;font-size:0.78rem;font-weight:600" title="Export Markdown chat log with embedded files in a ZIP archive">MD+ZIP</button>
                         </div>
                     </div>
 

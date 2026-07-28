@@ -117,7 +117,9 @@ class TextShare {
         if (existing) {
             if (url && !existing.url) {
                 existing.url = url;
-                this.updateSingleMessageUI(existing);
+                if (!this.updateSingleMessageUI(existing)) {
+                    this._renderMessage(existing);
+                }
             }
             return;
         }

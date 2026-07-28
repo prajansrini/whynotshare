@@ -623,8 +623,11 @@ class ConnectionManager {
             }
             case 'kick-peer': {
                 if (data.payload.targetId === this.myPeerId) {
-                    if (typeof UI !== 'undefined') UI.toast('You were removed by the host.', 'error');
-                    if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
+                    if (window.app && window.app.showKickedNotice) {
+                        window.app.showKickedNotice('Removed From Room', 'You were removed by the host.');
+                    } else if (window.app && window.app._performLeaveRoom) {
+                        window.app._performLeaveRoom(true);
+                    }
                 } else if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
@@ -644,9 +647,11 @@ class ConnectionManager {
 
                 if (this.myPeerId === adminPeerId) {
                     this.isRoomAdmin = true;
-                    if (typeof UI !== 'undefined') UI.toast('You have been promoted to Room Admin!', 'success');
+                    this.isCreator = true;
+                    if (typeof UI !== 'undefined') UI.toast('You have been promoted to Room Host!', 'success');
                 } else {
                     this.isRoomAdmin = false;
+                    this.isCreator = false;
                 }
 
                 if (this.isCreator) {
@@ -668,8 +673,11 @@ class ConnectionManager {
                 if (this.isCreator) {
                     this._broadcast(data, fromId);
                 }
-                if (typeof UI !== 'undefined') UI.toast('The room was deleted by the host.', 'error');
-                if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
+                if (window.app && window.app.showKickedNotice) {
+                    window.app.showKickedNotice('Room Deleted', 'The room was deleted by the host.');
+                } else if (window.app && window.app._performLeaveRoom) {
+                    window.app._performLeaveRoom(true);
+                }
                 break;
             }
             case 'share-personal-key': {

@@ -492,6 +492,20 @@ body.light-theme .btn-cancel-inline:hover {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
 }
 
+/* Scroll to bottom button in Light Theme */
+body.light-theme .btn-scroll-bottom {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    color: #2d1810 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-theme .btn-scroll-bottom:hover {
+    background: #f3f4f6 !important;
+    border-color: rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
 /* Device Icons Color (Pure Black in Light Theme) */
 body.light-theme .device-icon,
 body.light-theme .device-icon-span,

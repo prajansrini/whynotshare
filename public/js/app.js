@@ -95,9 +95,8 @@ class App {
         };
 
         this.fileTransfer.onIncomingFile = (fid, meta) => {
-            if (meta && meta.historyTransfer) return;
             const peer = this.conn.getPeers().find(p => p.id === meta.senderId);
-            const senderName = peer ? peer.deviceName : 'Peer';
+            const senderName = (peer && peer.deviceName) ? peer.deviceName : (meta.senderName || meta.deviceName || 'Peer');
             const senderColor = this.textShare ? this.textShare._getPeerColor(meta.senderId || 'unknown') : 'var(--text-secondary)';
             if (this.textShare && Array.isArray(this.textShare.messages)) {
                 const existingMsg = this.textShare.messages.find(m => (m.meta && m.meta.fileId === fid) || m.id === fid);
@@ -516,7 +515,57 @@ class App {
         };
     }
 
+    closeAllModalsAndDrawers() {
+        const drawer = document.getElementById('drawer-room-menu');
+        const backdrop = document.getElementById('drawer-backdrop');
+        if (drawer) drawer.classList.remove('active');
+        if (backdrop) backdrop.classList.remove('active');
+
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.style.display = 'none';
+        });
+        document.body.style.overflow = '';
+    }
+
+    showKickedNotice(title, message) {
+        const modal = document.getElementById('modal-kicked-notice');
+        if (!modal) {
+            this._performLeaveRoom(true);
+            return;
+        }
+        const titleEl = document.getElementById('kicked-notice-title');
+        const msgEl = document.getElementById('kicked-notice-message');
+        if (titleEl) titleEl.textContent = title || 'Room Notice';
+        if (msgEl) msgEl.textContent = message || 'You were removed by the host.';
+
+        modal.style.display = 'flex';
+
+        const btnExport = document.getElementById('btn-kicked-export-zip');
+        const btnDismiss = document.getElementById('btn-kicked-dismiss');
+
+        const cleanup = () => {
+            modal.style.display = 'none';
+            if (btnExport) btnExport.onclick = null;
+            if (btnDismiss) btnDismiss.onclick = null;
+        };
+
+        if (btnExport) {
+            btnExport.onclick = async () => {
+                cleanup();
+                await this.exportChatPackageZip();
+                this._performLeaveRoom(true);
+            };
+        }
+        if (btnDismiss) {
+            btnDismiss.onclick = () => {
+                cleanup();
+                this._performLeaveRoom(true);
+            };
+        }
+    }
+
     _performLeaveRoom(pushToHistory = true, deleteRoom = false) {
+        this.closeAllModalsAndDrawers();
         try { sessionStorage.removeItem('whynotshare_active_session'); } catch { }
         const currentCode = this.conn ? this.conn.getRoomCode() : null;
         if (currentCode) this.lastRoomCodeLeft = currentCode;
@@ -660,6 +709,213 @@ class App {
         }
     }
 
+    async exportChatPackageZip() {
+        if (!window.JSZip) {
+            UI.toast('ZIP library is loading or unavailable.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btn-export-chat-md-zip');
+        const origText = btn ? btn.textContent : 'MD+ZIP';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Preparing...';
+        }
+
+        try {
+            const zip = new JSZip();
+            const roomCode = (this.conn && this.conn.getRoomCode()) || 'SESSION';
+            const rootFolderName = `WhyNotShare_Archive_${roomCode}`;
+            const rootFolder = zip.folder(rootFolderName);
+            const filesFolder = rootFolder.folder("files");
+
+            const nowStr = new Date().toLocaleString();
+            const dateISO = new Date().toISOString().slice(0, 10);
+            const myPeerId = this.conn ? this.conn.myPeerId : null;
+
+            // 1. Gather all shared files
+            const candidates = new Map();
+            if (this.fileTransfer && this.fileTransfer.sharedFilesHistory) {
+                for (const [fid, item] of this.fileTransfer.sharedFilesHistory.entries()) {
+                    if (item && item.meta && item.meta.fileName && !item.meta.cancelled) {
+                        candidates.set(fid, {
+                            fileName: item.meta.fileName,
+                            fileSize: item.meta.fileSize || 0,
+                            getBlob: () => this.fileTransfer.loadFromIndexedDB(fid)
+                        });
+                    }
+                }
+            }
+
+            if (this.textShare && Array.isArray(this.textShare.messages)) {
+                for (const msg of this.textShare.messages) {
+                    if (msg && msg.meta && (msg.meta.fileName || msg.meta.fileId) && !msg.meta.cancelled) {
+                        const fid = msg.meta.fileId || msg.id;
+                        const fName = msg.meta.fileName || ('file_' + fid);
+                        if (!candidates.has(fid)) {
+                            candidates.set(fid, {
+                                fileName: fName,
+                                fileSize: msg.meta.fileSize || 0,
+                                getBlob: async () => {
+                                    let b = await this.fileTransfer.loadFromIndexedDB(fid);
+                                    if (!b && msg.url && msg.url.startsWith('blob:')) {
+                                        try { b = await fetch(msg.url).then(r => r.blob()); } catch { }
+                                    }
+                                    return b;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Map of fileId / fName -> relative markdown link target inside ZIP
+            const fileLinkMap = new Map();
+            const usedFileNames = new Map();
+
+            for (const [fid, cand] of candidates.entries()) {
+                try {
+                    const blob = await cand.getBlob();
+                    if (blob && blob instanceof Blob) {
+                        let name = cand.fileName || ('shared_file_' + fid);
+                        let count = usedFileNames.get(name) || 0;
+                        let safeName = name;
+                        if (count > 0) {
+                            const extIdx = name.lastIndexOf('.');
+                            if (extIdx > 0) {
+                                safeName = name.slice(0, extIdx) + '_' + count + name.slice(extIdx);
+                            } else {
+                                safeName = name + '_' + count;
+                            }
+                        }
+                        usedFileNames.set(name, count + 1);
+
+                        filesFolder.file(safeName, blob);
+                        const relPath = `./files/${encodeURIComponent(safeName)}`;
+                        fileLinkMap.set(fid, relPath);
+                        fileLinkMap.set(cand.fileName, relPath);
+                    }
+                } catch (e) {
+                    console.error('Error packing file into ZIP:', e);
+                }
+            }
+
+            // 2. Generate Markdown document
+            let md = `# 💬 WhyNotShare Room Chat Archive\n\n`;
+            md += `> **Room Code:** \`${roomCode}\`  \n`;
+            md += `> **Export Date:** \`${nowStr}\`  \n`;
+            md += `> **E2E Encryption:** \`${this.e2eEnabled ? 'AES-256 E2E Encrypted' : 'Plaintext Mode'}\`  \n\n`;
+
+            md += `---\n\n`;
+            md += `## 👥 Connected Participants\n\n`;
+            md += `| Participant | Role | Device / OS |\n`;
+            md += `| :--- | :--- | :--- |\n`;
+
+            const peers = (this.conn && this.conn.getPeers()) || [];
+            let myName = (this.myInfo && this.myInfo.deviceName && this.myInfo.deviceName !== 'You') ? this.myInfo.deviceName : '';
+            if (!myName && this.conn && this.conn.myDeviceName && this.conn.myDeviceName !== 'You') {
+                myName = this.conn.myDeviceName;
+            }
+            if (!myName) {
+                myName = (typeof DeviceInfo !== 'undefined' && DeviceInfo.getSystemInfo) ? DeviceInfo.getSystemInfo().deviceName : 'You';
+            }
+
+            let mySys = '';
+            if (this.myInfo && this.myInfo.browser && this.myInfo.os && this.myInfo.browser !== 'undefined') {
+                mySys = `${this.myInfo.browser} on ${this.myInfo.os}`;
+            } else if (this.myInfo && this.myInfo.systemName) {
+                mySys = this.myInfo.systemName;
+            } else if (typeof DeviceInfo !== 'undefined' && DeviceInfo.getSystemInfo) {
+                const sysInfo = DeviceInfo.getSystemInfo();
+                mySys = sysInfo.systemName || `${sysInfo.browser} on ${sysInfo.os}`;
+            }
+            if (!mySys || mySys.includes('undefined')) mySys = 'Web Client';
+
+            const isMeHost = Boolean(this.conn && (this.conn.isPrivileged ? this.conn.isPrivileged() : this.conn.isCreator));
+
+            md += `| **${myName} (You)** | ${isMeHost ? 'Host' : 'Member'} | ${mySys} |\n`;
+            for (const p of peers) {
+                if (p.id === myPeerId) continue;
+                const role = (p.isCreator || p.isAdmin) ? 'Host' : 'Member';
+                const sys = p.systemName || 'Web Client';
+                md += `| **${p.deviceName || 'Member'}** | ${role} | ${sys} |\n`;
+            }
+
+            md += `\n---\n\n`;
+            md += `## 💬 Chat Transcript & Shared Files\n\n`;
+
+            const messages = (this.textShare && Array.isArray(this.textShare.messages)) ? this.textShare.messages : [];
+            if (messages.length === 0) {
+                md += `*No chat messages or file transfers recorded in this session.*\n`;
+            } else {
+                for (const m of messages) {
+                    const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    
+                    let senderName = 'Peer';
+                    let isMe = Boolean(m.isMe);
+
+                    if (typeof m.sender === 'string') {
+                        senderName = m.sender;
+                        if (m.sender === 'You') isMe = true;
+                    } else if (m.sender && typeof m.sender === 'object') {
+                        senderName = m.sender.name || m.sender.deviceName || 'Peer';
+                        if (m.sender.id && m.sender.id === myPeerId) isMe = true;
+                    } else if (m.deviceName) {
+                        senderName = m.deviceName;
+                    }
+
+                    if (isMe) senderName = 'You';
+
+                    const align = isMe ? 'right' : 'left';
+
+                    if (m.type === 'file' || (m.meta && (m.meta.fileName || m.meta.fileId))) {
+                        const fid = m.meta ? (m.meta.fileId || m.id) : m.id;
+                        const fname = m.meta ? (m.meta.fileName || 'Shared File') : 'Shared File';
+                        const relativePath = fileLinkMap.get(fid) || fileLinkMap.get(fname) || (`./files/${encodeURIComponent(fname)}`);
+
+                        md += `<div align="${align}">\n\n`;
+                        md += `📎 **${senderName}** shared a file \`[${time}]\`  \n`;
+                        md += `📄 **[${fname}](${relativePath})**  \n\n`;
+                        md += `</div>\n\n`;
+                    } else {
+                        md += `<div align="${align}">\n\n`;
+                        md += `**${senderName}** \`[${time}]\`:  \n`;
+                        md += `> ${m.text || m.content || ''}  \n\n`;
+                        md += `</div>\n\n`;
+                    }
+                }
+            }
+
+            md += `---\n\n`;
+            md += `*Generated automatically by [WhyNotShare](https://github.com/prajansrini/whynotshare) P2P Sharing Platform.*\n`;
+
+            // Add chat.md and README to rootFolder inside ZIP
+            rootFolder.file('chat.md', md);
+            rootFolder.file('README.txt', `WhyNotShare Room Archive (${roomCode})\n\nOpen 'chat.md' in any Markdown viewer (VS Code, Obsidian, GitHub, etc.) to view the presentable chat log with direct links to shared files in the 'files/' folder.`);
+
+            if (btn) btn.textContent = 'Packaging...';
+            const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 5 } });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `WhyNotShare_Chat_Archive_${roomCode}_${dateISO}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+            UI.toast('Chat Archive Package (.MD + Files ZIP) exported!', 'success');
+        } catch (err) {
+            console.error('Failed to generate chat package ZIP:', err);
+            UI.toast('Failed to export chat package ZIP', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+    }
+
     async handleDataTransferItems(dataTransfer) {
         if (!dataTransfer) return;
         const items = dataTransfer.items;
@@ -697,6 +953,10 @@ class App {
             }
         }
         this.updateStagedFilesUI();
+        setTimeout(() => {
+            const input = document.getElementById('text-input') || document.getElementById('input-text-msg');
+            if (input) input.focus();
+        }, 50);
     }
 
     removeStagedFile(index) {
@@ -1429,6 +1689,7 @@ class App {
                             }
 
                             this.conn.isRoomAdmin = false;
+                            this.conn.isCreator = false;
                             for (const peer of (this.conn.peers || [])) {
                                 peer.isAdmin = (peer.id === p.id);
                                 peer.isCreator = (peer.id === p.id);
@@ -2778,6 +3039,23 @@ class App {
             if (e.target.id === 'modal-host-leave') closeAllLeaveModals();
         });
 
+        const btnExportAndLeave = document.getElementById('btn-export-and-leave');
+        if (btnExportAndLeave) {
+            btnExportAndLeave.addEventListener('click', async () => {
+                closeAllLeaveModals();
+                await this.exportChatPackageZip();
+                this._performLeaveRoom(true);
+            });
+        }
+        const btnHostExportLeave = document.getElementById('btn-host-export-leave');
+        if (btnHostExportLeave) {
+            btnHostExportLeave.addEventListener('click', async () => {
+                closeAllLeaveModals();
+                await this.exportChatPackageZip();
+                this._performLeaveRoom(true);
+            });
+        }
+
         const triggerLeave = () => {
             document.addEventListener('keydown', handleEscapeLeave);
             this.leaveRoom();
@@ -3168,6 +3446,9 @@ class App {
         const btnExportChatJson = document.getElementById('btn-export-chat-json');
         if (btnExportChatJson) btnExportChatJson.addEventListener('click', () => this.exportChatAsJson());
 
+        const btnExportChatMdZip = document.getElementById('btn-export-chat-md-zip');
+        if (btnExportChatMdZip) btnExportChatMdZip.addEventListener('click', () => this.exportChatPackageZip());
+
         const btnExportFilesZip = document.getElementById('btn-export-files-zip');
         if (btnExportFilesZip) btnExportFilesZip.addEventListener('click', () => this.downloadAllFilesZip());
 
@@ -3304,7 +3585,21 @@ class App {
         const filePicker = document.getElementById('file-picker');
         document.getElementById('btn-pick-file').addEventListener('click', () => filePicker.click());
         const btnAttachChat = document.getElementById('btn-attach-chat');
-        if (btnAttachChat) btnAttachChat.addEventListener('click', () => filePicker.click());
+        if (btnAttachChat) {
+            btnAttachChat.addEventListener('click', (e) => {
+                if (this.stagedFiles && this.stagedFiles.length > 0 && e.detail === 0) {
+                    this.sendText();
+                    return;
+                }
+                filePicker.click();
+            });
+            btnAttachChat.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.sendText();
+                }
+            });
+        }
         const btnDownloadAll = document.getElementById('btn-download-all');
         if (btnDownloadAll && !btnDownloadAll._hasZipListener) {
             btnDownloadAll._hasZipListener = true;

@@ -3,6 +3,18 @@ class UI {
     static $$(sel) { return document.querySelectorAll(sel); }
 
     static showScreen(screenId, pushToHistory = true) {
+        if (screenId !== 'screen-room' && screenId !== 'screen-share') {
+            const drawer = document.getElementById('drawer-room-menu');
+            const backdrop = document.getElementById('drawer-backdrop');
+            if (drawer) drawer.classList.remove('active');
+            if (backdrop) backdrop.classList.remove('active');
+
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.style.display = 'none';
+            });
+            document.body.style.overflow = '';
+        }
+
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const t = document.getElementById(screenId);
         if (t) t.classList.add('active');
@@ -27,6 +39,17 @@ class UI {
                 try { window.app.updateMyNameDisplay(); } catch {}
             }
         }
+    }
+
+    static formatBytes(bytes) {
+        if (typeof FileTransfer !== 'undefined' && FileTransfer.formatSize) {
+            return FileTransfer.formatSize(bytes);
+        }
+        if (!bytes || isNaN(bytes)) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
     static toast(message, type = 'info', duration = 3000) {

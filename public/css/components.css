@@ -760,26 +760,30 @@ button .waiting-dots span {
 .btn-scroll-bottom {
     position: absolute;
     bottom: 84px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--accent-gradient, #2563eb);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
-    transition: all 0.25s ease;
+    transition: opacity 0.18s ease, transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .btn-scroll-bottom:hover {
-    transform: translateX(-50%) scale(1.1);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    transform: translateX(-50%) scale(1.1) !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45) !important;
 }
 
 /* Green Save Button for Inline Rename */
@@ -1101,6 +1105,14 @@ button .waiting-dots span {
     justify-content: center;
     padding: var(--space-md);
     animation: fadeIn 0.2s ease;
+}
+
+/* Top-Level Dialog Overlays */
+#modal-confirm-action,
+#modal-leave-confirm,
+#modal-host-leave,
+#modal-prompt-action {
+    z-index: 999999 !important;
 }
 
 .modal-card {
