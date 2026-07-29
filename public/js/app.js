@@ -2651,6 +2651,14 @@ class App {
             }
         });
         window.addEventListener('popstate', (e) => {
+            const currentActive = document.querySelector('.screen.active');
+            const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
+            if (currentScreenId === 'screen-share' && this.conn && this.conn.getRoomCode()) {
+                try { window.history.pushState({ screenId: 'screen-share' }, '', window.location.hash); } catch { }
+                this.leaveRoom(false);
+                return;
+            }
+
             const state = e.state;
             const hash = window.location.hash ? window.location.hash.slice(1).split(':')[0] : '';
             let targetScreenId = state && state.screenId ? state.screenId : null;
@@ -2661,8 +2669,6 @@ class App {
                 else targetScreenId = 'screen-landing';
             }
 
-            const currentActive = document.querySelector('.screen.active');
-            const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
             if (currentScreenId === 'screen-share' && targetScreenId !== 'screen-share') {
                 this.leaveRoom(false);
             } else if (targetScreenId === 'screen-share' && !this.conn.getRoomCode()) {
@@ -3651,9 +3657,8 @@ class App {
     updateFavicon(isLight) {
         const favicon = document.getElementById('app-favicon');
         if (!favicon) return;
-        const strokeColor = isLight ? '%23ea580c' : '%233b82f6';
-        const planeColor = isLight ? '%23ea580c' : '%23ffffff';
-        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='10 10 80 80' fill='none' stroke='${strokeColor}'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke-width='8' stroke-linejoin='round'/><g transform='translate(34, 34) scale(1.3)' stroke='${planeColor}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></svg>`;
+        const strokeColor = isLight ? '%23000000' : '%23ffffff';
+        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='15 10 70 82' fill='none' stroke='${strokeColor}'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke-width='7' stroke-linejoin='round'/><g transform='translate(34, 34) scale(1.3)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></svg>`;
         favicon.href = 'data:image/svg+xml,' + svgStr;
     }
 

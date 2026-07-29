@@ -446,9 +446,17 @@ body:not(.light-theme) .bg-orb-3 {
 .toast-error { border-left: 3px solid var(--status-error); }
 .toast-info { border-left: 3px solid var(--accent-primary); }
 
-/* --- Utility --- */
+/* --- Static Clean Text Gradient for 'Not' --- */
 .text-gradient {
-    background: var(--accent-gradient);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+}
+
+body.light-theme .text-gradient {
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
