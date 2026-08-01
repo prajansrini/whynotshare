@@ -2229,7 +2229,7 @@ body.light-theme .portrait-lock-overlay {
     .share-header-top {
         margin-bottom: 4px !important;
     }
-    .app-title { font-size: 1.15rem !important; }
+    .share-header-top .room-header-title { font-size: 1.02rem !important; white-space: nowrap !important; flex-shrink: 0 !important; }
     .chat-logo-icon svg { width: 26px !important; height: 26px !important; }
     #btn-disconnect { height: 28px !important; font-size: 0.75rem !important; padding: 0 10px !important; }
     .btn-theme-toggle.static-theme-btn { width: 30px !important; height: 30px !important; }
@@ -2367,12 +2367,14 @@ body.light-theme .portrait-lock-overlay {
     bottom: 0;
     width: 270px;
     max-width: 82vw;
-    background: #090c19;
-    border-right: 1px solid var(--glass-border);
+    background: #0f1322 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 10000;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.7);
     display: flex;
     flex-direction: column;
     padding: 18px 14px;
@@ -2382,9 +2384,11 @@ body.light-theme .portrait-lock-overlay {
 }
 
 body.light-theme .drawer-panel {
-    background: #fde8df !important;
-    border-right-color: rgba(235, 150, 120, 0.3) !important;
-    box-shadow: 10px 0 40px rgba(220, 130, 100, 0.15) !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-right-color: rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.12) !important;
 }
 
 .drawer-panel.active {

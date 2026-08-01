@@ -2949,14 +2949,16 @@ class App {
             }
         };
 
-        if (btnShowDevices) {
-            btnShowDevices.addEventListener('click', () => {
-                const modal = document.getElementById('modal-connected-devices');
-                if (modal) modal.style.display = 'flex';
-                this.renderConnectedDevicesModal();
-                startP2PDiagLoop();
-            });
-        }
+        const openDevicesModal = () => {
+            const modal = document.getElementById('modal-connected-devices');
+            if (modal) modal.style.display = 'flex';
+            this.renderConnectedDevicesModal();
+            startP2PDiagLoop();
+        };
+
+        if (btnShowDevices) btnShowDevices.addEventListener('click', openDevicesModal);
+        const btnHeaderDeviceCount = document.getElementById('btn-header-device-count');
+        if (btnHeaderDeviceCount) btnHeaderDeviceCount.addEventListener('click', openDevicesModal);
         const btnCloseDevices = document.getElementById('btn-close-devices-modal');
         if (btnCloseDevices) {
             btnCloseDevices.addEventListener('click', () => {
@@ -3657,8 +3659,9 @@ class App {
     updateFavicon(isLight) {
         const favicon = document.getElementById('app-favicon');
         if (!favicon) return;
-        const strokeColor = isLight ? '%23000000' : '%23ffffff';
-        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='15 10 70 82' fill='none' stroke='${strokeColor}'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke-width='7' stroke-linejoin='round'/><g transform='translate(34, 34) scale(1.3)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></svg>`;
+        const boxColor = '%23ffffff';
+        const logoColor = '%23000000';
+        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${boxColor}'/><g transform='translate(-4, -4) scale(1.08)'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke='${logoColor}' stroke-width='8' stroke-linejoin='round'/><g transform='translate(34, 34) scale(1.3)' stroke='${logoColor}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></g></svg>`;
         favicon.href = 'data:image/svg+xml,' + svgStr;
     }
 

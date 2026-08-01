@@ -156,6 +156,12 @@ class UI {
         const count = document.getElementById('devices-count');
         const countModal = document.getElementById('devices-count-modal');
         const countPill = document.getElementById('devices-count-pill');
+        const countHeader = document.getElementById('header-device-count');
+        const total = (peers && peers.length > 0) ? peers.length : 1;
+        if (countHeader) countHeader.textContent = total;
+        if (count) count.textContent = total;
+        if (countModal) countModal.textContent = total;
+        if (countPill) countPill.textContent = total;
         if (!list) return;
 
         const searchInput = document.getElementById('input-devices-modal-search');
