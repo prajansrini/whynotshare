@@ -2226,13 +2226,62 @@ body.light-theme .portrait-lock-overlay {
         max-height: 100dvh;
         padding: 6px 14px !important;
     }
+.share-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.share-header-controls::-webkit-scrollbar {
+    height: 3px;
+}
+
+.share-header-controls::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.share-header-controls::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+}
+
+body.light-theme .share-header-controls::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 640px) {
     .share-header-top {
         margin-bottom: 4px !important;
+        overflow: hidden !important;
     }
-    .share-header-top .room-header-title { font-size: 1.02rem !important; white-space: nowrap !important; flex-shrink: 0 !important; }
+    .room-header-title {
+        display: none !important;
+    }
+    .header-mini-logo {
+        display: flex !important;
+    }
+    .share-header-controls {
+        overflow-x: auto !important;
+        max-width: calc(100vw - 75px) !important;
+        flex-shrink: 1 !important;
+        min-width: 0 !important;
+        padding-bottom: 2px !important;
+    }
+    .tab-btn .tab-label {
+        display: none !important;
+    }
+    .tab-btn {
+        padding: 6px 16px !important;
+        justify-content: center !important;
+    }
     .chat-logo-icon svg { width: 26px !important; height: 26px !important; }
     #btn-disconnect { height: 28px !important; font-size: 0.75rem !important; padding: 0 10px !important; }
     .btn-theme-toggle.static-theme-btn { width: 30px !important; height: 30px !important; }
+}
     
     .share-header-card {
         padding: 6px 10px !important;
