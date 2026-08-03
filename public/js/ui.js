@@ -98,6 +98,9 @@ class UI {
             const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
             document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
         }
+        if (window.getSelection) {
+            try { window.getSelection().removeAllRanges(); } catch { }
+        }
         UI.toast(toastMsg, 'success');
     }
 
@@ -160,7 +163,7 @@ class UI {
         const total = (peers && peers.length > 0) ? peers.length : 1;
         if (countHeader) countHeader.textContent = total;
         if (count) count.textContent = total;
-        if (countModal) countModal.textContent = total;
+        if (countModal) countModal.textContent = `${total} Active`;
         if (countPill) countPill.textContent = total;
         if (!list) return;
 
@@ -170,29 +173,28 @@ class UI {
         const filtered = peers.filter((p, index) => {
             if (!query) return true;
             const name = (p.deviceName || '').toLowerCase();
-            const os = (p.osName || '').toLowerCase();
-            const isHostDevice = p.isHost || p.isCreator || p.role === 'host' || index === 0;
-            const roleStr = isHostDevice ? 'host creator owner' : 'guest peer participant';
-            const searchHaystack = `${name} ${os} ${roleStr}`.toLowerCase();
-            return searchHaystack.includes(query);
+            const os = (p.deviceType || '').toLowerCase();
+            const isYou = (p.id === myId || index === 0);
+            const role = isYou ? 'host you' : 'member';
+            return name.includes(query) || os.includes(query) || role.includes(query);
         });
 
         list.innerHTML = '';
         if (filtered.length === 0) {
-            list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.85rem">No matching devices found</div>';
-        } else {
-            filtered.forEach(p => list.appendChild(UI.renderDeviceChip(p, p.id === myId)));
+            list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.85rem">No devices match search</div>';
+            return;
         }
 
-        if (count) count.textContent = peers.length + ' user' + (peers.length !== 1 ? 's' : '');
-        if (countModal) countModal.textContent = filtered.length !== peers.length ? `${filtered.length}/${peers.length}` : peers.length;
-        if (countPill) countPill.textContent = peers.length > 10 ? '10+' : peers.length;
+        filtered.forEach((peer, idx) => {
+            const isYou = (peer.id === myId || idx === 0);
+            list.appendChild(UI.renderDeviceChip(peer, isYou));
+        });
     }
 
     static showEmptyMessages() {
         const c = document.getElementById('messages');
         if (!c) return;
-        c.innerHTML = '<div class="messages-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>No messages yet</span><span style="font-size:0.8rem">Messages are end-to-end encrypted when E2E is enabled</span></div>';
+        c.innerHTML = '<div class="messages-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>Your Shared Space is Ready</span><span style="font-size:0.82rem;opacity:0.8;max-width:320px;text-align:center;line-height:1.4">Type a message below to share text, code, or links instantly with all connected devices</span></div>';
     }
 
     static formatFileName(fileName, maxChars = 24) {

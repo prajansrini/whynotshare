@@ -128,7 +128,10 @@ body.light-theme .chat-logo-icon {
     letter-spacing: 0.15em;
     color: var(--accent-gold);
     text-shadow: 0 0 30px rgba(255, 217, 61, 0.25);
-    user-select: all;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    cursor: pointer;
 }
 
 .secret-phrase-section {
@@ -285,16 +288,18 @@ button .waiting-dots span {
 }
 
 .device-count-badge {
-    background: rgba(37, 99, 235, 0.2);
-    color: var(--accent-primary);
-    font-size: 0.78rem;
-    font-weight: 700;
-    padding: 2px 10px;
-    border-radius: 9999px;
-    letter-spacing: 0.3px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    background: rgba(59, 130, 246, 0.18) !important;
+    border: 1px solid rgba(59, 130, 246, 0.38) !important;
+    color: #60a5fa !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    padding: 3px 11px !important;
+    border-radius: 12px !important;
+    letter-spacing: 0.02em !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: 8px !important;
 }
 
 .device-chip {
@@ -563,7 +568,7 @@ button .waiting-dots span {
     background: rgba(0, 0, 0, 0.2);
     border-radius: var(--radius-md);
     border: 1px solid var(--glass-border);
-    margin-bottom: var(--space-md);
+    margin-bottom: 8px !important;
 }
 
 .messages-empty {
@@ -2253,7 +2258,7 @@ body.light-theme .share-header-controls::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.25);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 520px) {
     .share-header-top {
         margin-bottom: 4px !important;
         overflow: hidden !important;

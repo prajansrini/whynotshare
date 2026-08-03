@@ -3078,7 +3078,16 @@ class App {
             btnTestServer.addEventListener('click', () => this.testPeerServerConnection());
         }
 
+        let isThemeToggling = false;
+
         const performThemeToggle = (e) => {
+            if (isThemeToggling) return;
+            isThemeToggling = true;
+
+            const unlockToggling = () => {
+                setTimeout(() => { isThemeToggling = false; }, 180);
+            };
+
             const isMobile = window.matchMedia('(max-width: 768px)').matches || ('ontouchstart' in window);
 
             const applyTheme = () => {
@@ -3087,29 +3096,28 @@ class App {
                 document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'none' : 'block');
                 this.updateFavicon(isLight);
                 try { localStorage.setItem('whynotshare_theme', isLight ? 'light' : 'dark'); } catch { }
-                const urlEl = document.getElementById('share-url');
-                const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
+
+                // Only re-render QR modal if active
                 const mq = document.getElementById('modal-qr');
                 if (mq && mq.style.display !== 'none') {
+                    const urlEl = document.getElementById('share-url');
+                    const url = (urlEl && urlEl.dataset.url) ? urlEl.dataset.url : window.location.href;
                     this.showQrModal(url);
-                }
-                const sr = document.getElementById('screen-room');
-                if (sr && sr.classList.contains('active')) {
-                    this.renderInlineQr(url);
                 }
             };
 
             // On mobile devices, use ultra-fast hardware-accelerated 60fps compositor opacity fade (0 GPU raster cost)
             if (isMobile) {
-                document.body.style.transition = 'opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1)';
-                document.body.style.opacity = '0.7';
+                document.body.style.transition = 'opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1)';
+                document.body.style.opacity = '0.75';
                 requestAnimationFrame(() => {
                     applyTheme();
                     requestAnimationFrame(() => {
                         document.body.style.opacity = '1';
                         setTimeout(() => {
                             document.body.style.transition = '';
-                        }, 180);
+                            unlockToggling();
+                        }, 160);
                     });
                 });
                 return;
@@ -3127,28 +3135,37 @@ class App {
             document.documentElement.style.setProperty('--y', `${y}px`);
 
             if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                const transition = document.startViewTransition(() => {
-                    applyTheme();
-                });
+                try {
+                    const transition = document.startViewTransition(() => {
+                        applyTheme();
+                    });
 
-                transition.ready.then(() => {
-                    document.documentElement.animate(
-                        {
-                            clipPath: [
-                                `circle(0px at ${x}px ${y}px)`,
-                                `circle(${endRadius}px at ${x}px ${y}px)`
-                            ]
-                        },
-                        {
-                            duration: 380,
-                            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                            fill: 'forwards',
-                            pseudoElement: '::view-transition-new(root)'
-                        }
-                    );
-                });
+                    transition.ready.then(() => {
+                        const anim = document.documentElement.animate(
+                            {
+                                clipPath: [
+                                    `circle(0px at ${x}px ${y}px)`,
+                                    `circle(${endRadius}px at ${x}px ${y}px)`
+                                ]
+                            },
+                            {
+                                duration: 360,
+                                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                                fill: 'forwards',
+                                pseudoElement: '::view-transition-new(root)'
+                            }
+                        );
+                        anim.onfinish = unlockToggling;
+                    }).catch(unlockToggling);
+
+                    transition.finished.then(unlockToggling).catch(unlockToggling);
+                } catch {
+                    applyTheme();
+                    unlockToggling();
+                }
             } else {
                 applyTheme();
+                unlockToggling();
             }
         };
 
@@ -3440,13 +3457,13 @@ class App {
         const btnCloseRoomMenu = document.getElementById('btn-close-room-menu');
 
         const openDrawer = () => {
-            if (drawer) drawer.classList.add('active');
-            if (backdrop) backdrop.classList.add('active');
+            if (drawer) { drawer.classList.add('active'); drawer.style.transform = ''; drawer.style.transition = ''; }
+            if (backdrop) { backdrop.classList.add('active'); backdrop.style.opacity = ''; backdrop.style.transition = ''; }
         };
 
         const closeDrawer = () => {
-            if (drawer) drawer.classList.remove('active');
-            if (backdrop) backdrop.classList.remove('active');
+            if (drawer) { drawer.classList.remove('active'); drawer.style.transform = ''; drawer.style.transition = ''; }
+            if (backdrop) { backdrop.classList.remove('active'); backdrop.style.opacity = ''; backdrop.style.transition = ''; }
         };
 
         if (btnOpenRoomMenu) btnOpenRoomMenu.addEventListener('click', openDrawer);
@@ -3463,6 +3480,88 @@ class App {
         }
         if (btnCloseRoomMenu) btnCloseRoomMenu.addEventListener('click', closeDrawer);
         if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+        // Interactive Touch Swipe Gestures for Drawer (Swipe Right to Open, Swipe Left to Close)
+        if (drawer && backdrop) {
+            let startX = 0;
+            let startY = 0;
+            let isSwiping = false;
+            let isDrawerOpen = false;
+
+            const onTouchStart = (e) => {
+                if (e.touches.length !== 1) return;
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                isDrawerOpen = drawer.classList.contains('active');
+
+                // Swipe right to open is allowed if touch starts within 40px of left screen edge
+                // Swipe left to close is allowed anytime drawer is open
+                if (!isDrawerOpen && startX > 40) return;
+
+                isSwiping = true;
+                drawer.style.transition = 'none';
+                backdrop.style.transition = 'none';
+            };
+
+            const onTouchMove = (e) => {
+                if (!isSwiping || e.touches.length !== 1) return;
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                // Ignore if user is scrolling vertically
+                if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaX) < 15) return;
+
+                if (!isDrawerOpen) {
+                    if (deltaX > 0) {
+                        const width = drawer.offsetWidth || 270;
+                        const translateX = Math.min(0, -width + deltaX);
+                        drawer.style.transform = `translateX(${translateX}px)`;
+                        backdrop.classList.add('active');
+                        backdrop.style.opacity = `${Math.min(1, deltaX / width)}`;
+                        e.preventDefault();
+                    }
+                } else {
+                    if (deltaX < 0) {
+                        const width = drawer.offsetWidth || 270;
+                        const translateX = Math.max(-width, deltaX);
+                        drawer.style.transform = `translateX(${translateX}px)`;
+                        backdrop.style.opacity = `${Math.max(0, 1 + deltaX / width)}`;
+                        e.preventDefault();
+                    }
+                }
+            };
+
+            const onTouchEnd = (e) => {
+                if (!isSwiping) return;
+                isSwiping = false;
+                drawer.style.transition = 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
+                backdrop.style.transition = 'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
+
+                const touch = e.changedTouches[0];
+                const deltaX = touch ? touch.clientX - startX : 0;
+
+                if (!isDrawerOpen) {
+                    if (deltaX > 60) {
+                        openDrawer();
+                    } else {
+                        closeDrawer();
+                    }
+                } else {
+                    if (deltaX < -60) {
+                        closeDrawer();
+                    } else {
+                        openDrawer();
+                    }
+                }
+            };
+
+            document.addEventListener('touchstart', onTouchStart, { passive: true });
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd, { passive: true });
+            document.addEventListener('touchcancel', onTouchEnd, { passive: true });
+        }
 
         document.querySelectorAll('.modal-overlay').forEach(modal => {
             if (modal.id === 'drawer-backdrop') return;
@@ -3719,7 +3818,7 @@ class App {
         if (!favicon) return;
         const boxColor = '%23ffffff';
         const logoColor = '%23000000';
-        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='${boxColor}'/><g transform='translate(4, 4) scale(0.92)'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke='${logoColor}' stroke-width='7' stroke-linejoin='round'/><g transform='translate(36, 36) scale(1.12)' stroke='${logoColor}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></g></svg>`;
+        const svgStr = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='${boxColor}'/><g transform='translate(4, 4) scale(0.92)'><path d='M50 15 L80 30 V52 C80 72 50 88 50 88 C50 88 20 72 20 52 V30 Z' fill='none' stroke='${logoColor}' stroke-width='7' stroke-linejoin='round'/><g transform='translate(34, 34) scale(1.35)' stroke='${logoColor}' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' fill='none'><line x1='22' y1='2' x2='11' y2='13'/><polygon points='22 2 15 22 11 13 2 9 22 2'/></g></g></svg>`;
         favicon.href = 'data:image/svg+xml,' + svgStr;
     }
 
