@@ -2395,13 +2395,17 @@ body.light-theme .share-header-controls::-webkit-scrollbar-thumb {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-theme .drawer-backdrop {
+    background: rgba(45, 24, 16, 0.48) !important;
 }
 
 .drawer-backdrop.active {
@@ -2549,5 +2553,41 @@ body.light-theme .btn-close-drawer:hover {
     margin: 0 !important;
     flex-shrink: 0 !important;
     vertical-align: middle !important;
+}
+
+.drawer-footer {
+    margin-top: auto !important;
+    padding-top: 12px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+body.light-theme .drawer-footer {
+    border-top-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.drawer-btn-footer {
+    flex: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 10px !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
+}
+
+.drawer-btn-footer svg {
+    margin: 0 !important;
+    flex-shrink: 0 !important;
 }
 

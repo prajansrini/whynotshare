@@ -3078,9 +3078,10 @@ class App {
             btnTestServer.addEventListener('click', () => this.testPeerServerConnection());
         }
 
-        document.querySelectorAll('.btn-theme-toggle').forEach(themeBtn => {
-            if (themeBtn.id === 'btn-landing-info' || themeBtn.id === 'btn-room-info') return;
-            themeBtn.addEventListener('click', () => {
+        const performThemeToggle = (e) => {
+            const isMobile = window.matchMedia('(max-width: 768px)').matches || ('ontouchstart' in window);
+
+            const applyTheme = () => {
                 const isLight = document.body.classList.toggle('light-theme');
                 document.querySelectorAll('.icon-moon').forEach(moon => moon.style.display = isLight ? 'block' : 'none');
                 document.querySelectorAll('.icon-sun').forEach(sun => sun.style.display = isLight ? 'none' : 'block');
@@ -3096,7 +3097,64 @@ class App {
                 if (sr && sr.classList.contains('active')) {
                     this.renderInlineQr(url);
                 }
-            });
+            };
+
+            // On mobile devices, use ultra-fast hardware-accelerated 60fps compositor opacity fade (0 GPU raster cost)
+            if (isMobile) {
+                document.body.style.transition = 'opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1)';
+                document.body.style.opacity = '0.7';
+                requestAnimationFrame(() => {
+                    applyTheme();
+                    requestAnimationFrame(() => {
+                        document.body.style.opacity = '1';
+                        setTimeout(() => {
+                            document.body.style.transition = '';
+                        }, 180);
+                    });
+                });
+                return;
+            }
+
+            // On desktop/tablet, use circular clip-path View Transition
+            const x = e ? e.clientX : window.innerWidth / 2;
+            const y = e ? e.clientY : window.innerHeight / 2;
+            const endRadius = Math.hypot(
+                Math.max(x, window.innerWidth - x),
+                Math.max(y, window.innerHeight - y)
+            );
+
+            document.documentElement.style.setProperty('--x', `${x}px`);
+            document.documentElement.style.setProperty('--y', `${y}px`);
+
+            if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                const transition = document.startViewTransition(() => {
+                    applyTheme();
+                });
+
+                transition.ready.then(() => {
+                    document.documentElement.animate(
+                        {
+                            clipPath: [
+                                `circle(0px at ${x}px ${y}px)`,
+                                `circle(${endRadius}px at ${x}px ${y}px)`
+                            ]
+                        },
+                        {
+                            duration: 380,
+                            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                            fill: 'forwards',
+                            pseudoElement: '::view-transition-new(root)'
+                        }
+                    );
+                });
+            } else {
+                applyTheme();
+            }
+        };
+
+        document.querySelectorAll('.btn-theme-toggle').forEach(themeBtn => {
+            if (themeBtn.id === 'btn-landing-info' || themeBtn.id === 'btn-room-info') return;
+            themeBtn.addEventListener('click', (e) => performThemeToggle(e));
         });
 
         const ti = document.getElementById('text-input');

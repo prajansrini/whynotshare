@@ -374,11 +374,8 @@
                 </div>
                 <div class="share-header-controls" style="display:flex;align-items:center;gap:5px;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:thin">
                     <div class="room-badge" id="btn-header-room-code" title="Click to Copy Room Link"
-                        style="height:34px;padding:0 8px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:0.78rem;font-weight:700;user-select:none;cursor:pointer">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" style="display:block;flex-shrink:0">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                        </svg><span id="header-quick-room-code"
+                        style="height:34px;padding:0 9px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;user-select:none;cursor:pointer">
+                        <span id="header-quick-room-code"
                             style="line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">---</span>
                     </div>
                     <button id="btn-header-device-count" class="btn btn-secondary" title="Connected Devices — Click to View Roster"
@@ -1571,19 +1568,23 @@
 
         <!-- SECTION 3: PREFERENCES & NAVIGATION -->
         <div class="drawer-section">
-            <div class="drawer-section-title">PREFERENCES &amp; EXIT</div>
-            <button id="btn-header-info" class="btn btn-secondary drawer-btn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                Info
-            </button>
-            <button class="btn-theme-toggle static-theme-btn drawer-btn">
-                <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;flex-shrink:0"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                <span>Toggle Theme</span>
-            </button>
+            <div class="drawer-section-title">EXIT &amp; NAVIGATION</div>
             <button id="btn-disconnect" class="btn btn-danger drawer-btn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 01-2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Leave Room
+            </button>
+        </div>
+
+        <!-- DRAWER FOOTER: BOTTOM LEFT INFO & BOTTOM RIGHT THEME TOGGLE -->
+        <div class="drawer-footer">
+            <button id="btn-header-info" class="btn btn-secondary drawer-btn-footer" title="Room Guide & Info">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Info</span>
+            </button>
+            <button class="btn-theme-toggle static-theme-btn drawer-btn-footer" title="Toggle Light / Dark Theme">
+                <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;flex-shrink:0"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span>Theme</span>
             </button>
         </div>
     </div>

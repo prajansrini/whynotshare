@@ -516,3 +516,18 @@ body.light-theme .member-card-item svg {
     color: #000000 !important;
     stroke: #000000 !important;
 }
+
+/* --- Circular Slide-Over View Transition CSS (Glitch-Free) --- */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+    z-index: 1;
+}
+::view-transition-new(root) {
+    z-index: 99999;
+    clip-path: circle(0px at var(--x, 50%) var(--y, 50%));
+    will-change: clip-path;
+}
