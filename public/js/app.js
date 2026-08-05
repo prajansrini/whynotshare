@@ -4089,16 +4089,13 @@ class App {
                 deleteBtnEl.style.display = isSentByMe ? 'flex' : 'none';
             }
 
+            document.querySelectorAll('.message.context-menu-active-highlight').forEach(m => m.classList.remove('context-menu-active-highlight'));
             if (parentMsg) {
-                parentMsg.classList.remove('reply-target-highlight');
-                void parentMsg.offsetWidth;
-                parentMsg.classList.add('reply-target-highlight');
-                setTimeout(() => {
-                    parentMsg.classList.remove('reply-target-highlight');
-                }, 3000);
+                parentMsg.classList.add('context-menu-active-highlight');
             }
 
             if (!menu) return;
+            this.pushHistoryState();
             menu.style.display = 'flex';
 
             const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth / 2);
@@ -4119,11 +4116,39 @@ class App {
 
         const hideContextMenu = () => {
             if (menu) menu.style.display = 'none';
+            if (!this._multiSelectActive) {
+                document.querySelectorAll('.message.context-menu-active-highlight').forEach(m => m.classList.remove('context-menu-active-highlight'));
+            }
         };
 
-        document.addEventListener('click', hideContextMenu);
-        document.addEventListener('scroll', hideContextMenu, true);
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideContextMenu(); });
+        document.addEventListener('click', (e) => {
+            hideContextMenu();
+            if (this._multiSelectActive) {
+                const isMsg = e.target.closest('.message');
+                const isBar = e.target.closest('#multi-select-bar');
+                const isCtx = e.target.closest('#custom-context-menu');
+                if (!isMsg && !isBar && !isCtx) {
+                    this.exitMultiSelectMode();
+                }
+            }
+        });
+
+        document.addEventListener('scroll', (e) => {
+            hideContextMenu();
+            if (this._multiSelectActive) {
+                this.updateMultiSelectBar();
+            }
+        }, true);
+
+        window.addEventListener('popstate', () => {
+            this.handleBackOrEscape();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.handleBackOrEscape();
+            }
+        });
 
         const isFileOrMedia = (el) => {
             return el.closest('.received-file-card') || el.closest('.file-box-card') || el.closest('[data-file-id]') || el.closest('.transfer-item') || el.closest('.file-card') || el.closest('.transfer-card') || el.closest('.file-attachment') || el.closest('img') || el.closest('video') || el.closest('audio') || el.closest('.message') || el.closest('.message-bubble');
@@ -4166,34 +4191,90 @@ class App {
             }
         });
 
+        const triggerReplyForNode = (targetNode) => {
+            if (!targetNode) return;
+            const parentMsg = targetNode.closest('.message') || targetNode;
+            const senderName = parentMsg.dataset.senderName || parentMsg.querySelector('.message-sender')?.textContent?.trim() || (parentMsg.classList.contains('message-sent') ? 'You' : 'Member');
+
+            let textContent = '';
+            const fileCard = parentMsg.querySelector('.file-box-card') || parentMsg.closest('.file-box-card');
+            const fileTitle = fileCard ? (fileCard.getAttribute('title') || parentMsg.querySelector('.file-name')?.textContent?.trim() || 'Shared File') : null;
+            const fileCaption = parentMsg.querySelector('.file-caption-container')?.textContent?.trim();
+
+            if (fileTitle) {
+                textContent = fileCaption ? `${fileTitle}: ${fileCaption}` : fileTitle;
+            } else {
+                const textEl = parentMsg.querySelector('.message-bubble span') || parentMsg.querySelector('.message-bubble');
+                if (textEl) {
+                    textContent = textEl.textContent.trim();
+                }
+            }
+
+            const msgId = (parentMsg && (parentMsg.dataset.msgId || parentMsg.id)) || '';
+            const fileId = (parentMsg && parentMsg.dataset.fileId) || '';
+
+            this._activeReplyQuote = { sender: senderName, text: textContent, msgId, fileId };
+
+            const bar = document.getElementById('reply-preview-bar');
+            const txt = document.getElementById('reply-preview-text');
+            if (bar && txt) {
+                const displayTxt = `${senderName}: ${textContent}`;
+                txt.textContent = displayTxt.length > 50 ? displayTxt.slice(0, 50) + '...' : displayTxt;
+                bar.style.display = 'flex';
+            }
+
+            const input = document.getElementById('text-input');
+            if (input) input.focus();
+        };
+
         const btnReply = document.getElementById('ctx-menu-reply');
         if (btnReply) {
             btnReply.addEventListener('click', (e) => {
                 e.stopPropagation();
                 hideContextMenu();
                 if (!_contextTarget || !_contextTarget.text) return;
-
-                const targetNode = _contextTarget.node;
-                const msgId = (targetNode && (targetNode.dataset.msgId || targetNode.id)) || '';
-                const fileId = (targetNode && targetNode.dataset.fileId) || '';
-
-                this._activeReplyQuote = { sender: _contextTarget.sender || 'Member', text: _contextTarget.text, msgId, fileId };
-                const bar = document.getElementById('reply-preview-bar');
-                const txt = document.getElementById('reply-preview-text');
-                if (bar && txt) {
-                    const displayTxt = `${_contextTarget.sender || 'Member'}: ${_contextTarget.text}`;
-                    txt.textContent = displayTxt.length > 50 ? displayTxt.slice(0, 50) + '...' : displayTxt;
-                    bar.style.display = 'flex';
-                }
-                const input = document.getElementById('text-input');
-                if (input) input.focus();
+                triggerReplyForNode(_contextTarget.node);
             });
         }
 
         const messagesContainer = document.getElementById('messages');
+        if (messagesContainer && !messagesContainer._hasDblClickReplyListener) {
+            messagesContainer._hasDblClickReplyListener = true;
+            messagesContainer.addEventListener('dblclick', (e) => {
+                const msgNode = e.target.closest('.message') || e.target.closest('.file-box-card');
+                if (msgNode) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    triggerReplyForNode(msgNode);
+                }
+            });
+        }
+
         if (messagesContainer && !messagesContainer._hasReplyScrollListener) {
             messagesContainer._hasReplyScrollListener = true;
             messagesContainer.addEventListener('click', (e) => {
+                if (this._multiSelectActive) {
+                    const msgNode = e.target.closest('.message');
+                    if (msgNode) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (this._selectedMessageNodes.has(msgNode)) {
+                            this._selectedMessageNodes.delete(msgNode);
+                            msgNode.classList.remove('context-menu-active-highlight');
+                        } else {
+                            this._selectedMessageNodes.add(msgNode);
+                            msgNode.classList.add('context-menu-active-highlight');
+                        }
+
+                        if (this._selectedMessageNodes.size === 0) {
+                            this.exitMultiSelectMode();
+                        } else {
+                            this.updateMultiSelectBar(msgNode);
+                        }
+                        return;
+                    }
+                }
+
                 const card = e.target.closest('.quoted-reply-card');
                 if (!card) return;
 
@@ -4284,6 +4365,28 @@ class App {
             });
         }
 
+        const btnSelect = document.getElementById('ctx-menu-select');
+        if (btnSelect) {
+            btnSelect.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideContextMenu();
+                if (!_contextTarget || !_contextTarget.node) return;
+
+                this.pushHistoryState();
+                this._multiSelectActive = true;
+                if (!this._selectedMessageNodes) this._selectedMessageNodes = new Set();
+                this._selectedMessageNodes.clear();
+
+                const parentMsg = _contextTarget.node.closest('.message') || _contextTarget.node;
+                if (parentMsg) {
+                    this._selectedMessageNodes.add(parentMsg);
+                    parentMsg.classList.add('context-menu-active-highlight');
+                }
+
+                this.updateMultiSelectBar(parentMsg);
+            });
+        }
+
         const btnDelete = document.getElementById('ctx-menu-delete');
         if (btnDelete) {
             btnDelete.addEventListener('click', (e) => {
@@ -4291,6 +4394,68 @@ class App {
                 hideContextMenu();
                 if (_contextTarget && _contextTarget.node && _contextTarget.isSentByMe) {
                     const node = _contextTarget.node;
+                    const msgId = node.dataset.msgId || node.id || null;
+                    const fileId = node.dataset.fileId || null;
+
+                    node.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                    node.style.opacity = '0';
+                    node.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        if (node.parentNode) node.parentNode.removeChild(node);
+                        if (this.textShare && typeof this.textShare._renderAllMessages === 'function') {
+                            this.textShare._renderAllMessages(true);
+                        }
+                    }, 250);
+
+                    if (this.conn && typeof this.conn.sendDeleteMessage === 'function') {
+                        this.conn.sendDeleteMessage(msgId, fileId);
+                    }
+
+                    if (this.textShare && Array.isArray(this.textShare.messages)) {
+                        this.textShare.messages = this.textShare.messages.filter(m => (!msgId || m.id !== msgId) && (!fileId || !m.meta || m.meta.fileId !== fileId));
+                        if (typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
+                    }
+
+                    UI.toast(`${_contextTarget.type === 'file' ? 'File card' : 'Message'} deleted for everyone`, 'info');
+                }
+            });
+        }
+
+        const btnMultiCopy = document.getElementById('btn-multi-copy');
+        if (btnMultiCopy) {
+            btnMultiCopy.addEventListener('click', () => {
+                if (!this._selectedMessageNodes || this._selectedMessageNodes.size === 0) return;
+                const texts = [];
+                const sortedNodes = Array.from(this._selectedMessageNodes).sort((a, b) => {
+                    if (!a.parentNode || !b.parentNode) return 0;
+                    const idxA = Array.from(a.parentNode.children).indexOf(a);
+                    const idxB = Array.from(b.parentNode.children).indexOf(b);
+                    return idxA - idxB;
+                });
+                sortedNodes.forEach(node => {
+                    const bubble = node.querySelector('.message-bubble') || node;
+                    const txt = (bubble.innerText || bubble.textContent || '').trim();
+                    if (txt) texts.push(txt);
+                });
+                if (texts.length > 0) {
+                    UI.copyToClipboard(texts.join('\n\n'), `${texts.length} message(s) copied!`);
+                }
+                this.exitMultiSelectMode();
+            });
+        }
+
+        const btnMultiDelete = document.getElementById('btn-multi-delete');
+        if (btnMultiDelete) {
+            btnMultiDelete.addEventListener('click', () => {
+                if (!this._selectedMessageNodes || this._selectedMessageNodes.size === 0) return;
+                const nodesArray = Array.from(this._selectedMessageNodes);
+                const allMine = nodesArray.every(node => node.classList.contains('message-sent') || node.dataset.isSent === 'true');
+                if (!allMine) {
+                    UI.toast('You can only delete your own messages', 'error');
+                    return;
+                }
+
+                nodesArray.forEach(node => {
                     const msgId = node.dataset.msgId || node.id || null;
                     const fileId = node.dataset.fileId || null;
 
@@ -4307,13 +4472,133 @@ class App {
 
                     if (this.textShare && Array.isArray(this.textShare.messages)) {
                         this.textShare.messages = this.textShare.messages.filter(m => (!msgId || m.id !== msgId) && (!fileId || !m.meta || m.meta.fileId !== fileId));
-                        if (typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
                     }
+                });
 
-                    UI.toast(`${_contextTarget.type === 'file' ? 'File card' : 'Message'} deleted for everyone`, 'info');
-                }
+                setTimeout(() => {
+                    if (this.textShare && typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
+                    if (this.textShare && typeof this.textShare._renderAllMessages === 'function') this.textShare._renderAllMessages(true);
+                }, 260);
+
+                UI.toast(`${nodesArray.length} message(s) deleted for everyone`, 'info');
+                this.exitMultiSelectMode();
             });
         }
+
+        const btnMultiCancel = document.getElementById('btn-multi-cancel');
+        if (btnMultiCancel) {
+            btnMultiCancel.addEventListener('click', () => {
+                this.exitMultiSelectMode();
+            });
+        }
+    }
+
+    updateMultiSelectBar(latestNode = null) {
+        const bar = document.getElementById('multi-select-bar');
+        const countTxt = document.getElementById('multi-select-count-text');
+        const btnDelete = document.getElementById('btn-multi-delete');
+        if (!bar || !countTxt) return;
+
+        const count = this._selectedMessageNodes ? this._selectedMessageNodes.size : 0;
+        if (count === 0) {
+            this.exitMultiSelectMode();
+            return;
+        }
+
+        countTxt.textContent = `${count} selected`;
+        bar.style.display = 'flex';
+
+        const nodesArray = Array.from(this._selectedMessageNodes);
+        const allMine = nodesArray.every(node => node.classList.contains('message-sent') || node.dataset.isSent === 'true');
+
+        if (btnDelete) {
+            btnDelete.style.display = allMine ? 'inline-flex' : 'none';
+        }
+
+        const targetNode = latestNode || nodesArray[nodesArray.length - 1];
+        if (targetNode) {
+            const rect = targetNode.getBoundingClientRect();
+            const barRect = bar.getBoundingClientRect();
+            const barWidth = barRect.width || bar.offsetWidth || 270;
+            const barHeight = barRect.height || bar.offsetHeight || 44;
+
+            let left = rect.left + (rect.width / 2) - (barWidth / 2);
+            let top = rect.top - barHeight - 8;
+
+            if (top < 10) {
+                top = rect.bottom + 8;
+            }
+
+            const maxLeft = window.innerWidth - barWidth - 16;
+            if (left > maxLeft) left = maxLeft;
+            if (left < 16) left = 16;
+
+            if (top + barHeight > window.innerHeight - 10) top = window.innerHeight - barHeight - 10;
+
+            bar.style.left = `${Math.max(16, left)}px`;
+            bar.style.top = `${Math.max(10, top)}px`;
+        }
+    }
+
+    pushHistoryState() {
+        try {
+            history.pushState({ appState: 'dismissable' }, '', window.location.href);
+        } catch (e) { }
+    }
+
+    handleBackOrEscape() {
+        const ctxMenu = document.getElementById('custom-context-menu');
+        if (ctxMenu && ctxMenu.style.display !== 'none') {
+            ctxMenu.style.display = 'none';
+            if (!this._multiSelectActive) {
+                document.querySelectorAll('.message.context-menu-active-highlight').forEach(m => m.classList.remove('context-menu-active-highlight'));
+            }
+            return true;
+        }
+
+        if (this._multiSelectActive) {
+            this.exitMultiSelectMode();
+            return true;
+        }
+
+        if (this._activeReplyQuote) {
+            this._activeReplyQuote = null;
+            const bar = document.getElementById('reply-preview-bar');
+            if (bar) bar.style.display = 'none';
+            return true;
+        }
+
+        const openModals = document.querySelectorAll('.modal-overlay:not([style*="display: none"]):not([style*="display:none"])');
+        if (openModals.length > 0) {
+            openModals.forEach(m => m.style.display = 'none');
+            return true;
+        }
+
+        const drawer = document.getElementById('room-menu-drawer');
+        if (drawer && drawer.classList.contains('active')) {
+            drawer.classList.remove('active');
+            const overlay = document.getElementById('drawer-overlay');
+            if (overlay) overlay.style.display = 'none';
+            return true;
+        }
+
+        const screenShare = document.getElementById('screen-share');
+        if (screenShare && (screenShare.classList.contains('active') || screenShare.style.display !== 'none')) {
+            this._showStandardLeaveModal(true);
+            return true;
+        }
+
+        return false;
+    }
+
+    exitMultiSelectMode() {
+        this._multiSelectActive = false;
+        if (this._selectedMessageNodes) {
+            this._selectedMessageNodes.forEach(node => node.classList.remove('context-menu-active-highlight'));
+            this._selectedMessageNodes.clear();
+        }
+        const bar = document.getElementById('multi-select-bar');
+        if (bar) bar.style.display = 'none';
     }
 
     onMessageDeleted(payload) {
@@ -4337,6 +4622,9 @@ class App {
             target.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 if (target.parentNode) target.parentNode.removeChild(target);
+                if (this.textShare && typeof this.textShare._renderAllMessages === 'function') {
+                    this.textShare._renderAllMessages(true);
+                }
             }, 250);
         }
 

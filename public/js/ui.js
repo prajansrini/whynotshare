@@ -175,9 +175,7 @@ class UI {
         msg.innerHTML = senderHtml +
             '<div class="message-bubble">' + bodyHtml + '</div>' +
             '<div class="' + timeClass + '" style="display:flex;align-items:center;gap:6px;' + (isSent ? 'flex-direction:row-reverse' : '') + '">' +
-            '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span>' +
-            '<div class="message-actions"><button class="message-action-btn" data-copy="' + UI.escapeAttr(text) + '">Copy</button></div></div>';
-        msg.querySelector('.message-action-btn').addEventListener('click', function() { UI.copyToClipboard(this.dataset.copy); });
+            '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span></div>';
         return msg;
     }
 
