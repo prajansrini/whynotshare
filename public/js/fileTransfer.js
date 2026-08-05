@@ -207,7 +207,7 @@ class FileTransfer {
             try {
                 buf = await this.crypto.decryptBufferWithPersonalKey(data.data, data.iv, info.senderId);
             } catch (err) {
-                if (typeof UI !== 'undefined') UI.toast('Personal E2E decryption failed! You are not an authorized recipient.', 'error');
+                if (typeof UI !== 'undefined') UI.toast('Decryption failed', 'error');
                 this.incoming.delete(data.fileId);
                 const tc = document.getElementById('transfer-' + data.fileId);
                 if (tc) tc.remove();
@@ -217,7 +217,7 @@ class FileTransfer {
             try {
                 buf = await this.crypto.decryptBuffer(this.crypto._base64ToBuf(data.data), this.crypto._base64ToBuf(data.iv));
             } catch (err) {
-                if (typeof UI !== 'undefined') UI.toast('File decryption failed! Check passphrase or toggle E2E mode.', 'error');
+                if (typeof UI !== 'undefined') UI.toast('Decryption failed', 'error');
                 this.incoming.delete(data.fileId);
                 const tc = document.getElementById('transfer-' + data.fileId);
                 if (tc) tc.remove();

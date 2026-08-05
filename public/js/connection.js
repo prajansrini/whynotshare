@@ -726,7 +726,7 @@ class ConnectionManager {
                 if (this._joinReject) {
                     this._joinReject(new Error('Room is currently locked by the host.'));
                 }
-                if (typeof UI !== 'undefined') UI.toast('Room is currently locked by the host. New members cannot join.', 'error');
+                if (typeof UI !== 'undefined') UI.toast('Room is locked', 'error');
                 if (window.app && window.app._performLeaveRoom) window.app._performLeaveRoom(true);
                 break;
             }
@@ -737,7 +737,7 @@ class ConnectionManager {
                 }
                 if (fromId && fromId !== this.myId) {
                     this.addAuditLog(this.isRoomLocked ? 'Room entry locked by Host' : 'Room entry unlocked by Host', 'sec', true);
-                    if (typeof UI !== 'undefined') UI.toast(this.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
+                    if (typeof UI !== 'undefined') UI.toast(this.isRoomLocked ? 'Room locked' : 'Room unlocked', 'info');
                     if (window.textShare && typeof window.textShare.addSystemMessage === 'function') {
                         window.textShare.addSystemMessage(this.isRoomLocked ? 'Room entry is now locked. No new members can join.' : 'Room entry unlocked. New members can now join.', 'info');
                     }

@@ -372,7 +372,9 @@ class App {
         document.addEventListener('keydown', handleKeyNav);
 
         btnConfirm.onclick = () => {
+            const pending = this._pendingPastedHash;
             cleanup();
+            this._pendingPastedHash = pending;
             this._performLeaveRoom(pushToHistory);
         };
         btnCancel.onclick = cleanup;
@@ -416,7 +418,9 @@ class App {
         const btnHostExportDelete = document.getElementById('btn-host-export-delete');
         if (btnHostExportDelete) {
             btnHostExportDelete.onclick = async () => {
+                const pending = this._pendingPastedHash;
                 cleanup();
+                this._pendingPastedHash = pending;
                 await this.exportChatPackageZip();
                 const delMsg = { type: 'room-deleted' };
                 if (this.conn.isCreator) {
@@ -432,7 +436,9 @@ class App {
         }
 
         document.getElementById('btn-host-confirm-delete').onclick = () => {
+            const pending = this._pendingPastedHash;
             cleanup();
+            this._pendingPastedHash = pending;
             const delMsg = { type: 'room-deleted' };
             if (this.conn.isCreator) {
                 this.conn._broadcast(delMsg);
@@ -513,7 +519,9 @@ class App {
 
             btnConfirm.onclick = () => {
                 if (!selectedTargetId) return;
+                const pending = this._pendingPastedHash;
                 cleanup();
+                this._pendingPastedHash = pending;
                 const handoffMsg = { type: 'host-handoff', payload: { targetId: selectedTargetId, adminPeerId: selectedTargetId } };
                 if (this.conn.isCreator) {
                     this.conn._broadcast(handoffMsg);
@@ -897,6 +905,11 @@ class App {
                         md += `</div>\n\n`;
                     } else {
                         md += `<div align="${align}">\n\n`;
+                        if (m.replyTo && (m.replyTo.sender || m.replyTo.text)) {
+                            const rSender = m.replyTo.sender || 'Peer';
+                            const rText = m.replyTo.text || '';
+                            md += `> ↩️ *Replying to ${rSender}: "${rText}"*  \n`;
+                        }
                         md += `**${senderName}** \`[${time}]\`:  \n`;
                         md += `> ${m.text || m.content || ''}  \n\n`;
                         md += `</div>\n\n`;
@@ -2002,7 +2015,11 @@ class App {
             const dateStr = this._formatDate24(m.timestamp || Date.now());
             const sName = typeof m.sender === 'object' && m.sender ? (m.sender.name || 'Peer') : (m.sender || 'Peer');
             const body = m.type === 'file' ? `[File: ${(m.meta && m.meta.name) ? m.meta.name : 'Attachment'}]` : (m.text || m.raw || '');
-            txt += `[${dateStr}] ${sName}: ${body}\n`;
+            let replyStr = '';
+            if (m.replyTo && (m.replyTo.sender || m.replyTo.text)) {
+                replyStr = ` (Replying to ${m.replyTo.sender || 'Peer'}: "${m.replyTo.text || ''}")`;
+            }
+            txt += `[${dateStr}] ${sName}${replyStr}: ${body}\n`;
         });
 
         txt += `\n=======================================================\n`;
@@ -2119,7 +2136,7 @@ class App {
         const roomCode = (this.conn && typeof this.conn.getRoomCode === 'function' ? this.conn.getRoomCode() : null) || (this.conn && this.conn.roomCode) || codeFromDOM || this.roomCode;
 
         if (!roomCode || roomCode === '---') {
-            UI.toast('No active room code to copy', 'error');
+            UI.toast('No room code to copy', 'error');
             return;
         }
 
@@ -2131,7 +2148,7 @@ class App {
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(fullLink).then(() => {
-                UI.toast('Room share link copied to clipboard!', 'success');
+                UI.toast('Link copied!', 'success');
             }).catch(() => {
                 this._fallbackCopyText(fullLink);
             });
@@ -2149,9 +2166,9 @@ class App {
         ta.select();
         try {
             document.execCommand('copy');
-            UI.toast('Room share link copied to clipboard!', 'success');
+            UI.toast('Link copied!', 'success');
         } catch {
-            UI.toast('Failed to copy link', 'error');
+            UI.toast('Copy failed', 'error');
         }
         document.body.removeChild(ta);
     }
@@ -3519,6 +3536,7 @@ class App {
         const btnCloseRoomMenu = document.getElementById('btn-close-room-menu');
 
         const openDrawer = () => {
+            this.pushHistoryState();
             if (drawer) { drawer.classList.add('active'); drawer.style.transform = ''; drawer.style.transition = ''; }
             if (backdrop) { backdrop.classList.add('active'); backdrop.style.opacity = ''; backdrop.style.transition = ''; }
         };
@@ -3552,6 +3570,8 @@ class App {
 
             const onTouchStart = (e) => {
                 if (e.touches.length !== 1) return;
+                if (e.target.closest('button, input, a, .btn, .drawer-btn, .room-badge, [role="button"]')) return;
+
                 const touch = e.touches[0];
                 startX = touch.clientX;
                 startY = touch.clientY;
@@ -4054,7 +4074,13 @@ class App {
                 itemType = 'message';
                 const copyBtn = msgBubble.querySelector('.message-action-btn[data-copy]');
                 const bubble = msgBubble.querySelector('.message-bubble') || msgBubble;
-                let rawText = copyBtn ? copyBtn.dataset.copy : (bubble.innerText || bubble.textContent || '').trim();
+                let rawText = copyBtn ? copyBtn.dataset.copy : null;
+                if (!rawText) {
+                    const clone = bubble.cloneNode(true);
+                    const replyCard = clone.querySelector('.quoted-reply-card');
+                    if (replyCard) replyCard.remove();
+                    rawText = (clone.innerText || clone.textContent || '').trim();
+                }
                 if (rawText.startsWith('> Replying to: ')) {
                     const lines = rawText.split('\n');
                     rawText = lines.slice(1).join('\n').trim();
@@ -4198,11 +4224,13 @@ class App {
 
             let textContent = '';
             const fileCard = parentMsg.querySelector('.file-box-card') || parentMsg.closest('.file-box-card');
-            const fileTitle = fileCard ? (fileCard.getAttribute('title') || parentMsg.querySelector('.file-name')?.textContent?.trim() || 'Shared File') : null;
+            const fileTitle = fileCard ? (fileCard.getAttribute('title') || parentMsg.querySelector('.file-name')?.textContent?.trim() || 'File') : null;
             const fileCaption = parentMsg.querySelector('.file-caption-container')?.textContent?.trim();
 
             if (fileTitle) {
-                textContent = fileCaption ? `${fileTitle}: ${fileCaption}` : fileTitle;
+                const isGenericName = !fileTitle || fileTitle === 'Shared File' || fileTitle === 'File';
+                const label = isGenericName ? 'File' : fileTitle;
+                textContent = fileCaption ? `File: ${fileCaption}` : label;
             } else {
                 const textEl = parentMsg.querySelector('.message-bubble span') || parentMsg.querySelector('.message-bubble');
                 if (textEl) {
@@ -4221,6 +4249,9 @@ class App {
                 const displayTxt = `${senderName}: ${textContent}`;
                 txt.textContent = displayTxt.length > 50 ? displayTxt.slice(0, 50) + '...' : displayTxt;
                 bar.style.display = 'flex';
+                bar.style.animation = 'none';
+                void bar.offsetHeight;
+                bar.style.animation = 'replyBarPulse 0.25s ease';
             }
 
             const input = document.getElementById('text-input');
@@ -4241,7 +4272,15 @@ class App {
         if (messagesContainer && !messagesContainer._hasDblClickReplyListener) {
             messagesContainer._hasDblClickReplyListener = true;
             messagesContainer.addEventListener('dblclick', (e) => {
-                const msgNode = e.target.closest('.message') || e.target.closest('.file-box-card');
+                let msgNode = e.target.closest('.message') || e.target.closest('.file-box-card');
+                if (!msgNode) {
+                    const clickY = e.clientY;
+                    const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
+                    msgNode = msgs.find(m => {
+                        const rect = m.getBoundingClientRect();
+                        return clickY >= rect.top && clickY <= rect.bottom;
+                    });
+                }
                 if (msgNode) {
                     e.stopPropagation();
                     e.preventDefault();
@@ -4254,7 +4293,16 @@ class App {
             messagesContainer._hasReplyScrollListener = true;
             messagesContainer.addEventListener('click', (e) => {
                 if (this._multiSelectActive) {
-                    const msgNode = e.target.closest('.message');
+                    let msgNode = e.target.closest('.message');
+                    if (!msgNode) {
+                        const clickY = e.clientY;
+                        const msgs = Array.from(messagesContainer.querySelectorAll('.message'));
+                        msgNode = msgs.find(m => {
+                            const rect = m.getBoundingClientRect();
+                            return clickY >= rect.top && clickY <= rect.bottom;
+                        });
+                    }
+
                     if (msgNode) {
                         e.stopPropagation();
                         e.preventDefault();
@@ -4269,7 +4317,7 @@ class App {
                         if (this._selectedMessageNodes.size === 0) {
                             this.exitMultiSelectMode();
                         } else {
-                            this.updateMultiSelectBar(msgNode);
+                            this.updateMultiSelectBar();
                         }
                         return;
                     }
@@ -4389,10 +4437,13 @@ class App {
 
         const btnDelete = document.getElementById('ctx-menu-delete');
         if (btnDelete) {
-            btnDelete.addEventListener('click', (e) => {
+            btnDelete.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 hideContextMenu();
                 if (_contextTarget && _contextTarget.node && _contextTarget.isSentByMe) {
+                    const confirmed = await UI.confirm(`Delete this ${_contextTarget.type === 'file' ? 'file card' : 'message'} for everyone?`, 'Confirm Delete');
+                    if (!confirmed) return;
+
                     const node = _contextTarget.node;
                     const msgId = node.dataset.msgId || node.id || null;
                     const fileId = node.dataset.fileId || null;
@@ -4402,10 +4453,8 @@ class App {
                     node.style.transform = 'scale(0.95)';
                     setTimeout(() => {
                         if (node.parentNode) node.parentNode.removeChild(node);
-                        if (this.textShare && typeof this.textShare._renderAllMessages === 'function') {
-                            this.textShare._renderAllMessages(true);
-                        }
-                    }, 250);
+                        this.refreshMessageGroupingClasses();
+                    }, 255);
 
                     if (this.conn && typeof this.conn.sendDeleteMessage === 'function') {
                         this.conn.sendDeleteMessage(msgId, fileId);
@@ -4433,12 +4482,23 @@ class App {
                     return idxA - idxB;
                 });
                 sortedNodes.forEach(node => {
-                    const bubble = node.querySelector('.message-bubble') || node;
-                    const txt = (bubble.innerText || bubble.textContent || '').trim();
+                    const copyBtn = node.querySelector('.message-action-btn[data-copy]');
+                    let txt = copyBtn ? copyBtn.dataset.copy : null;
+                    if (!txt) {
+                        const bubble = node.querySelector('.message-bubble') || node;
+                        const clone = bubble.cloneNode(true);
+                        const replyCard = clone.querySelector('.quoted-reply-card');
+                        if (replyCard) replyCard.remove();
+                        txt = (clone.innerText || clone.textContent || '').trim();
+                    }
+                    if (txt && txt.startsWith('> Replying to: ')) {
+                        const lines = txt.split('\n');
+                        txt = lines.slice(1).join('\n').trim();
+                    }
                     if (txt) texts.push(txt);
                 });
                 if (texts.length > 0) {
-                    UI.copyToClipboard(texts.join('\n\n'), `${texts.length} message(s) copied!`);
+                    UI.copyToClipboard(texts.join('\n'), `${texts.length} message(s) copied!`);
                 }
                 this.exitMultiSelectMode();
             });
@@ -4446,7 +4506,7 @@ class App {
 
         const btnMultiDelete = document.getElementById('btn-multi-delete');
         if (btnMultiDelete) {
-            btnMultiDelete.addEventListener('click', () => {
+            btnMultiDelete.addEventListener('click', async () => {
                 if (!this._selectedMessageNodes || this._selectedMessageNodes.size === 0) return;
                 const nodesArray = Array.from(this._selectedMessageNodes);
                 const allMine = nodesArray.every(node => node.classList.contains('message-sent') || node.dataset.isSent === 'true');
@@ -4454,6 +4514,9 @@ class App {
                     UI.toast('You can only delete your own messages', 'error');
                     return;
                 }
+
+                const confirmed = await UI.confirm(`Delete ${nodesArray.length} selected message(s) for everyone?`, 'Confirm Delete');
+                if (!confirmed) return;
 
                 nodesArray.forEach(node => {
                     const msgId = node.dataset.msgId || node.id || null;
@@ -4477,7 +4540,7 @@ class App {
 
                 setTimeout(() => {
                     if (this.textShare && typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
-                    if (this.textShare && typeof this.textShare._renderAllMessages === 'function') this.textShare._renderAllMessages(true);
+                    this.refreshMessageGroupingClasses();
                 }, 260);
 
                 UI.toast(`${nodesArray.length} message(s) deleted for everyone`, 'info');
@@ -4497,6 +4560,8 @@ class App {
         const bar = document.getElementById('multi-select-bar');
         const countTxt = document.getElementById('multi-select-count-text');
         const btnDelete = document.getElementById('btn-multi-delete');
+        const headerControls = document.querySelector('.share-header-controls');
+
         if (!bar || !countTxt) return;
 
         const count = this._selectedMessageNodes ? this._selectedMessageNodes.size : 0;
@@ -4506,37 +4571,16 @@ class App {
         }
 
         countTxt.textContent = `${count} selected`;
-        bar.style.display = 'flex';
+
+        if (headerControls) {
+            headerControls.classList.add('multi-select-active');
+        }
 
         const nodesArray = Array.from(this._selectedMessageNodes);
         const allMine = nodesArray.every(node => node.classList.contains('message-sent') || node.dataset.isSent === 'true');
 
         if (btnDelete) {
             btnDelete.style.display = allMine ? 'inline-flex' : 'none';
-        }
-
-        const targetNode = latestNode || nodesArray[nodesArray.length - 1];
-        if (targetNode) {
-            const rect = targetNode.getBoundingClientRect();
-            const barRect = bar.getBoundingClientRect();
-            const barWidth = barRect.width || bar.offsetWidth || 270;
-            const barHeight = barRect.height || bar.offsetHeight || 44;
-
-            let left = rect.left + (rect.width / 2) - (barWidth / 2);
-            let top = rect.top - barHeight - 8;
-
-            if (top < 10) {
-                top = rect.bottom + 8;
-            }
-
-            const maxLeft = window.innerWidth - barWidth - 16;
-            if (left > maxLeft) left = maxLeft;
-            if (left < 16) left = 16;
-
-            if (top + barHeight > window.innerHeight - 10) top = window.innerHeight - barHeight - 10;
-
-            bar.style.left = `${Math.max(16, left)}px`;
-            bar.style.top = `${Math.max(10, top)}px`;
         }
     }
 
@@ -4547,8 +4591,9 @@ class App {
     }
 
     handleBackOrEscape() {
+        // Priority 1: Context Menu (topmost floating layer)
         const ctxMenu = document.getElementById('custom-context-menu');
-        if (ctxMenu && ctxMenu.style.display !== 'none') {
+        if (ctxMenu && ctxMenu.style.display !== 'none' && ctxMenu.style.display !== '') {
             ctxMenu.style.display = 'none';
             if (!this._multiSelectActive) {
                 document.querySelectorAll('.message.context-menu-active-highlight').forEach(m => m.classList.remove('context-menu-active-highlight'));
@@ -4556,11 +4601,25 @@ class App {
             return true;
         }
 
+        // Priority 2: Open Modals (Host Manage, QR code, Device Roster, History, etc.)
+        const openModals = Array.from(document.querySelectorAll('.modal-overlay')).filter(m => {
+            const disp = window.getComputedStyle(m).display;
+            const vis = window.getComputedStyle(m).visibility;
+            return disp !== 'none' && vis !== 'hidden';
+        });
+        if (openModals.length > 0) {
+            const topModal = openModals[openModals.length - 1];
+            topModal.style.display = 'none';
+            return true;
+        }
+
+        // Priority 3: Multi-Select Mode
         if (this._multiSelectActive) {
             this.exitMultiSelectMode();
             return true;
         }
 
+        // Priority 4: Active Reply Quote Preview
         if (this._activeReplyQuote) {
             this._activeReplyQuote = null;
             const bar = document.getElementById('reply-preview-bar');
@@ -4568,23 +4627,18 @@ class App {
             return true;
         }
 
-        const openModals = document.querySelectorAll('.modal-overlay:not([style*="display: none"]):not([style*="display:none"])');
-        if (openModals.length > 0) {
-            openModals.forEach(m => m.style.display = 'none');
-            return true;
-        }
-
-        const drawer = document.getElementById('room-menu-drawer');
+        // Priority 5: Side Navigation Drawer Slide
+        const drawer = document.getElementById('drawer-room-menu') || document.getElementById('room-menu-drawer');
+        const backdrop = document.getElementById('drawer-backdrop') || document.getElementById('drawer-overlay');
         if (drawer && drawer.classList.contains('active')) {
             drawer.classList.remove('active');
-            const overlay = document.getElementById('drawer-overlay');
-            if (overlay) overlay.style.display = 'none';
-            return true;
-        }
-
-        const screenShare = document.getElementById('screen-share');
-        if (screenShare && (screenShare.classList.contains('active') || screenShare.style.display !== 'none')) {
-            this._showStandardLeaveModal(true);
+            drawer.style.transform = '';
+            drawer.style.transition = '';
+            if (backdrop) {
+                backdrop.classList.remove('active');
+                backdrop.style.opacity = '';
+                backdrop.style.transition = '';
+            }
             return true;
         }
 
@@ -4597,8 +4651,10 @@ class App {
             this._selectedMessageNodes.forEach(node => node.classList.remove('context-menu-active-highlight'));
             this._selectedMessageNodes.clear();
         }
-        const bar = document.getElementById('multi-select-bar');
-        if (bar) bar.style.display = 'none';
+        const headerControls = document.querySelector('.share-header-controls');
+        if (headerControls) {
+            headerControls.classList.remove('multi-select-active');
+        }
     }
 
     onMessageDeleted(payload) {
@@ -4622,15 +4678,47 @@ class App {
             target.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 if (target.parentNode) target.parentNode.removeChild(target);
-                if (this.textShare && typeof this.textShare._renderAllMessages === 'function') {
-                    this.textShare._renderAllMessages(true);
-                }
-            }, 250);
+                this.refreshMessageGroupingClasses();
+            }, 255);
         }
 
         if (this.textShare && Array.isArray(this.textShare.messages)) {
             this.textShare.messages = this.textShare.messages.filter(m => (!msgId || m.id !== msgId) && (!fileId || !m.meta || m.meta.fileId !== fileId));
             if (typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
+        }
+    }
+
+    refreshMessageGroupingClasses() {
+        const container = document.getElementById('messages');
+        if (!container) return;
+        const msgs = Array.from(container.querySelectorAll('.message'));
+        for (let i = 0; i < msgs.length; i++) {
+            const cur = msgs[i];
+            const next = msgs[i + 1];
+            const prev = msgs[i - 1];
+
+            const curSender = cur.getAttribute('data-sender-name') || '';
+            const nextSender = next ? (next.getAttribute('data-sender-name') || '') : '';
+            const prevSender = prev ? (prev.getAttribute('data-sender-name') || '') : '';
+
+            const isSameSenderAsNext = Boolean(next && curSender && (curSender === nextSender));
+            const isSameSenderAsPrev = Boolean(prev && curSender && (curSender === prevSender));
+
+            const timeWrapper = cur.querySelector('.message-time-wrapper');
+
+            if (isSameSenderAsNext) {
+                cur.classList.add('message-group-lead');
+                if (timeWrapper) timeWrapper.classList.add('message-time-grouped');
+            } else {
+                cur.classList.remove('message-group-lead');
+                if (timeWrapper) timeWrapper.classList.remove('message-time-grouped');
+            }
+
+            if (isSameSenderAsPrev) {
+                cur.classList.add('message-group-followup');
+            } else {
+                cur.classList.remove('message-group-followup');
+            }
         }
     }
 

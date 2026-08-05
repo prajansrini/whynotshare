@@ -493,59 +493,83 @@ body.light-theme .device-count-badge {
     font-weight: 500;
 }
 
-/* --- Tab Navigation --- */
-.tab-nav {
-    display: flex !important;
-    width: 100% !important;
+/* --- Tab Navigation in Header --- */
+.tab-nav.header-tab-nav,
+body.light-theme .tab-nav.header-tab-nav {
+    display: inline-flex !important;
+    width: 60px !important;
+    height: 27px !important;
     box-sizing: border-box !important;
     position: relative !important;
-    gap: 4px !important;
-    margin: 6px 0 10px 0 !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-radius: 12px !important;
-    padding: 4px !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    gap: 2px !important;
+    margin: 0 !important;
+    padding: 1px !important;
+    border-radius: 7px !important;
+    align-items: center !important;
+    overflow: hidden !important;
 }
 
-body.light-theme .tab-nav {
-    background: rgba(0, 0, 0, 0.04) !important;
-    border-color: rgba(0, 0, 0, 0.08) !important;
+.tab-nav.header-tab-nav {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-.tab-slider {
+body.light-theme .tab-nav.header-tab-nav {
+    background: rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+.header-tab-nav .tab-slider,
+body.light-theme .header-tab-nav .tab-slider {
     position: absolute !important;
-    top: 4px !important;
-    bottom: 4px !important;
-    left: 4px !important;
-    width: calc(50% - 6px) !important;
-    background: var(--accent-gradient) !important;
-    border-radius: 9px !important;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease !important;
+    top: 1px !important;
+    bottom: 1px !important;
+    left: 1px !important;
+    width: 27px !important;
+    height: 23px !important;
+    border-radius: 5px !important;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.22s ease !important;
     will-change: transform !important;
     transform: translate3d(0, 0, 0) !important;
     z-index: 1 !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
     border: none !important;
 }
 
-.tab-nav[data-active="files"] .tab-slider {
-    transform: translate3d(calc(100% + 4px), 0, 0) !important;
-    background: linear-gradient(135deg, #2563eb, #1e40af) !important;
+.header-tab-nav .tab-slider {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
 }
 
-.tab-btn {
-    flex: 1 !important;
-    height: 32px !important;
-    padding: 0 16px !important;
-    border-radius: 9px !important;
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
+body.light-theme .header-tab-nav .tab-slider {
+    background: linear-gradient(135deg, #ea580c, #f97316) !important;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35) !important;
+}
+
+.header-tab-nav[data-active="files"] .tab-slider {
+    transform: translate3d(29px, 0, 0) !important;
+    background: linear-gradient(225deg, #3b82f6, #1d4ed8) !important;
+    box-shadow: 0 2px 8px rgba(29, 78, 216, 0.4) !important;
+}
+
+body.light-theme .header-tab-nav[data-active="files"] .tab-slider {
+    transform: translate3d(29px, 0, 0) !important;
+    background: linear-gradient(225deg, #ea580c, #f97316) !important;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35) !important;
+}
+
+.header-tab-nav .tab-btn,
+body.light-theme .header-tab-nav .tab-btn {
+    flex: 0 0 27px !important;
+    width: 27px !important;
+    height: 23px !important;
+    padding: 0 !important;
+    border-radius: 5px !important;
     color: var(--text-secondary) !important;
     transition: color 0.2s ease !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 8px !important;
     position: relative !important;
     z-index: 2 !important;
     background: transparent !important;
@@ -554,14 +578,17 @@ body.light-theme .tab-nav {
     cursor: pointer !important;
 }
 
-.tab-btn .tab-label {
-    display: inline !important;
+.header-tab-nav .tab-btn:hover,
+body.light-theme .header-tab-nav .tab-btn:hover { color: var(--text-primary) !important; }
+
+.header-tab-nav [data-tab="files"] svg {
+    transform: scaleX(-1);
 }
 
-.tab-btn:hover { color: var(--text-primary) !important; }
-
-.tab-btn.active {
+.header-tab-nav .tab-btn.active,
+body.light-theme .header-tab-nav .tab-btn.active {
     color: #ffffff !important;
+    background: transparent !important;
 }
 
 .tab-content {
@@ -761,8 +788,18 @@ body.light-theme .tab-nav {
     box-shadow: none !important;
 }
 
+#text-input::placeholder,
 .text-input-area textarea::placeholder {
-    color: var(--text-tertiary);
+    color: rgba(255, 255, 255, 0.38) !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    opacity: 1 !important;
+}
+
+body.light-theme #text-input::placeholder,
+body.light-theme .text-input-area textarea::placeholder {
+    color: rgba(0, 0, 0, 0.38) !important;
+    opacity: 1 !important;
 }
 
 .btn-send {
@@ -2876,52 +2913,61 @@ body.light-theme .message.context-menu-active-highlight .file-box-card::before {
     background-color: rgba(234, 88, 12, 0.2);
 }
 
-/* Floating Multi-Select Toolbar */
-.multi-select-bar {
-    position: fixed;
-    z-index: 100005;
-    background: #181926;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 14px;
-    padding: 6px 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
-    animation: contextMenuPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    transition: top 0.15s ease, left 0.15s ease;
-    max-width: calc(100vw - 32px);
-    box-sizing: border-box;
+/* --- Header Multi-Select Toggle --- */
+body.light-theme .share-header-controls.multi-select-active #btn-header-room-code,
+body.light-theme .share-header-controls.multi-select-active .header-tab-nav,
+.share-header-controls.multi-select-active #btn-header-room-code,
+.share-header-controls.multi-select-active .header-tab-nav {
+    display: none !important;
 }
 
-body.light-theme .multi-select-bar {
-    background: #ffffff !important;
-    border-color: rgba(0, 0, 0, 0.15) !important;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2) !important;
+.share-header-controls:not(.multi-select-active) #multi-select-bar {
+    display: none !important;
+}
+
+.share-header-controls.multi-select-active #multi-select-bar {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: 27px !important;
+    padding: 2px 6px !important;
+    border-radius: 7px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: none !important;
+    animation: none !important;
+    z-index: 10 !important;
+}
+
+body.light-theme .share-header-controls.multi-select-active #multi-select-bar {
+    background: rgba(0, 0, 0, 0.06) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    box-shadow: none !important;
 }
 
 .multi-select-count {
     font-weight: 700;
-    font-size: 0.88rem;
+    font-size: 0.75rem !important;
     color: var(--text-primary);
     white-space: nowrap;
+    padding: 0 4px;
 }
 
 .multi-select-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .btn-multi-action {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.82rem;
+    justify-content: center;
+    width: 23px !important;
+    height: 23px !important;
+    padding: 0 !important;
+    border-radius: 5px !important;
+    font-size: 0.76rem !important;
     font-weight: 600;
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.08);
@@ -2958,4 +3004,15 @@ body.light-theme .btn-multi-action:hover {
     padding: 6px !important;
     border-radius: 50% !important;
     color: var(--text-secondary);
+}
+
+.drawer-btn, .room-badge {
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.drawer-btn:active, .room-badge:active {
+    transform: scale(0.97) !important;
+    opacity: 0.88 !important;
 }

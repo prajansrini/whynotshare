@@ -54,7 +54,21 @@ class UI {
 
     static toast(message, type = 'info', duration = 3000) {
         let c = document.querySelector('.toast-container');
-        if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
+        if (!c) {
+            c = document.createElement('div');
+            c.className = 'toast-container';
+            document.body.appendChild(c);
+        }
+
+        const existingToasts = c.querySelectorAll('.toast');
+        if (existingToasts.length >= 2) {
+            for (let i = 0; i <= existingToasts.length - 2; i++) {
+                if (existingToasts[i] && existingToasts[i].parentNode) {
+                    existingToasts[i].remove();
+                }
+            }
+        }
+
         const t = document.createElement('div');
         t.className = 'toast toast-' + type;
         t.textContent = message;
@@ -62,7 +76,7 @@ class UI {
         setTimeout(() => { if (t.parentNode) t.remove(); }, duration);
     }
 
-    static confirm(message, title = 'Confirm') {
+    static confirm(message, title = 'Confirm Delete', confirmText = 'Delete', cancelText = 'Cancel', isDanger = true) {
         return new Promise((resolve) => {
             const modal = document.getElementById('modal-confirm-action');
             if (!modal) return resolve(window.confirm(message));
@@ -72,19 +86,41 @@ class UI {
             const msgEl = document.getElementById('confirm-action-message');
             if (msgEl) msgEl.textContent = message;
             
-            modal.style.display = 'flex';
+            const btnAction = document.getElementById('btn-confirm-action-yes');
+            const btnCancel = document.getElementById('btn-confirm-action-no');
             
-            const btnYes = document.getElementById('btn-confirm-action-yes');
-            const btnNo = document.getElementById('btn-confirm-action-no');
+            if (btnAction) {
+                btnAction.textContent = confirmText;
+                if (isDanger) {
+                    btnAction.className = 'btn text-danger';
+                    btnAction.style.background = 'rgba(239, 68, 68, 0.2)';
+                    btnAction.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+                    btnAction.style.color = '#f87171';
+                } else {
+                    btnAction.className = 'btn btn-secondary';
+                    btnAction.style.background = '';
+                    btnAction.style.border = '';
+                    btnAction.style.color = '';
+                }
+            }
+
+            if (btnCancel) {
+                btnCancel.textContent = cancelText;
+                btnCancel.className = 'btn btn-primary';
+                btnCancel.style.background = 'var(--accent-primary)';
+                btnCancel.style.color = '#ffffff';
+            }
+
+            modal.style.display = 'flex';
             
             const cleanup = () => {
                 modal.style.display = 'none';
-                if (btnYes) btnYes.onclick = null;
-                if (btnNo) btnNo.onclick = null;
+                if (btnAction) btnAction.onclick = null;
+                if (btnCancel) btnCancel.onclick = null;
             };
             
-            if (btnYes) btnYes.onclick = () => { cleanup(); resolve(true); };
-            if (btnNo) btnNo.onclick = () => { cleanup(); resolve(false); };
+            if (btnAction) btnAction.onclick = () => { cleanup(); resolve(true); };
+            if (btnCancel) btnCancel.onclick = () => { cleanup(); resolve(false); };
         });
     }
 
