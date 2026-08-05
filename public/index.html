@@ -440,6 +440,17 @@
                 <div id="staged-files-chat"
                     style="display:none;padding:8px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;margin-bottom:8px;flex-direction:column;flex-shrink:0;max-height:110px;overflow-y:auto">
                 </div>
+                <div id="reply-preview-bar" class="reply-preview-bar" style="display:none">
+                    <div style="display:flex;align-items:center;gap:6px;overflow:hidden;min-width:0;flex:1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" style="flex-shrink:0">
+                            <polyline points="9 14 4 9 9 4"/>
+                            <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+                        </svg>
+                        <span style="font-size:0.75rem;font-weight:700;color:var(--accent-primary);flex-shrink:0">Replying:</span>
+                        <span id="reply-preview-text" style="font-size:0.78rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                    </div>
+                    <button id="btn-cancel-reply" class="btn-close-modal" style="width:22px;height:22px;padding:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;border-radius:50%;margin-left:8px;flex-shrink:0" title="Cancel Reply">✕</button>
+                </div>
                 <div class="text-input-area">
                     <textarea id="text-input" placeholder="Type a message..." rows="1"></textarea>
                     <button id="btn-attach-chat" class="btn-send"
@@ -1595,6 +1606,32 @@
                 <span>Theme</span>
             </button>
         </div>
+    </div>
+
+    <!-- CUSTOM CONTEXT MENU FOR MESSAGES & FILES -->
+    <div id="custom-context-menu" class="custom-context-menu" style="display:none">
+        <button class="context-menu-item" id="ctx-menu-reply">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 14 4 9 9 4"/>
+                <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+            </svg>
+            <span>Reply</span>
+        </button>
+        <button class="context-menu-item" id="ctx-menu-copy">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span>Copy</span>
+        </button>
+        <div class="context-menu-divider"></div>
+        <button class="context-menu-item danger" id="ctx-menu-delete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>Delete</span>
+        </button>
     </div>
 
     <script src="js/qr-code-styling.js"></script>

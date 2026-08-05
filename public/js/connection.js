@@ -579,6 +579,14 @@ class ConnectionManager {
                 if (this.isCreator) this._broadcast({ type: 'text', payload: { ...data.payload, senderId: sid } }, fromId);
                 break;
             }
+            case 'delete-message': case 'delete-msg': {
+                const payload = data.payload || {};
+                if (window.app && window.app.onMessageDeleted) {
+                    window.app.onMessageDeleted(payload);
+                }
+                if (this.isCreator) this._broadcast(data, fromId);
+                break;
+            }
             case 'file-meta': case 'file-chunk': case 'file-complete': case 'file-cancel':
                 if (this.onFileEvent) this.onFileEvent(data.type, data.payload);
                 if (this.isCreator) this._broadcast(data, fromId);
@@ -763,6 +771,12 @@ class ConnectionManager {
 
     sendFileEvent(type, payload) {
         const msg = { type, payload: { ...payload, senderId: this.myPeerId } };
+        if (this.isCreator) this._broadcast(msg);
+        else { const c = this.connections.get(this._roomCodeToPeerId(this.roomCode)); if (c && c.open) c.send(msg); }
+    }
+
+    sendDeleteMessage(msgId, fileId) {
+        const msg = { type: 'delete-message', payload: { msgId, fileId, senderId: this.myPeerId } };
         if (this.isCreator) this._broadcast(msg);
         else { const c = this.connections.get(this._roomCodeToPeerId(this.roomCode)); if (c && c.open) c.send(msg); }
     }

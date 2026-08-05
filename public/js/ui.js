@@ -129,9 +129,9 @@ class UI {
         if (hasGroupFollowup) classes += ' message-group-lead';
         msg.className = classes;
 
-        const escaped = UI.escapeHtml(text);
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
+        msg.setAttribute('data-sender-name', isSent ? 'You' : sName);
 
         const hideSender = isSent || (isSameSender !== undefined ? isSameSender : isGroupFollowup);
         const senderHtml = !hideSender
@@ -140,8 +140,40 @@ class UI {
 
         const timeClass = 'message-time-wrapper' + (hasGroupFollowup ? ' message-time-grouped' : '');
 
+        let bodyHtml = UI.escapeHtml(text);
+        if (text && text.startsWith('> Replying to: ')) {
+            const parts = text.split('\n');
+            const header = parts[0].replace('> Replying to: ', '');
+            const replyText = parts.slice(1).join('\n');
+
+            let replySender = 'Member';
+            let quoteContent = header;
+            let targetMsgId = '';
+            let targetFileId = '';
+
+            if (header.includes(' || ')) {
+                const hParts = header.split(' || ');
+                replySender = hParts[0] || 'Member';
+                quoteContent = hParts[1] || '';
+                targetMsgId = hParts[2] || '';
+                targetFileId = hParts[3] || '';
+            }
+
+            const isLong = quoteContent.length > 70;
+            const displayQuote = isLong ? quoteContent.slice(0, 70) : quoteContent;
+
+            const cardHtml =
+                '<div class="quoted-reply-card" data-target-id="' + UI.escapeAttr(targetMsgId) + '" data-target-fid="' + UI.escapeAttr(targetFileId) + '">' +
+                    '<div class="quoted-reply-sender">' + UI.escapeHtml(replySender) + '</div>' +
+                    '<div class="quoted-reply-text">' + UI.escapeHtml(displayQuote) + '</div>' +
+                    (isLong ? '<div class="quoted-reply-ellipsis">...</div>' : '') +
+                '</div>';
+
+            bodyHtml = cardHtml + UI.escapeHtml(replyText);
+        }
+
         msg.innerHTML = senderHtml +
-            '<div class="message-bubble">' + escaped + '</div>' +
+            '<div class="message-bubble">' + bodyHtml + '</div>' +
             '<div class="' + timeClass + '" style="display:flex;align-items:center;gap:6px;' + (isSent ? 'flex-direction:row-reverse' : '') + '">' +
             '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span>' +
             '<div class="message-actions"><button class="message-action-btn" data-copy="' + UI.escapeAttr(text) + '">Copy</button></div></div>';
@@ -566,6 +598,7 @@ class UI {
 
         const sName = typeof sender === 'object' && sender ? sender.name : (sender || 'Peer');
         const sColor = typeof sender === 'object' && sender && sender.color ? sender.color : 'var(--text-secondary)';
+        msg.setAttribute('data-sender-name', isSent ? 'You' : sName);
         const isSameSender = groupInfo && typeof groupInfo.isSameSender === 'boolean' ? groupInfo.isSameSender : isGroupFollowup;
         const hideSender = isSent || isSameSender;
         const senderHtml = !hideSender
@@ -574,8 +607,33 @@ class UI {
 
         const timeClass = 'message-time-wrapper' + (hasGroupFollowup ? ' message-time-grouped' : '');
 
+        let captionHtml = '';
+        if (meta && meta.captionText) {
+            let capText = UI.escapeHtml(meta.captionText);
+            if (meta.captionText.startsWith('> Replying to: ')) {
+                const parts = meta.captionText.split('\n');
+                const header = parts[0].replace('> Replying to: ', '');
+                const rest = parts.slice(1).join('\n');
+                let replySender = 'Member';
+                let quoteContent = header;
+                let targetMsgId = '';
+                let targetFileId = '';
+                if (header.includes(' || ')) {
+                    const hParts = header.split(' || ');
+                    replySender = hParts[0] || 'Member';
+                    quoteContent = hParts[1] || '';
+                    targetMsgId = hParts[2] || '';
+                    targetFileId = hParts[3] || '';
+                }
+                const isLong = quoteContent.length > 70;
+                const displayQuote = isLong ? quoteContent.slice(0, 70) : quoteContent;
+                capText = '<div class="quoted-reply-card" data-target-id="' + UI.escapeAttr(targetMsgId) + '" data-target-fid="' + UI.escapeAttr(targetFileId) + '"><div class="quoted-reply-sender">' + UI.escapeHtml(replySender) + '</div><div class="quoted-reply-text">' + UI.escapeHtml(displayQuote) + '</div>' + (isLong ? '<div class="quoted-reply-ellipsis">...</div>' : '') + '</div>' + UI.escapeHtml(rest);
+            }
+            captionHtml = '<div class="file-caption-container">' + capText + '</div>';
+        }
+
         msg.innerHTML = senderHtml +
-            '<div class="message-bubble" style="padding:10px">' + contentHtml + '</div>' +
+            '<div class="message-bubble" style="padding:10px">' + contentHtml + captionHtml + '</div>' +
             '<div class="' + timeClass + '" style="display:flex;align-items:center;gap:6px;' + (isSent ? 'flex-direction:row-reverse' : '') + '">' +
             '<span class="message-time">' + UI.formatTime(timestamp || Date.now()) + '</span></div>';
         return msg;

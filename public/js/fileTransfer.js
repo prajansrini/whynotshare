@@ -106,7 +106,7 @@ class FileTransfer {
         });
     }
 
-    async sendFile(file, customFileId) {
+    async sendFile(file, customFileId, captionText = null) {
         const isPersonal = Boolean(window.app && window.app.personalE2E);
         const peers = (this.conn && typeof this.conn.getPeers === 'function') ? this.conn.getPeers() : [];
         const myId = this.conn ? (this.conn.getSocketId() || this.conn.myPeerId) : null;
@@ -115,7 +115,7 @@ class FileTransfer {
         const fileId = customFileId || (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
         const totalChunks = Math.ceil(file.size / this.chunkSize);
         const encrypt = (this.encryptionEnabled && this.crypto.hasKey()) || isPersonal;
-        const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks, encrypted: encrypt, personalEncrypted: isPersonal, recipients };
+        const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, totalChunks, encrypted: encrypt, personalEncrypted: isPersonal, recipients, captionText: captionText || null };
         this.saveToIndexedDB(fileId, meta, file, this.conn.myPeerId, Date.now());
         this.conn.sendFileEvent('file-meta', meta);
         const start = Date.now();

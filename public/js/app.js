@@ -1029,7 +1029,42 @@ class App {
 
     async sendText() {
         const input = document.getElementById('text-input');
-        const text = input ? input.value.trim() : '';
+        let text = input ? input.value.trim() : '';
+
+        if (this._activeReplyQuote && text) {
+            const sender = (typeof this._activeReplyQuote === 'object' && this._activeReplyQuote.sender) ? this._activeReplyQuote.sender : 'Member';
+            const quoteStr = (typeof this._activeReplyQuote === 'object' && this._activeReplyQuote.text) ? this._activeReplyQuote.text : String(this._activeReplyQuote || '');
+            const msgId = (typeof this._activeReplyQuote === 'object' && this._activeReplyQuote.msgId) ? this._activeReplyQuote.msgId : '';
+            const fileId = (typeof this._activeReplyQuote === 'object' && this._activeReplyQuote.fileId) ? this._activeReplyQuote.fileId : '';
+            const cleanQuote = quoteStr.replace(/\n/g, ' ');
+            text = `> Replying to: ${sender} || ${cleanQuote} || ${msgId} || ${fileId}\n${text}`;
+            this._activeReplyQuote = null;
+            const bar = document.getElementById('reply-preview-bar');
+            if (bar) bar.style.display = 'none';
+        }
+
+        // If files are staged, embed the text message as a caption inside the FIRST file bubble!
+        if (this.stagedFiles && this.stagedFiles.length > 0) {
+            const filesToSend = [...this.stagedFiles];
+            this.stagedFiles = [];
+            this.updateStagedFilesUI();
+
+            if (input) {
+                input.value = '';
+                UI.autoResize(input);
+            }
+
+            await this.sendFiles(filesToSend, text);
+
+            if (input) {
+                input.focus();
+            }
+            if (this.resetViewportScroll) {
+                this.resetViewportScroll();
+            }
+            return;
+        }
+
         if (text) {
             if (input) {
                 input.value = '';
@@ -1043,21 +1078,14 @@ class App {
                 this.resetViewportScroll();
             }
         }
-        if (this.stagedFiles && this.stagedFiles.length > 0) {
-            const filesToSend = [...this.stagedFiles];
-            this.stagedFiles = [];
-            this.updateStagedFilesUI();
-            await this.sendFiles(filesToSend);
-            if (this.resetViewportScroll) {
-                this.resetViewportScroll();
-            }
-        }
     }
 
-    async sendFiles(files) {
-        for (const file of files) {
+    async sendFiles(files, captionText = '') {
+        for (let idx = 0; idx < files.length; idx++) {
+            const file = files[idx];
             const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-            const res = await this.fileTransfer.sendFile(file, fileId);
+            const fileCaption = (idx === 0 && captionText) ? captionText : null;
+            const res = await this.fileTransfer.sendFile(file, fileId, fileCaption);
             const tc = document.querySelector('[id^="transfer-"]');
             setTimeout(() => {
                 document.querySelectorAll('.transfer-card').forEach(c => {
@@ -1071,7 +1099,7 @@ class App {
             if (rcv) rcv.prepend(card);
 
             const url = URL.createObjectURL(file);
-            const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type };
+            const meta = { fileId, fileName: file.name, fileSize: file.size, fileType: file.type, captionText: fileCaption };
             if (this.textShare) {
                 this.textShare.addFileMessage(fileId, meta, url, true, { name: 'You', id: this.conn.getSocketId() }, Date.now());
             }
@@ -3805,46 +3833,59 @@ class App {
             btnDownloadAll.addEventListener('click', () => this.downloadAllFilesAsZip());
         }
         filePicker.addEventListener('change', (e) => { if (e.target.files.length) this.stageFiles(e.target.files); e.target.value = ''; });
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer) this.handleDataTransferItems(e.dataTransfer); });
+        let dragCounter = 0;
+
+        const handleChatDragEnter = (e) => {
+            if (e.cancelable) e.preventDefault();
+            dragCounter++;
+            const inputEl = document.getElementById('text-input');
+            if (inputEl) inputEl.classList.add('drag-highlight');
+            if (dropZone && e.target.closest && e.target.closest('#drop-zone')) dropZone.classList.add('drag-over');
+        };
 
         const handleChatDragOver = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const tia = document.querySelector('.text-input-area');
-            if (tia && !e.target.closest('#drop-zone')) tia.classList.add('drag-highlight');
-            if (e.target.closest('#drop-zone')) dropZone.classList.add('drag-over');
+            if (e.cancelable) e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'copy';
+            }
+            const inputEl = document.getElementById('text-input');
+            if (inputEl && !inputEl.classList.contains('drag-highlight')) {
+                inputEl.classList.add('drag-highlight');
+            }
+            if (dropZone && e.target && e.target.closest && e.target.closest('#drop-zone')) dropZone.classList.add('drag-over');
         };
+
         const handleChatDragLeave = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const tia = document.querySelector('.text-input-area');
-            if (tia) tia.classList.remove('drag-highlight');
-            if (dropZone) dropZone.classList.remove('drag-over');
+            if (e.cancelable) e.preventDefault();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                const inputEl = document.getElementById('text-input');
+                if (inputEl) inputEl.classList.remove('drag-highlight');
+                if (dropZone) dropZone.classList.remove('drag-over');
+            }
         };
+
         const handleChatDrop = (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             e.stopPropagation();
-            const tia = document.querySelector('.text-input-area');
-            if (tia) tia.classList.remove('drag-highlight');
+            dragCounter = 0;
+            const inputEl = document.getElementById('text-input');
+            if (inputEl) inputEl.classList.remove('drag-highlight');
             if (dropZone) dropZone.classList.remove('drag-over');
+
             if (e.dataTransfer) {
                 this.handleDataTransferItems(e.dataTransfer);
             }
         };
 
-        window.addEventListener('dragover', handleChatDragOver);
-        window.addEventListener('drop', handleChatDrop);
+        window.addEventListener('dragover', (e) => { if (e.cancelable) e.preventDefault(); }, false);
+        window.addEventListener('drop', (e) => { if (e.cancelable) e.preventDefault(); }, false);
 
-        ['screen-room', 'tab-text', 'messages', 'text-input', 'tab-files', 'received-files', 'drop-zone'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('dragenter', handleChatDragOver);
-                el.addEventListener('dragover', handleChatDragOver);
-                el.addEventListener('dragleave', handleChatDragLeave);
-            }
-        });
+        document.body.addEventListener('dragenter', handleChatDragEnter, false);
+        document.body.addEventListener('dragover', handleChatDragOver, false);
+        document.body.addEventListener('dragleave', handleChatDragLeave, false);
+        document.body.addEventListener('drop', handleChatDrop, false);
     }
 
     updateFavicon(isLight) {
@@ -3913,6 +3954,395 @@ class App {
                     syncViewport();
                 }, 120);
             });
+        }
+        this.setupContextMenuAndPasteListeners();
+    }
+
+    setupContextMenuAndPasteListeners() {
+        const handlePaste = (e) => {
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+
+            const files = [];
+            if (clipboardData.files && clipboardData.files.length > 0) {
+                for (let i = 0; i < clipboardData.files.length; i++) {
+                    files.push(clipboardData.files[i]);
+                }
+            } else if (clipboardData.items) {
+                for (let i = 0; i < clipboardData.items.length; i++) {
+                    const item = clipboardData.items[i];
+                    if (item.kind === 'file') {
+                        const file = item.getAsFile();
+                        if (file) files.push(file);
+                    }
+                }
+            }
+
+            if (files.length > 0) {
+                e.preventDefault();
+                this.stageFiles(files);
+                UI.toast(`Pasted ${files.length} file(s) / media ready to send!`, 'info');
+            }
+        };
+
+        const textInput = document.getElementById('text-input');
+        if (textInput) textInput.addEventListener('paste', handlePaste);
+
+        const menu = document.getElementById('custom-context-menu');
+        let _contextTarget = null;
+        let longPressTimer = null;
+        let touchStartPos = { x: 0, y: 0 };
+
+        const showContextMenu = (e, targetEl) => {
+            if (e.cancelable) e.preventDefault();
+            if (!targetEl) return;
+
+            const fileCard = targetEl.closest('.received-file-card') || targetEl.closest('.file-box-card') || targetEl.closest('[data-file-id]') || targetEl.closest('.transfer-item') || targetEl.closest('.file-card') || targetEl.closest('.transfer-card') || targetEl.closest('.file-attachment');
+            const mediaEl = targetEl.closest('img') || targetEl.closest('video') || targetEl.closest('audio');
+            const msgBubble = (!fileCard && !mediaEl) ? (targetEl.closest('.message') || targetEl.closest('.message-bubble')) : null;
+
+            if (!msgBubble && !fileCard && !mediaEl) return;
+
+            let textContent = '';
+            let itemType = 'message';
+            let targetNode = null;
+            let senderName = 'Member';
+            let downloadEl = null;
+            let downloadUrl = null;
+
+            const parentMsg = targetEl.closest('.message');
+            const isSentByMe = parentMsg ? parentMsg.classList.contains('message-sent') : (targetEl.classList.contains('message-sent') || false);
+
+            if (fileCard || mediaEl) {
+                targetNode = fileCard || mediaEl;
+                itemType = 'file';
+                
+                let fileName = 'File';
+                if (fileCard) {
+                    const titleEl = fileCard.querySelector('[title]') || fileCard.querySelector('.file-name') || fileCard.querySelector('.received-file-name') || fileCard.querySelector('.transfer-name');
+                    if (titleEl) {
+                        fileName = titleEl.getAttribute('title') || titleEl.innerText || titleEl.textContent || 'File';
+                        fileName = fileName.trim();
+                    } else if (fileCard.dataset && fileCard.dataset.name) {
+                        fileName = fileCard.dataset.name;
+                    }
+                } else if (mediaEl) {
+                    fileName = mediaEl.dataset.name || mediaEl.alt || 'Media';
+                }
+
+                const captionEl = (fileCard && fileCard.querySelector('.file-caption-container')) || (parentMsg && parentMsg.querySelector('.file-caption-container'));
+                const captionText = captionEl ? (captionEl.innerText || captionEl.textContent || '').trim() : '';
+
+                textContent = captionText ? `${fileName}: ${captionText}` : fileName;
+
+                downloadEl = (fileCard && (fileCard.querySelector('a[download]') || fileCard.querySelector('.btn-download') || fileCard.querySelector('a[href]')));
+                if (mediaEl && mediaEl.src) downloadUrl = mediaEl.src;
+                else if (fileCard && fileCard.dataset && fileCard.dataset.url) downloadUrl = fileCard.dataset.url;
+
+                if (isSentByMe) {
+                    senderName = 'You';
+                } else if (parentMsg) {
+                    senderName = parentMsg.dataset.senderName || '';
+                    if (!senderName || senderName === 'Peer') {
+                        const senderEl = parentMsg.querySelector('.message-sender');
+                        if (senderEl) senderName = (senderEl.innerText || senderEl.textContent || '').trim();
+                    }
+                    if (!senderName) senderName = 'Peer';
+                }
+            } else if (msgBubble) {
+                targetNode = msgBubble;
+                itemType = 'message';
+                const copyBtn = msgBubble.querySelector('.message-action-btn[data-copy]');
+                const bubble = msgBubble.querySelector('.message-bubble') || msgBubble;
+                let rawText = copyBtn ? copyBtn.dataset.copy : (bubble.innerText || bubble.textContent || '').trim();
+                if (rawText.startsWith('> Replying to: ')) {
+                    const lines = rawText.split('\n');
+                    rawText = lines.slice(1).join('\n').trim();
+                }
+                textContent = rawText;
+
+                if (isSentByMe) {
+                    senderName = 'You';
+                } else if (parentMsg) {
+                    senderName = parentMsg.dataset.senderName || '';
+                    if (!senderName || senderName === 'Peer') {
+                        const senderEl = parentMsg.querySelector('.message-sender');
+                        if (senderEl) senderName = (senderEl.innerText || senderEl.textContent || '').trim();
+                    }
+                    if (!senderName) senderName = 'Peer';
+                }
+            }
+
+            _contextTarget = { node: targetNode, text: textContent, type: itemType, sender: senderName, downloadEl, downloadUrl, isSentByMe };
+
+            const copyBtnEl = document.getElementById('ctx-menu-copy');
+            if (copyBtnEl) {
+                if (itemType === 'file') {
+                    copyBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Save</span>';
+                } else {
+                    copyBtnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>';
+                }
+            }
+
+            const deleteBtnEl = document.getElementById('ctx-menu-delete');
+            if (deleteBtnEl) {
+                deleteBtnEl.style.display = isSentByMe ? 'flex' : 'none';
+            }
+
+            if (parentMsg) {
+                parentMsg.classList.remove('reply-target-highlight');
+                void parentMsg.offsetWidth;
+                parentMsg.classList.add('reply-target-highlight');
+                setTimeout(() => {
+                    parentMsg.classList.remove('reply-target-highlight');
+                }, 3000);
+            }
+
+            if (!menu) return;
+            menu.style.display = 'flex';
+
+            const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth / 2);
+            const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight / 2);
+
+            const menuWidth = menu.offsetWidth || 160;
+            const menuHeight = menu.offsetHeight || 130;
+
+            let left = clientX;
+            let top = clientY;
+
+            if (left + menuWidth > window.innerWidth - 10) left = window.innerWidth - menuWidth - 10;
+            if (top + menuHeight > window.innerHeight - 10) top = window.innerHeight - menuHeight - 10;
+
+            menu.style.left = `${Math.max(10, left)}px`;
+            menu.style.top = `${Math.max(10, top)}px`;
+        };
+
+        const hideContextMenu = () => {
+            if (menu) menu.style.display = 'none';
+        };
+
+        document.addEventListener('click', hideContextMenu);
+        document.addEventListener('scroll', hideContextMenu, true);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideContextMenu(); });
+
+        const isFileOrMedia = (el) => {
+            return el.closest('.received-file-card') || el.closest('.file-box-card') || el.closest('[data-file-id]') || el.closest('.transfer-item') || el.closest('.file-card') || el.closest('.transfer-card') || el.closest('.file-attachment') || el.closest('img') || el.closest('video') || el.closest('audio') || el.closest('.message') || el.closest('.message-bubble');
+        };
+
+        document.body.addEventListener('contextmenu', (e) => {
+            const targetEl = isFileOrMedia(e.target);
+            if (targetEl) {
+                showContextMenu(e, targetEl);
+            }
+        });
+
+        document.body.addEventListener('touchstart', (e) => {
+            const targetEl = isFileOrMedia(e.target);
+            if (!targetEl) return;
+
+            touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            if (longPressTimer) clearTimeout(longPressTimer);
+
+            longPressTimer = setTimeout(() => {
+                showContextMenu(e, targetEl);
+            }, 450);
+        }, { passive: true });
+
+        document.body.addEventListener('touchmove', (e) => {
+            if (!longPressTimer) return;
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - touchStartPos.x);
+            const dy = Math.abs(touch.clientY - touchStartPos.y);
+            if (dx > 10 || dy > 10) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
+
+        document.body.addEventListener('touchend', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        });
+
+        const btnReply = document.getElementById('ctx-menu-reply');
+        if (btnReply) {
+            btnReply.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideContextMenu();
+                if (!_contextTarget || !_contextTarget.text) return;
+
+                const targetNode = _contextTarget.node;
+                const msgId = (targetNode && (targetNode.dataset.msgId || targetNode.id)) || '';
+                const fileId = (targetNode && targetNode.dataset.fileId) || '';
+
+                this._activeReplyQuote = { sender: _contextTarget.sender || 'Member', text: _contextTarget.text, msgId, fileId };
+                const bar = document.getElementById('reply-preview-bar');
+                const txt = document.getElementById('reply-preview-text');
+                if (bar && txt) {
+                    const displayTxt = `${_contextTarget.sender || 'Member'}: ${_contextTarget.text}`;
+                    txt.textContent = displayTxt.length > 50 ? displayTxt.slice(0, 50) + '...' : displayTxt;
+                    bar.style.display = 'flex';
+                }
+                const input = document.getElementById('text-input');
+                if (input) input.focus();
+            });
+        }
+
+        const messagesContainer = document.getElementById('messages');
+        if (messagesContainer && !messagesContainer._hasReplyScrollListener) {
+            messagesContainer._hasReplyScrollListener = true;
+            messagesContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.quoted-reply-card');
+                if (!card) return;
+
+                const targetId = card.dataset.targetId;
+                const targetFid = card.dataset.targetFid;
+                const quoteText = card.querySelector('.quoted-reply-text')?.textContent?.trim();
+
+                let targetEl = null;
+                if (targetId) {
+                    try {
+                        const escId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetId) : targetId;
+                        targetEl = document.querySelector(`[data-msg-id="${escId}"]`) || document.getElementById(targetId);
+                    } catch (err) {}
+                }
+                if (!targetEl && targetFid) {
+                    try {
+                        const escFid = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetFid) : targetFid;
+                        targetEl = document.querySelector(`[data-file-id="${escFid}"]`) || document.getElementById('history-card-' + targetFid) || document.getElementById('transfer-' + targetFid);
+                    } catch (err) {}
+                }
+
+                if (!targetEl && quoteText) {
+                    const cleanSnippet = quoteText.replace(/^.*?: /, '').trim();
+                    const allMsgs = document.querySelectorAll('.message');
+                    for (const m of allMsgs) {
+                        if (m.contains(card)) continue;
+                        const txt = (m.innerText || m.textContent || '').trim();
+                        if (cleanSnippet && txt.includes(cleanSnippet)) {
+                            targetEl = m;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetEl) {
+                    if (messagesContainer) {
+                        const containerRect = messagesContainer.getBoundingClientRect();
+                        const targetRect = targetEl.getBoundingClientRect();
+                        const scrollTop = messagesContainer.scrollTop + (targetRect.top - containerRect.top) - (containerRect.height / 2) + (targetRect.height / 2);
+                        messagesContainer.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+                    }
+                    setTimeout(() => {
+                        targetEl.classList.add('reply-target-highlight');
+                        setTimeout(() => {
+                            targetEl.classList.remove('reply-target-highlight');
+                        }, 3000);
+                    }, 400);
+                } else {
+                    UI.toast('Original message not found in view', 'info');
+                }
+            });
+        }
+
+        const btnCancelReply = document.getElementById('btn-cancel-reply');
+        if (btnCancelReply) {
+            btnCancelReply.addEventListener('click', () => {
+                this._activeReplyQuote = null;
+                const bar = document.getElementById('reply-preview-bar');
+                if (bar) bar.style.display = 'none';
+            });
+        }
+
+        const btnCopy = document.getElementById('ctx-menu-copy');
+        if (btnCopy) {
+            btnCopy.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideContextMenu();
+                if (!_contextTarget) return;
+
+                if (_contextTarget.type === 'file') {
+                    if (_contextTarget.downloadEl) {
+                        _contextTarget.downloadEl.click();
+                        UI.toast('Downloading file...', 'info');
+                    } else if (_contextTarget.downloadUrl) {
+                        const a = document.createElement('a');
+                        a.href = _contextTarget.downloadUrl;
+                        a.download = _contextTarget.text || 'download';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        UI.toast('File saved!', 'info');
+                    } else if (_contextTarget.text) {
+                        UI.copyToClipboard(_contextTarget.text, 'File name copied!');
+                    }
+                } else if (_contextTarget.text) {
+                    UI.copyToClipboard(_contextTarget.text, 'Copied to clipboard!');
+                }
+            });
+        }
+
+        const btnDelete = document.getElementById('ctx-menu-delete');
+        if (btnDelete) {
+            btnDelete.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideContextMenu();
+                if (_contextTarget && _contextTarget.node && _contextTarget.isSentByMe) {
+                    const node = _contextTarget.node;
+                    const msgId = node.dataset.msgId || node.id || null;
+                    const fileId = node.dataset.fileId || null;
+
+                    node.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                    node.style.opacity = '0';
+                    node.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        if (node.parentNode) node.parentNode.removeChild(node);
+                    }, 250);
+
+                    if (this.conn && typeof this.conn.sendDeleteMessage === 'function') {
+                        this.conn.sendDeleteMessage(msgId, fileId);
+                    }
+
+                    if (this.textShare && Array.isArray(this.textShare.messages)) {
+                        this.textShare.messages = this.textShare.messages.filter(m => (!msgId || m.id !== msgId) && (!fileId || !m.meta || m.meta.fileId !== fileId));
+                        if (typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
+                    }
+
+                    UI.toast(`${_contextTarget.type === 'file' ? 'File card' : 'Message'} deleted for everyone`, 'info');
+                }
+            });
+        }
+    }
+
+    onMessageDeleted(payload) {
+        const { msgId, fileId } = payload || {};
+        let target = null;
+        if (msgId) {
+            const escId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(msgId) : msgId;
+            try {
+                target = document.querySelector(`[data-msg-id="${escId}"]`) || document.getElementById(msgId);
+            } catch (e) { }
+        }
+        if (!target && fileId) {
+            const escFid = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(fileId) : fileId;
+            try {
+                target = document.querySelector(`[data-file-id="${escFid}"]`) || document.getElementById('history-card-' + fileId) || document.getElementById('transfer-' + fileId);
+            } catch (e) { }
+        }
+        if (target) {
+            target.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            target.style.opacity = '0';
+            target.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (target.parentNode) target.parentNode.removeChild(target);
+            }, 250);
+        }
+
+        if (this.textShare && Array.isArray(this.textShare.messages)) {
+            this.textShare.messages = this.textShare.messages.filter(m => (!msgId || m.id !== msgId) && (!fileId || !m.meta || m.meta.fileId !== fileId));
+            if (typeof this.textShare.saveHistory === 'function') this.textShare.saveHistory();
         }
     }
 
