@@ -165,6 +165,7 @@ class ConnectionManager {
     connect() { if (this.onConnected) this.onConnected(); }
 
     createRoom(existingCode) {
+        this.leaveRoom(true);
         this.auditLogs = [];
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
@@ -172,9 +173,11 @@ class ConnectionManager {
         const peerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
             const tryOpen = (attempt = 1) => {
-                if (this.peer) { try { this.peer.destroy(); } catch { } }
+                if (this._isLeaving) return;
+                if (this.peer) { try { this.peer.off && this.peer.off(); this.peer.destroy(); } catch { } }
                 this.peer = new Peer(peerId, this._getPeerOptions());
                 this.peer.on('open', (id) => {
+                    if (this._isLeaving) return;
                     this.myPeerId = id;
                     this.roomCode = code;
                     this.isCreator = true;
@@ -185,15 +188,19 @@ class ConnectionManager {
                 });
                 this.peer.on('connection', (conn) => this._handleIncoming(conn));
                 this.peer.on('error', (err) => {
+                    if (this._isLeaving) return;
                     if (err && err.type === 'unavailable-id' && attempt <= 10) {
-                        setTimeout(() => tryOpen(attempt + 1), 800);
+                        setTimeout(() => { if (!this._isLeaving) tryOpen(attempt + 1); }, 800);
                     } else if (err && err.type === 'unavailable-id') {
                         reject(new Error('Room code taken. Try again.'));
                     } else {
                         reject(new Error((err && err.message) || 'Connection failed'));
                     }
                 });
-                this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });
+                this.peer.on('disconnected', () => {
+                    if (this._isLeaving) return;
+                    if (this.peer && !this.peer.destroyed) this.peer.reconnect();
+                });
             };
             tryOpen(1);
         });
@@ -209,44 +216,49 @@ class ConnectionManager {
             const p = new Peer(newPeerId, this._getPeerOptions());
             this.peer = p;
             p.on('open', (id) => {
+                if (this._isLeaving) return;
                 this.myPeerId = id;
                 this.addAuditLog(`Room code changed to ${newCode}`, 'success', true);
             });
             p.on('connection', (conn) => this._handleIncoming(conn));
             p.on('error', (err) => {
+                if (this._isLeaving) return;
                 if (err && err.type === 'unavailable-id') {
                     if (typeof UI !== 'undefined') UI.toast('Room code taken. Try another.', 'error');
                 }
             });
-            p.on('disconnected', () => { if (!p.destroyed) p.reconnect(); });
+            p.on('disconnected', () => { if (!p.destroyed && !this._isLeaving) p.reconnect(); });
         }
     }
 
     joinRoom(code) {
+        this.leaveRoom(true);
         this.auditLogs = [];
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
         const hostPeerId = this._roomCodeToPeerId(code);
         return new Promise((resolve, reject) => {
-            if (this.peer) { try { this.peer.destroy(); } catch { } }
+            if (this.peer) { try { this.peer.off && this.peer.off(); this.peer.destroy(); } catch { } }
             this.peer = new Peer(undefined, this._getPeerOptions());
             let settled = false;
-            this._joinResolve = (peers) => { if (!settled) { settled = true; resolve(peers); } };
-            this._joinReject = (err) => { if (!settled) { settled = true; reject(err); } };
+            this._joinResolve = (peers) => { if (!settled && !this._isLeaving) { settled = true; resolve(peers); } };
+            this._joinReject = (err) => { if (!settled && !this._isLeaving) { settled = true; reject(err); } };
 
             let attempt = 1;
             let connected = false;
             let tryConnect = null;
 
             this.peer.on('open', (id) => {
+                if (this._isLeaving) return;
                 this.myPeerId = id;
                 this.roomCode = code;
                 this.isCreator = false;
 
                 tryConnect = () => {
-                    if (connected || this.peer.destroyed) return;
+                    if (connected || this._isLeaving || !this.peer || this.peer.destroyed) return;
                     const conn = this.peer.connect(hostPeerId, { metadata: { deviceInfo: this.myInfo }, reliable: true });
                     this._onConnOpen(conn, () => {
+                        if (this._isLeaving) return;
                         connected = true;
                         this._register(conn, hostPeerId);
                         const authHash = window.app && window.app.crypto ? window.app.crypto.authHash : null;
@@ -257,32 +269,38 @@ class ConnectionManager {
                             { id, ...this.myInfo, isCreator: false }
                         ];
                     });
-                    conn.on('error', () => { if (this._joinReject && !connected) this._joinReject(new Error('Connection failed')); });
+                    conn.on('error', () => { if (this._joinReject && !connected && !this._isLeaving) this._joinReject(new Error('Connection failed')); });
                 };
 
                 tryConnect();
-                setTimeout(() => { if (this._joinReject && !connected) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
+                setTimeout(() => { if (this._joinReject && !connected && !this._isLeaving) this._joinReject(new Error('Timed out. Room may not exist.')); }, 12000);
             });
+
             this.peer.on('error', (err) => {
+                if (this._isLeaving) return;
                 if (err && err.type === 'peer-unavailable' && !connected) {
                     if (attempt < 4) {
                         attempt++;
-                        if (tryConnect) setTimeout(tryConnect, 800);
+                        if (tryConnect) setTimeout(() => { if (!this._isLeaving) tryConnect(); }, 800);
                     } else {
                         // Host has left & room is empty: Auto-claim room as new Host!
                         this.createRoom(code).then(() => {
-                            if (this._joinResolve) this._joinResolve(this.peers);
+                            if (this._joinResolve && !this._isLeaving) this._joinResolve(this.peers);
                         }).catch(() => {
-                            if (this._joinReject && !connected) {
+                            if (this._joinReject && !connected && !this._isLeaving) {
                                 this._joinReject(new Error('Room not found or host left.'));
                             }
                         });
                     }
-                } else if (this._joinReject && !connected) {
+                } else if (this._joinReject && !connected && !this._isLeaving) {
                     this._joinReject(new Error((err && err.message) || 'Failed'));
                 }
             });
-            this.peer.on('disconnected', () => { if (this.peer && !this.peer.destroyed) this.peer.reconnect(); });
+
+            this.peer.on('disconnected', () => {
+                if (this._isLeaving) return;
+                if (this.peer && !this.peer.destroyed) this.peer.reconnect();
+            });
         });
     }
 
@@ -931,7 +949,10 @@ class ConnectionManager {
 
     leaveRoom(isUnload = false, deleteRoom = false) {
         this._isLeaving = true;
+        this._joinResolve = null;
+        this._joinReject = null;
         if (this._heartbeatInterval) { clearInterval(this._heartbeatInterval); this._heartbeatInterval = null; }
+        if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
         if (deleteRoom) {
             const delMsg = { type: 'room-deleted' };
             if (this.isCreator) {
@@ -942,7 +963,7 @@ class ConnectionManager {
                     this.sendDirect(hostId, delMsg);
                 } catch { }
             }
-        } else {
+        } else if (this.roomCode) {
             try {
                 this._broadcast({ type: 'peer-leaving', payload: { id: this.myPeerId, deviceName: this.myInfo ? this.myInfo.deviceName : 'Member' } });
             } catch { }
@@ -950,19 +971,20 @@ class ConnectionManager {
         this.auditLogs = [];
         if (this.onAuditLogSync) this.onAuditLogSync(this.auditLogs);
         if (window.app && window.app.renderAuditLogs) window.app.renderAuditLogs();
+
         const cleanup = () => {
-            for (const conn of this.connections.values()) { try { conn.close(); } catch { } }
+            for (const conn of this.connections.values()) { try { if (conn.off) conn.off(); conn.close(); } catch { } }
             this.connections.clear();
-            if (this.peer) { try { this.peer.destroy(); } catch { } this.peer = null; }
+            if (this.peer) {
+                try { if (this.peer.off) this.peer.off(); this.peer.destroy(); } catch { }
+                this.peer = null;
+            }
             this.roomCode = null; this.isCreator = false; this.isRoomAdmin = false; this.peers = []; this.myPeerId = null;
             this.auditLogs = [];
             this._isLeaving = false;
         };
-        if (isUnload) {
-            cleanup();
-        } else {
-            setTimeout(cleanup, 300);
-        }
+
+        cleanup();
     }
 
     async getPeerStats(peerId) {

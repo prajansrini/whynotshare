@@ -857,11 +857,17 @@
                 <h3 style="font-size:1.15rem;font-weight:700;margin:0 0 8px;color:var(--text-primary)">Delete Room?</h3>
                 <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 24px;line-height:1.4">This will
                     permanently destroy the room and disconnect all members. Proceed?</p>
-                <div style="display:flex;gap:10px;width:100%">
-                    <button id="btn-host-confirm-delete" class="btn"
-                        style="flex:1;background:#ef4444;color:#fff;border-radius:10px;font-weight:700;padding:10px;border:none">Delete</button>
-                    <button id="btn-host-back-delete" class="btn btn-secondary"
-                        style="flex:1;border-radius:10px;font-weight:600;padding:10px">Back</button>
+                <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+                    <button id="btn-host-export-delete" class="btn btn-secondary" style="width:100%;border-radius:10px;font-weight:700;padding:11px;background:rgba(37,99,235,0.2);border:1px solid rgba(59,130,246,0.4);color:var(--text-primary);display:inline-flex;align-items:center;justify-content:center;gap:6px">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Export All &amp; Delete</span>
+                    </button>
+                    <div style="display:flex;gap:10px;width:100%">
+                        <button id="btn-host-confirm-delete" class="btn"
+                            style="flex:1;background:#ef4444;color:#fff;border-radius:10px;font-weight:700;padding:10px;border:none">Delete</button>
+                        <button id="btn-host-back-delete" class="btn btn-secondary"
+                            style="flex:1;border-radius:10px;font-weight:600;padding:10px">Back</button>
+                    </div>
                 </div>
             </div>
 

@@ -413,6 +413,24 @@ class App {
             stateInitial.style.display = 'block';
         };
 
+        const btnHostExportDelete = document.getElementById('btn-host-export-delete');
+        if (btnHostExportDelete) {
+            btnHostExportDelete.onclick = async () => {
+                cleanup();
+                await this.exportChatPackageZip();
+                const delMsg = { type: 'room-deleted' };
+                if (this.conn.isCreator) {
+                    this.conn._broadcast(delMsg);
+                } else if (this.conn.roomCode) {
+                    const hostId = this.conn._roomCodeToPeerId(this.conn.roomCode);
+                    this.conn.sendDirect(hostId, delMsg);
+                }
+                setTimeout(() => {
+                    this._performLeaveRoom(pushToHistory, true);
+                }, 200);
+            };
+        }
+
         document.getElementById('btn-host-confirm-delete').onclick = () => {
             cleanup();
             const delMsg = { type: 'room-deleted' };
@@ -1393,13 +1411,13 @@ class App {
     _triggerAutoSaveHostSettings(closeModal = false) {
         const isPrivileged = Boolean(this.conn && (this.conn.isPrivileged ? this.conn.isPrivileged() : this.conn.isCreator));
         if (!this.conn || !isPrivileged) return;
-        // Room ID change feature has been disabled by user request
+        const btnOpen = document.getElementById('btn-room-key-open');
         const toggle = document.getElementById('toggle-open-room');
-        const isOpen = toggle && toggle.checked;
+        const isOpen = (btnOpen && (btnOpen.classList.contains('active-plaintext') || btnOpen.classList.contains('active'))) || (toggle && toggle.checked);
         const inputKeyEl = document.getElementById('input-rotate-room-key');
         const newKey = isOpen ? '' : (inputKeyEl ? inputKeyEl.value.trim() : '');
         const currentKey = this.crypto.getPhrase() || '';
-        if (newKey !== currentKey || isOpen === this.e2eEnabled) {
+        if (newKey !== currentKey || (isOpen && this.e2eEnabled) || (!isOpen && !this.e2eEnabled)) {
             this.conn._broadcast({ type: 'room-key-rotated', payload: { newKey: newKey } });
             this._onRoomKeyRotated(newKey);
         }
@@ -2119,13 +2137,20 @@ class App {
         await this.crypto.importKey(newKey || '');
         this.toggleE2E(isEnc);
         this.updatePhraseUI(newKey, !isEnc);
-        const code = this.conn.getRoomCode();
+        const code = this.conn ? this.conn.getRoomCode() : this.roomCode;
         if (code) {
-            const targetUrl = this.e2eEnabled ? this._buildShareUrl(code, newKey) : (window.location.origin + this._getBasePath() + '#' + code);
-            const targetHash = this.e2eEnabled ? ('#' + code + ':' + newKey) : ('#' + code);
+            const targetUrl = (this.e2eEnabled && newKey) ? this._buildShareUrl(code, newKey) : (window.location.origin + this._getBasePath() + '#' + code);
+            const targetHash = (this.e2eEnabled && newKey) ? ('#' + code + ':' + newKey) : ('#' + code);
             const urlEl = document.getElementById('share-url');
-            if (urlEl) urlEl.dataset.url = targetUrl;
-            if (this._hasEnteredLiveRoom) {
+            if (urlEl) {
+                urlEl.dataset.url = targetUrl;
+                if (urlEl.tagName === 'INPUT') urlEl.value = targetUrl;
+            }
+            const modalUrlEl = document.getElementById('input-modal-room-link');
+            if (modalUrlEl) {
+                modalUrlEl.value = targetUrl;
+            }
+            if (this._hasEnteredLiveRoom || (window.location.hash && window.location.hash.slice(1).startsWith(code))) {
                 window.history.replaceState(null, '', this._getBasePath() + targetHash);
             }
             try {
@@ -2139,7 +2164,7 @@ class App {
             } catch { }
             this.renderInlineQr(targetUrl);
         }
-        UI.toast(isEnc ? 'Room Key was rotated / updated!' : 'Room changed to Open Room!', 'success');
+        UI.toast(isEnc ? 'Room Key was rotated / updated!' : 'Room changed to Open Room (No Key Required)!', 'success');
     }
 
     async changePassphrase(phrase) {
@@ -3345,6 +3370,15 @@ class App {
                     if (cancelBtn) cancelBtn.onclick = cleanup;
                     const backBtn = document.getElementById('btn-host-back-delete');
                     if (backBtn) backBtn.onclick = cleanup;
+
+                    const exportDeleteBtn = document.getElementById('btn-host-export-delete');
+                    if (exportDeleteBtn) {
+                        exportDeleteBtn.onclick = async () => {
+                            cleanup();
+                            await this.exportChatPackageZip();
+                            this._performLeaveRoom(true, true);
+                        };
+                    }
 
                     const confirmBtn = document.getElementById('btn-host-confirm-delete');
                     if (confirmBtn) {

@@ -163,7 +163,7 @@ class UI {
         const total = (peers && peers.length > 0) ? peers.length : 1;
         if (countHeader) countHeader.textContent = total;
         if (count) count.textContent = total;
-        if (countModal) countModal.textContent = `${total} Active`;
+        if (countModal) countModal.textContent = total;
         if (countPill) countPill.textContent = total;
         if (!list) return;
 
