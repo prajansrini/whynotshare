@@ -2721,6 +2721,15 @@ class App {
             }
         });
         window.addEventListener('popstate', (e) => {
+            const isMobile = window.matchMedia('(max-width: 768px)').matches || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            if (isMobile && typeof this.handleBackOrEscape === 'function') {
+                const handled = this.handleBackOrEscape();
+                if (handled) {
+                    try { window.history.pushState({ screenId: 'screen-share' }, '', window.location.hash); } catch { }
+                    return;
+                }
+            }
+
             const currentActive = document.querySelector('.screen.active');
             const currentScreenId = currentActive ? currentActive.id : 'screen-landing';
             if (currentScreenId === 'screen-share' && this.conn && this.conn.getRoomCode()) {
@@ -2787,27 +2796,10 @@ class App {
                 }
             }
             if (e.key === 'Escape') {
-                const mediaModal = document.getElementById('modal-media-preview');
-                if (mediaModal && mediaModal.style.display !== 'none') {
-                    if (typeof UI !== 'undefined' && typeof UI.closeMediaPreviewModal === 'function') {
-                        UI.closeMediaPreviewModal();
-                    }
-                    return;
-                }
-                const activeModals = Array.from(document.querySelectorAll('.modal-overlay'))
-                    .filter(m => m.id !== 'drawer-backdrop' && m.style.display !== 'none');
-                if (activeModals.length > 0) {
-                    const topModal = activeModals[activeModals.length - 1];
-                    topModal.style.display = 'none';
-                    return;
-                }
-                const drawer = document.getElementById('drawer-room-menu');
-                const backdrop = document.getElementById('drawer-backdrop');
-                if (drawer && drawer.classList.contains('active')) {
-                    drawer.classList.remove('active');
-                    if (backdrop) backdrop.classList.remove('active');
-                    return;
-                }
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                this.handleBackOrEscape();
                 const ti = document.getElementById('text-input');
                 const shareScreen = document.getElementById('screen-share');
                 if (ti && shareScreen && shareScreen.classList.contains('active')) {
@@ -3577,9 +3569,10 @@ class App {
                 startY = touch.clientY;
                 isDrawerOpen = drawer.classList.contains('active');
 
-                // Swipe right to open is allowed if touch starts within 40px of left screen edge
+                // Swipe right to open is allowed if touch starts anywhere in left half of screen
                 // Swipe left to close is allowed anytime drawer is open
-                if (!isDrawerOpen && startX > 40) return;
+                const maxStart = Math.max(160, window.innerWidth * 0.5);
+                if (!isDrawerOpen && startX > maxStart) return;
 
                 isSwiping = true;
                 drawer.style.transition = 'none';
@@ -4014,6 +4007,7 @@ class App {
         let touchStartPos = { x: 0, y: 0 };
 
         const showContextMenu = (e, targetEl) => {
+            try { window.getSelection().removeAllRanges(); } catch { }
             if (e.cancelable) e.preventDefault();
             if (!targetEl) return;
 
@@ -4153,7 +4147,8 @@ class App {
                 const isMsg = e.target.closest('.message');
                 const isBar = e.target.closest('#multi-select-bar');
                 const isCtx = e.target.closest('#custom-context-menu');
-                if (!isMsg && !isBar && !isCtx) {
+                const isInsideChat = e.target.closest('#messages') || e.target.closest('.messages-container');
+                if (!isMsg && !isBar && !isCtx && !isInsideChat) {
                     this.exitMultiSelectMode();
                 }
             }
@@ -4165,16 +4160,6 @@ class App {
                 this.updateMultiSelectBar();
             }
         }, true);
-
-        window.addEventListener('popstate', () => {
-            this.handleBackOrEscape();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.handleBackOrEscape();
-            }
-        });
 
         const isFileOrMedia = (el) => {
             return el.closest('.received-file-card') || el.closest('.file-box-card') || el.closest('[data-file-id]') || el.closest('.transfer-item') || el.closest('.file-card') || el.closest('.transfer-card') || el.closest('.file-attachment') || el.closest('img') || el.closest('video') || el.closest('audio') || el.closest('.message') || el.closest('.message-bubble');
@@ -4591,6 +4576,17 @@ class App {
     }
 
     handleBackOrEscape() {
+        // Priority 0: Media Preview Modal (topmost lightbox)
+        const mediaModal = document.getElementById('modal-media-preview');
+        if (mediaModal && window.getComputedStyle(mediaModal).display !== 'none') {
+            if (typeof UI !== 'undefined' && typeof UI.closeMediaPreviewModal === 'function') {
+                UI.closeMediaPreviewModal();
+            } else {
+                mediaModal.style.display = 'none';
+            }
+            return true;
+        }
+
         // Priority 1: Context Menu (topmost floating layer)
         const ctxMenu = document.getElementById('custom-context-menu');
         if (ctxMenu && ctxMenu.style.display !== 'none' && ctxMenu.style.display !== '') {
@@ -4603,6 +4599,7 @@ class App {
 
         // Priority 2: Open Modals (Host Manage, QR code, Device Roster, History, etc.)
         const openModals = Array.from(document.querySelectorAll('.modal-overlay')).filter(m => {
+            if (m.id === 'drawer-backdrop' || m.id === 'drawer-overlay') return false;
             const disp = window.getComputedStyle(m).display;
             const vis = window.getComputedStyle(m).visibility;
             return disp !== 'none' && vis !== 'hidden';

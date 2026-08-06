@@ -497,14 +497,14 @@ body.light-theme .device-count-badge {
 .tab-nav.header-tab-nav,
 body.light-theme .tab-nav.header-tab-nav {
     display: inline-flex !important;
-    width: 60px !important;
-    height: 27px !important;
+    width: 68px !important;
+    height: 32px !important;
     box-sizing: border-box !important;
     position: relative !important;
     gap: 2px !important;
     margin: 0 !important;
-    padding: 1px !important;
-    border-radius: 7px !important;
+    padding: 2px !important;
+    border-radius: 8px !important;
     align-items: center !important;
     overflow: hidden !important;
 }
@@ -522,12 +522,12 @@ body.light-theme .tab-nav.header-tab-nav {
 .header-tab-nav .tab-slider,
 body.light-theme .header-tab-nav .tab-slider {
     position: absolute !important;
-    top: 1px !important;
-    bottom: 1px !important;
-    left: 1px !important;
-    width: 27px !important;
-    height: 23px !important;
-    border-radius: 5px !important;
+    top: 2px !important;
+    bottom: 2px !important;
+    left: 2px !important;
+    width: 31px !important;
+    height: 26px !important;
+    border-radius: 6px !important;
     transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), background 0.22s ease !important;
     will-change: transform !important;
     transform: translate3d(0, 0, 0) !important;
@@ -547,24 +547,24 @@ body.light-theme .header-tab-nav .tab-slider {
 }
 
 .header-tab-nav[data-active="files"] .tab-slider {
-    transform: translate3d(29px, 0, 0) !important;
+    transform: translate3d(33px, 0, 0) !important;
     background: linear-gradient(225deg, #3b82f6, #1d4ed8) !important;
     box-shadow: 0 2px 8px rgba(29, 78, 216, 0.4) !important;
 }
 
 body.light-theme .header-tab-nav[data-active="files"] .tab-slider {
-    transform: translate3d(29px, 0, 0) !important;
+    transform: translate3d(33px, 0, 0) !important;
     background: linear-gradient(225deg, #ea580c, #f97316) !important;
     box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35) !important;
 }
 
 .header-tab-nav .tab-btn,
 body.light-theme .header-tab-nav .tab-btn {
-    flex: 0 0 27px !important;
-    width: 27px !important;
-    height: 23px !important;
+    flex: 0 0 31px !important;
+    width: 31px !important;
+    height: 26px !important;
     padding: 0 !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     color: var(--text-secondary) !important;
     transition: color 0.2s ease !important;
     display: inline-flex !important;
@@ -2908,9 +2908,30 @@ body.light-theme .message.reply-target-highlight .file-box-card::before {
     z-index: 0;
 }
 
-body.light-theme .message.context-menu-active-highlight .message-bubble::before,
-body.light-theme .message.context-menu-active-highlight .file-box-card::before {
-    background-color: rgba(234, 88, 12, 0.2);
+/* Disable native mobile text selection callout & blue handles on messages */
+.message,
+.message-bubble,
+.file-box-card,
+.quoted-reply-card,
+.messages-container {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+code,
+pre {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
 }
 
 /* --- Header Multi-Select Toggle --- */
@@ -2929,9 +2950,9 @@ body.light-theme .share-header-controls.multi-select-active .header-tab-nav,
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
-    height: 27px !important;
-    padding: 2px 6px !important;
-    border-radius: 7px !important;
+    height: 32px !important;
+    padding: 2px 8px !important;
+    border-radius: 8px !important;
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     box-shadow: none !important;
@@ -2947,7 +2968,7 @@ body.light-theme .share-header-controls.multi-select-active #multi-select-bar {
 
 .multi-select-count {
     font-weight: 700;
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
     color: var(--text-primary);
     white-space: nowrap;
     padding: 0 4px;
@@ -2963,11 +2984,11 @@ body.light-theme .share-header-controls.multi-select-active #multi-select-bar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 23px !important;
-    height: 23px !important;
+    width: 26px !important;
+    height: 26px !important;
     padding: 0 !important;
-    border-radius: 5px !important;
-    font-size: 0.76rem !important;
+    border-radius: 6px !important;
+    font-size: 0.8rem !important;
     font-weight: 600;
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.08);
